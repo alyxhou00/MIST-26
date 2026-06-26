@@ -1,0 +1,3 @@
+# Cluster shell scripts must keep LF endings or bash on Linux chokes on \r.
+*.sh    text eol=lf
+*.sbatch text eol=lf

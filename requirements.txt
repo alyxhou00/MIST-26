@@ -1,0 +1,8 @@
+# Qwen3.5 (model_type "qwen3_5") needs a recent transformers; install from source if the
+# released version doesn't recognize it:
+#   pip install "git+https://github.com/huggingface/transformers.git"
+torch
+transformers>=4.57.0
+accelerate
+datasets
+sacrebleu
