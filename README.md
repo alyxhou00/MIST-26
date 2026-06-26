@@ -61,12 +61,46 @@ python benchmark.py --limit 50     # quick check
 python benchmark.py                # full dev split
 ```
 
-On the Alex cluster (NHR@FAU): clone the repo into `$WORK`, run [`setup.sh`](setup.sh) once on
-the login node (venv + cached model/dataset), then `sbatch job.sbatch`.
+## Running on the Alex cluster (NHR@FAU)
+
+The Alex login node has internet but no GPU; the compute nodes have GPUs but no internet. So we
+download everything once on the login node ([`setup.sh`](setup.sh)) and run the GPU job offline
+([`job.sbatch`](job.sbatch)).
+
+**1. Get the code onto the cluster.** Push from your laptop, then clone into `$WORK`:
 
 ```bash
+# on your laptop
+git push origin main
+
+# on the cluster
 ssh alex
-cd $WORK && git clone https://github.com/alyxhou00/MIST-26.git && cd MIST-26
-bash setup.sh        # one-time, login node (needs internet)
-sbatch job.sbatch    # full dev-set run on 1x A40
+cd $WORK
+git clone https://github.com/alyxhou00/MIST-26.git
+cd MIST-26
+```
+
+**2. One-time setup on the login node** — builds the venv and caches the model + dataset:
+
+```bash
+bash setup.sh
+```
+
+**3. (Recommended) Smoke test on a GPU** — grab an interactive node and run 20 examples:
+
+```bash
+srun --partition=a40 --gres=gpu:a40:1 --time=00:15:00 --pty bash -l
+module load python/3.12-base cuda/12.8.1
+source $WORK/mist-venv/bin/activate
+export HF_HOME=$WORK/hf_cache HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+python benchmark.py --limit 20
+exit          # release the interactive allocation
+```
+
+**4. Submit the full dev-set run** and check the result:
+
+```bash
+sbatch job.sbatch
+squeue --me          # PD = pending, R = running
+cat mist-qa-*.out    # output, ending in the chrF score
 ```
