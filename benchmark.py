@@ -8,6 +8,8 @@ half via its chat template, and reports chrF.
 """
 
 import argparse
+import csv
+from pathlib import Path
 
 from datasets import load_dataset
 
@@ -40,44 +42,53 @@ def main() -> None:
     ).eval()
 
     # --- zero-shot generation ---
+    # Each prediction is written to the CSV and flushed immediately, so an interrupted run
+    # (time limit, node failure, OOM) keeps every example completed so far instead of losing all.
     # Fix the seed so the (random) sampling below is reproducible across runs.
     set_seed(args.seed)
-    preds = []
-    for i, text in enumerate(dev["input"], 1):
-        prompt = tok.apply_chat_template(
-            [{"role": "user", "content": text}],
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=False,  # 2B is prone to thinking loops; keep non-thinking (card)
-        )
-        inputs = tok(prompt, return_tensors="pt").to(model.device)
-        with torch.no_grad():
-            # Card's "non-thinking, text task" sampling. (presence_penalty=2.0 from the card
-            # has no model.generate equivalent, so it's omitted.)
-            out = model.generate(
-                **inputs,
-                max_new_tokens=args.max_new_tokens,
-                do_sample=True,
-                temperature=1.0,
-                top_p=1.0,
-                top_k=20,
-            )
-        pred = tok.decode(out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
-        preds.append(pred)
-        print(f"  [{i}/{len(dev)}]", flush=True)
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    preds, golds = [], []
+    with open(args.out, "w", newline="", encoding="utf-8-sig") as f:  # utf-8-sig: opens in Excel
+        writer = csv.writer(f)
+        writer.writerow(["source", "lang_code", "input", "gold", "prediction"])
+        for i, row in enumerate(dev.itertuples(index=False), 1):
+            try:
+                prompt = tok.apply_chat_template(
+                    [{"role": "user", "content": row.input}],
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=False,  # 2B is prone to thinking loops; keep non-thinking (card)
+                )
+                inputs = tok(prompt, return_tensors="pt").to(model.device)
+                with torch.no_grad():
+                    # Card's "non-thinking, text task" sampling. (presence_penalty=2.0 from the
+                    # card has no model.generate equivalent, so it's omitted.)
+                    out = model.generate(
+                        **inputs,
+                        max_new_tokens=args.max_new_tokens,
+                        do_sample=True,
+                        temperature=1.0,
+                        top_p=1.0,
+                        top_k=20,
+                    )
+                pred = tok.decode(
+                    out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True
+                ).strip()
+            except Exception as e:  # noqa: BLE001 - keep going so one bad example can't lose the run
+                print(f"  [{i}] FAILED: {type(e).__name__}: {e}", flush=True)
+                pred = ""
+            writer.writerow([row.source, row.lang_code, row.input, row.output, pred])
+            f.flush()  # ensure the row is on disk before moving on
+            preds.append(pred)
+            golds.append(row.output)
+            print(f"  [{i}/{len(dev)}]", flush=True)
+    print(f"wrote {len(preds)} rows -> {args.out}")
 
-    # --- log per-example results ---
-    out = dev[["source", "lang_code", "input"]].copy()
-    out["gold"] = dev["output"].to_numpy()
-    out["prediction"] = preds
-    out.to_csv(args.out, index=False, encoding="utf-8-sig")  # utf-8-sig: opens cleanly in Excel
-    print(f"wrote {len(out)} rows -> {args.out}")
-
-    # --- score ---
+    # --- score (also recoverable from the CSV above if the run was interrupted) ---
     import sacrebleu
 
-    chrf = sacrebleu.corpus_chrf(preds, [dev["output"].tolist()]).score
-    print(f"\nchrF = {chrf:.2f}  (n={len(dev)}, model={args.model})")
+    chrf = sacrebleu.corpus_chrf(preds, [golds]).score
+    print(f"\nchrF = {chrf:.2f}  (n={len(preds)}, model={args.model})")
 
 
 if __name__ == "__main__":
