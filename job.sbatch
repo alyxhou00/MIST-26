@@ -16,4 +16,6 @@ export HF_HOME="$WORK/hf_cache"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
-python benchmark.py            # add --limit 50 for a quick run
+# Write per-example results to a per-job CSV so runs don't overwrite each other.
+mkdir -p "$WORK/mist-out"
+python benchmark.py --out "$WORK/mist-out/predictions-$SLURM_JOB_ID.csv"   # add --limit 50 for a quick run
