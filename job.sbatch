@@ -18,4 +18,6 @@ export TRANSFORMERS_OFFLINE=1
 
 # Write per-example results to a per-job CSV so runs don't overwrite each other.
 mkdir -p "$WORK/mist-out"
-python benchmark.py --out "$WORK/mist-out/predictions-$SLURM_JOB_ID.csv"   # add --limit 50 for a quick run
+CSV="$WORK/mist-out/predictions-$SLURM_JOB_ID.csv"
+python benchmark.py --out "$CSV"   # add --limit 50 for a quick run
+python evaluate.py "$CSV"          # chrF summary (overall + per-source + per-language) into the .out log
