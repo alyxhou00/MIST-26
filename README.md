@@ -61,5 +61,12 @@ python benchmark.py --limit 50     # quick check
 python benchmark.py                # full dev split
 ```
 
-On the Alex cluster (NHR@FAU), set up a venv once on the login node, then `sbatch job.sbatch`
-(see the comments in [`job.sbatch`](job.sbatch)).
+On the Alex cluster (NHR@FAU): clone the repo into `$WORK`, run [`setup.sh`](setup.sh) once on
+the login node (venv + cached model/dataset), then `sbatch job.sbatch`.
+
+```bash
+ssh alex
+cd $WORK && git clone https://github.com/alyxhou00/MIST-26.git && cd MIST-26
+bash setup.sh        # one-time, login node (needs internet)
+sbatch job.sbatch    # full dev-set run on 1x A40
+```
