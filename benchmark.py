@@ -32,7 +32,7 @@ def main() -> None:
 
     # --- model (Qwen3.5-2B is multimodal; we use it text-only) ---
     import torch
-    from transformers import AutoModelForImageTextToText, AutoTokenizer
+    from transformers import AutoModelForImageTextToText, AutoTokenizer, set_seed
 
     tok = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForImageTextToText.from_pretrained(
@@ -40,16 +40,28 @@ def main() -> None:
     ).eval()
 
     # --- zero-shot generation ---
+    # Fix the seed so the (random) sampling below is reproducible across runs.
+    set_seed(args.seed)
     preds = []
     for i, text in enumerate(dev["input"], 1):
         prompt = tok.apply_chat_template(
             [{"role": "user", "content": text}],
             tokenize=False,
             add_generation_prompt=True,
+            enable_thinking=False,  # 2B is prone to thinking loops; keep non-thinking (card)
         )
         inputs = tok(prompt, return_tensors="pt").to(model.device)
         with torch.no_grad():
-            out = model.generate(**inputs, max_new_tokens=args.max_new_tokens, do_sample=False)
+            # Card's "non-thinking, text task" sampling. (presence_penalty=2.0 from the card
+            # has no model.generate equivalent, so it's omitted.)
+            out = model.generate(
+                **inputs,
+                max_new_tokens=args.max_new_tokens,
+                do_sample=True,
+                temperature=1.0,
+                top_p=1.0,
+                top_k=20,
+            )
         pred = tok.decode(out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
         preds.append(pred)
         print(f"  [{i}/{len(dev)}]", flush=True)
