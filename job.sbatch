@@ -4,6 +4,8 @@
 #SBATCH --gres=gpu:a40:1
 #SBATCH --time=12:00:00
 #SBATCH --output=%x-%j.out
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=jenchien.hou@tum.de
 #
 # Run on Alex (NHR@FAU):  sbatch job.sbatch
 # Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
