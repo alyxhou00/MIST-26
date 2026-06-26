@@ -18,6 +18,8 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0, help="0 = whole dev split")
     ap.add_argument("--max-new-tokens", type=int, default=256)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--out", default="predictions.csv",
+                    help="CSV of per-example source/lang/input/gold/prediction")
     args = ap.parse_args()
 
     # --- data: qa subset, 80/20 split, evaluate on dev ---
@@ -51,6 +53,13 @@ def main() -> None:
         pred = tok.decode(out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
         preds.append(pred)
         print(f"  [{i}/{len(dev)}]", flush=True)
+
+    # --- log per-example results ---
+    out = dev[["source", "lang_code", "input"]].copy()
+    out["gold"] = dev["output"].to_numpy()
+    out["prediction"] = preds
+    out.to_csv(args.out, index=False, encoding="utf-8-sig")  # utf-8-sig: opens cleanly in Excel
+    print(f"wrote {len(out)} rows -> {args.out}")
 
     # --- score ---
     import sacrebleu
