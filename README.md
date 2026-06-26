@@ -111,3 +111,10 @@ Each run produces two artifacts:
 |------|----------|
 | `mist-qa-<jobid>.out` | log: progress, warnings, final chrF score (stdout + stderr), in the submit dir |
 | `$WORK/mist-out/predictions-<jobid>.csv` | per-example `source, lang_code, input, gold, prediction` |
+
+**5. Download the predictions to your laptop.** Run this *on your laptop* (not on the cluster),
+replacing `<jobid>` with the actual job number:
+
+```bash
+scp alex:/home/atuin/b279bb/b279bb31/mist-out/predictions-<jobid>.csv .
+```
