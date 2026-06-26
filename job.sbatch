@@ -6,12 +6,14 @@
 #SBATCH --output=%x-%j.out
 #
 # Run on Alex (NHR@FAU):  sbatch job.sbatch
-# One-time setup on the login node first:
-#   module load python/3.12-base cuda/12.8.1
-#   python -m venv $WORK/mist-venv && source $WORK/mist-venv/bin/activate
-#   pip install -r requirements.txt
+# Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
 
 module load python/3.12-base cuda/12.8.1
 source "$WORK/mist-venv/bin/activate"
 
-python benchmark.py --limit 50
+# Compute nodes have no internet -> use the cache populated on the login node.
+export HF_HOME="$WORK/hf_cache"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+python benchmark.py            # add --limit 50 for a quick run
