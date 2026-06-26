@@ -104,3 +104,10 @@ sbatch job.sbatch
 squeue --me          # PD = pending, R = running
 cat mist-qa-*.out    # output, ending in the chrF score
 ```
+
+Each run produces two artifacts:
+
+| File | Contents |
+|------|----------|
+| `mist-qa-<jobid>.out` | log: progress, warnings, final chrF score (stdout + stderr), in the submit dir |
+| `$WORK/mist-out/predictions-<jobid>.csv` | per-example `source, lang_code, input, gold, prediction` |
