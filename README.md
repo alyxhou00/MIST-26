@@ -59,7 +59,14 @@ user turn); it needs a recent `transformers` (see `requirements.txt`).
 ```bash
 python benchmark.py --limit 50     # quick check
 python benchmark.py                # full dev split
+python benchmark.py --lang-hint    # prefix prompts with "Please respond in <language>."
 ```
+
+`--lang-hint` derives the target language from `lang_code` and adds it as an explicit
+instruction. Most examples don't need it (the input's language already matches the expected
+output language), but a few — e.g. `aya_dataset` rows where the question is in English but the
+answer is expected in another language — are otherwise ambiguous: nothing in the input signals
+that the output should switch languages.
 
 ## Running on the Alex cluster (NHR@FAU)
 
