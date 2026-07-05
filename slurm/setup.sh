@@ -5,7 +5,7 @@
 # downloaded -- the Python deps, the model, and the dataset -- must be fetched here on the login
 # node first. job.sbatch then runs fully offline against this venv and cache.
 #
-#   ssh alex && cd $WORK/MIST-26 && bash setup.sh
+# Run from the repo root:  ssh alex && cd $WORK/MIST-26 && bash slurm/setup.sh
 set -euo pipefail
 
 module load python/3.12-base cuda/12.8.1
@@ -28,4 +28,4 @@ if ! python -c "from transformers import AutoConfig; AutoConfig.from_pretrained(
   pip install --upgrade "git+https://github.com/huggingface/transformers.git"
 fi
 
-echo "[setup] done -- now submit:  sbatch job.sbatch"
+echo "[setup] done -- now submit:  sbatch slurm/job.sbatch"

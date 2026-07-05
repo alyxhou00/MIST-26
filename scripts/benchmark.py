@@ -3,8 +3,8 @@
 Splits the `qa` examples 80/20 (train/dev, seed 42), runs the model zero-shot on the dev
 half via its chat template, and reports chrF.
 
-    python benchmark.py --limit 50     # quick check on 50 examples
-    python benchmark.py                # full dev split
+    python scripts/benchmark.py --limit 50     # quick check on 50 examples
+    python scripts/benchmark.py                # full dev split
 """
 
 import argparse
@@ -35,7 +35,7 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0, help="0 = whole dev split")
     ap.add_argument("--max-new-tokens", type=int, default=256)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--out", default="predictions.csv",
+    ap.add_argument("--out", default="runs/predictions.csv",
                     help="CSV of per-example source/lang/input/gold/prediction")
     ap.add_argument("--lang-hint", action="store_true",
                     help="prefix each prompt with 'Please respond in <language>.', "

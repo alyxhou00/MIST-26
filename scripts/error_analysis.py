@@ -8,7 +8,7 @@ Flags two cheap-to-detect failure modes that disproportionately hurt chrF:
 Prints per-language rates plus a few example rows per language so you can eyeball
 the actual failure mode, not just the chrF number.
 
-    python error_analysis.py predictions.csv
+    python scripts/error_analysis.py predictions/predictions-<jobid>.csv
 """
 
 import argparse

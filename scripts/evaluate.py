@@ -7,7 +7,7 @@ overall and per-group numbers. Independent of generation -- run it on the login 
 it to add metrics, or point it at a *partial* CSV to score an interrupted job without
 re-generating.
 
-    python evaluate.py predictions.csv
+    python scripts/evaluate.py predictions/predictions-<jobid>.csv
 """
 
 import argparse

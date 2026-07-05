@@ -39,3 +39,10 @@ env/
 
 # mypy
 .mypy_cache/
+
+# Ad-hoc predictions CSVs (large, scratch) -- same relative path locally and on the cluster,
+# so nothing lands loose in the repo root. Worth-keeping ones get copied into predictions/ and
+# committed deliberately -- see README. Slurm .out logs go to logs/ instead, which IS
+# committed (small, and $WORK has no backup guarantee).
+/runs/*
+!/runs/.gitkeep
