@@ -7,3 +7,5 @@ accelerate
 datasets
 pandas
 sacrebleu
+bert-score
+rouge-score
