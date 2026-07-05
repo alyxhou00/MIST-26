@@ -1,0 +1,104 @@
+### Starting TaskPrologue of job 3814759 on a0123 at Mon Jul  6 12:22:53 AM CEST 2026
+Running on cores 0-15 with governor performance
+Mon Jul  6 00:22:53 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:01:00.0 Off |                  Off |
+|  0%   34C    P8             23W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+scoring: predictions/predictions-3786727.csv
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  23%|██▎       | 45/199 [00:00<00:00, 413.68it/s]Loading weights:  66%|██████▋   | 132/199 [00:00<00:00, 672.46it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 636.39it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+file: predictions/predictions-3786727.csv
+n = 2978
+overall chrF      = 18.01
+overall BERTScore = 62.21
+overall ROUGE-L   = 12.51
+
+by source:
+  CohereLabs/aya_dataset              n=  978  chrF= 20.83  BERTScore= 63.62  ROUGE-L= 10.19
+  FBK-MT/MCIF                         n=  165  chrF= 23.87  BERTScore= 67.98  ROUGE-L= 17.01
+  copenlu/answerable_tydiqa           n=  615  chrF= 12.68  BERTScore= 57.88  ROUGE-L= 10.34
+  facebook/belebele                   n= 1123  chrF= 10.90  BERTScore= 62.15  ROUGE-L= 15.45
+  wmt25-mist-oeg-gpt-4.1              n=   97  chrF= 22.05  BERTScore= 66.24  ROUGE-L=  7.76
+
+by language (best to worst chrF):
+  ind_Latn     n=  191  chrF= 25.67  BERTScore= 64.88  ROUGE-L= 12.49
+  eng_Latn     n=  109  chrF= 25.05  BERTScore= 64.57  ROUGE-L= 13.97
+  fra_Latn     n=  119  chrF= 24.97  BERTScore= 64.25  ROUGE-L= 11.81
+  deu_Latn     n=  166  chrF= 23.87  BERTScore= 63.77  ROUGE-L=  9.99
+  spa_Latn     n=  126  chrF= 22.84  BERTScore= 63.90  ROUGE-L= 10.24
+  fin_Latn     n=   65  chrF= 21.98  BERTScore= 60.83  ROUGE-L=  9.92
+  vie_Latn     n=  120  chrF= 21.66  BERTScore= 65.18  ROUGE-L= 18.19
+  ita_Latn     n=  173  chrF= 21.31  BERTScore= 63.83  ROUGE-L=  9.31
+  tur_Latn     n=  125  chrF= 20.74  BERTScore= 61.22  ROUGE-L=  8.11
+  rus_Cyrl     n=  193  chrF= 19.71  BERTScore= 60.66  ROUGE-L= 20.11
+  por_Latn     n=  108  chrF= 19.40  BERTScore= 63.72  ROUGE-L= 10.11
+  ces_Latn     n=   11  chrF= 19.11  BERTScore= 64.59  ROUGE-L= 13.88
+  arb_Arab     n=  185  chrF= 17.30  BERTScore= 62.86  ROUGE-L= 18.03
+  hin_Deva     n=  130  chrF= 13.54  BERTScore= 61.79  ROUGE-L=  6.36
+  ckb_Arab     n=   67  chrF= 12.82  BERTScore= 69.40  ROUGE-L= 10.39
+  ben_Beng     n=   32  chrF= 11.22  BERTScore= 60.34  ROUGE-L=  0.53
+  pes_Arab     n=   68  chrF= 10.86  BERTScore= 63.05  ROUGE-L= 29.33
+  slk_Latn     n=   43  chrF= 10.71  BERTScore= 60.39  ROUGE-L=  5.48
+  mar_Deva     n=  132  chrF= 10.17  BERTScore= 58.58  ROUGE-L=  4.46
+  jpn_Jpan     n=  177  chrF=  9.53  BERTScore= 59.56  ROUGE-L= 16.81
+  kor_Hang     n=  182  chrF=  9.40  BERTScore= 61.74  ROUGE-L= 16.91
+  yor_Latn     n=   55  chrF=  8.98  BERTScore= 62.91  ROUGE-L= 13.53
+  zho_Hans     n=  175  chrF=  8.78  BERTScore= 63.08  ROUGE-L= 15.69
+  hat_Latn     n=   49  chrF=  8.32  BERTScore= 59.48  ROUGE-L=  4.65
+  tha_Thai     n=   59  chrF=  7.23  BERTScore= 56.67  ROUGE-L=  3.99
+  swh_Latn     n=   55  chrF=  7.21  BERTScore= 54.68  ROUGE-L=  4.89
+  tel_Telu     n=   63  chrF=  6.16  BERTScore= 53.55  ROUGE-L=  6.94
+=== JOB_STATISTICS ===
+=== current date     : Mon Jul  6 00:24:04 CEST 2026
+= Job-ID             : 3814759 on alex
+= Job-Name           : mist-qa-eval
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/evaluate.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 00:30:00
+= Elapsed runtime    : 00:01:11
+= Total RAM usage    : 8.2 GiB of assigned  GiB (%)
+= Node list          : a0123
+= Subm/Elig/Start/End: 2026-07-06T00:22:52 / 2026-07-06T00:22:52 / 2026-07-06T00:22:53 / 2026-07-06T00:24:04
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc               5.6G   104.9G   209.7G        N/A   1,643      500K   1,000K        N/A    
+    /home/vault             0.0K  1048.6G  2097.2G        N/A       1      200K     400K        N/A    
+    /home/atuin            13.3G     0.0K     0.0K        N/A  42,958                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:01:00.0, 2875513, 51 %, 25 %, 2728 MiB, 44081 ms
