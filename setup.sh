@@ -16,10 +16,11 @@ source "$WORK/mist-venv/bin/activate"
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Pre-cache the dataset and model so the offline compute node finds them.
+# Pre-cache the dataset and models so the offline compute node finds them.
 export HF_HOME="$WORK/hf_cache"
 python -c "from datasets import load_dataset; load_dataset('pinzhenchen/wmt26-mist-sample')"
 python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen3.5-2B')"
+python -c "from huggingface_hub import snapshot_download; snapshot_download('bert-base-multilingual-cased')"  # for evaluate.py's BERTScore
 
 # Qwen3.5 is new; if this released transformers doesn't know "qwen3_5", install from source.
 if ! python -c "from transformers import AutoConfig; AutoConfig.from_pretrained('Qwen/Qwen3.5-2B')" 2>/dev/null; then

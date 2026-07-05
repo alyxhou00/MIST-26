@@ -125,3 +125,22 @@ replacing `<jobid>` with the actual job number:
 ```bash
 scp alex:/home/atuin/b279bb/b279bb31/mist-out/predictions-<jobid>.csv .
 ```
+
+**Re-scoring only (no re-generation).** `evaluate.py` now also computes BERTScore, which needs
+a GPU forward pass over every row -- slow on a laptop CPU. Predictions get committed under
+`predictions/` (e.g. `predictions/predictions-3786727.csv`) so they're already in the repo; if
+that same file is on the cluster too (after a `git pull`), re-score it there instead of
+regenerating:
+
+```bash
+ssh alex
+cd $WORK/MIST-26
+git pull                      # get evaluate.py/requirements.txt updates + any new predictions/*.csv
+bash setup.sh                 # re-run once: installs bert-score/rouge-score, caches mBERT
+sbatch evaluate.sbatch        # scores the newest predictions/*.csv
+squeue --me
+cat mist-qa-eval-*.out        # chrF + BERTScore + ROUGE-L summary
+```
+
+Pass a specific file (`sbatch evaluate.sbatch predictions/predictions-<jobid>.csv`) if you don't
+want the newest one picked automatically.
