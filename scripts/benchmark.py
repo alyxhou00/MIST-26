@@ -1,7 +1,8 @@
 """Minimal zero-shot QA benchmark: Qwen3.5-2B on the WMT26 MIST `qa` task.
 
 Splits the `qa` examples 80/20 (train/dev, seed 42), runs the model zero-shot on the dev
-half via its chat template, and reports chrF.
+half via its chat template, and writes a predictions CSV. Scoring is a separate step --
+run `scripts/evaluate.py` on the CSV for chrF/BERTScore/ROUGE-L (single source of truth).
 
     python scripts/benchmark.py --limit 50     # quick check on 50 examples
     python scripts/benchmark.py                # full dev split (target-language hint ON by default)
@@ -57,7 +58,7 @@ def main() -> None:
     # Fix the seed so the (random) sampling below is reproducible across runs.
     set_seed(args.seed)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    preds, golds = [], []
+    n_written = 0
     with open(args.out, "w", newline="", encoding="utf-8-sig") as f:  # utf-8-sig: opens in Excel
         writer = csv.writer(f)
         writer.writerow(["source", "lang_code", "input", "gold", "prediction"])
@@ -90,16 +91,10 @@ def main() -> None:
                 pred = ""
             writer.writerow([row.source, row.lang_code, row.input, row.output, pred])
             f.flush()  # ensure the row is on disk before moving on
-            preds.append(pred)
-            golds.append(row.output)
+            n_written += 1
             print(f"  [{i}/{len(dev)}]", flush=True)
-    print(f"wrote {len(preds)} rows -> {args.out}")
-
-    # --- score (also recoverable from the CSV above if the run was interrupted) ---
-    import sacrebleu
-
-    chrf = sacrebleu.corpus_chrf(preds, [golds]).score
-    print(f"\nchrF = {chrf:.2f}  (n={len(preds)}, model={args.model})")
+    print(f"wrote {n_written} rows -> {args.out}")
+    print(f"score it with:  python scripts/evaluate.py {args.out}")
 
 
 if __name__ == "__main__":

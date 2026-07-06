@@ -69,9 +69,10 @@ from there anymore.
 
 [`scripts/benchmark.py`](scripts/benchmark.py) is a minimal zero-shot benchmark of the `qa`
 sub-task: it splits the examples **80/20 train/dev** (seed 42), runs the model on the dev half
-via its chat template, and reports **chrF**. `Qwen/Qwen3.5-2B` is multimodal but used here
-text-only (each `input` is one user turn); it needs a recent `transformers` (see
-`requirements.txt`).
+via its chat template, and writes a **predictions CSV**. Scoring is a separate step --
+[`scripts/evaluate.py`](scripts/evaluate.py) reads the CSV and reports **chrF / BERTScore /
+ROUGE-L** (single source of truth). `Qwen/Qwen3.5-2B` is multimodal but used here text-only
+(each `input` is one user turn); it needs a recent `transformers` (see `requirements.txt`).
 
 ```bash
 python scripts/benchmark.py --limit 50     # quick check
@@ -132,14 +133,14 @@ exit          # release the interactive allocation
 ```bash
 sbatch slurm/job.sbatch
 squeue --me                # PD = pending, R = running
-cat logs/mist-qa-*.out     # output, ending in the chrF score
+cat logs/mist-qa-*.out     # output, ending in the evaluate.py metric summary
 ```
 
 Each run produces two artifacts:
 
 | File | Contents |
 |------|----------|
-| `logs/mist-qa-<jobid>.out` | log: progress, warnings, final chrF score (stdout + stderr) -- **committed**, so `git add logs/mist-qa-<jobid>.out && git commit && git push` from the cluster once the job finishes |
+| `logs/mist-qa-<jobid>.out` | log: progress, warnings, final metric summary from `evaluate.py` (chrF / BERTScore / ROUGE-L, stdout + stderr) -- **committed**, so `git add logs/mist-qa-<jobid>.out && git commit && git push` from the cluster once the job finishes |
 | `runs/predictions-<jobid>.csv` | per-example `source, lang_code, input, gold, prediction` -- gitignored scratch; promote it into `predictions/` (see below) only if it's worth keeping |
 
 **5. Promote the predictions CSV into `predictions/`, if it's worth keeping.** `runs/` is
