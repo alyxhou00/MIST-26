@@ -54,7 +54,7 @@ print(ds["train"])   # the only split -- train
 | Path | Contents |
 |------|----------|
 | [`scripts/`](scripts) | `benchmark.py` (generation), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
-| [`slurm/`](slurm) | `setup.sh` (one-time login-node setup), `job.sbatch`, `evaluate.sbatch` |
+| [`slurm/`](slurm) | `setup.sh` (one-time login-node setup), `job.sbatch` (zero-shot full run), `fewshot.sbatch` (few-shot full run), `smoke.sbatch` / `smoke-fewshot.sbatch` (cheap A/Bs), `evaluate.sbatch` (re-scoring) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
@@ -91,6 +91,33 @@ and is reused for SFT so training and inference match.
 
 Pass **`--no-lang-hint`** to drop the system turn and reproduce the raw zero-shot baseline
 (user turn only) — useful as an A/B control to measure how much the hint helps.
+
+## 1. Few-shot prompting (`--shots N`)
+
+`benchmark.py --shots 3` prepends N demonstration examples to each prompt as **completed
+user/assistant chat turns** (real prior exchanges the model can imitate), before the actual
+question. `--shots 0` (the default) is the zero-shot behavior above. How shots are chosen:
+
+- **Pool:** only the **train 80%** of the split — a dev example can never appear among its own
+  demonstrations, so the dev metric stays honest.
+- **Matching:** shots share the dev example's `(source, lang_code)` where possible, so they
+  demonstrate both the task format (e.g. `belebele`'s multiple-choice answers) and the target
+  language. If that stratum has fewer than N train rows, selection falls back to same `source`
+  only, then to the whole train pool.
+- **Determinism:** each dev example's shots are seeded from a hash of its input text, so they
+  don't change with `--limit`/`--source`/`--lang` filters or row order — A/B runs stay
+  comparable and any single prediction is reproducible in isolation.
+
+The turn insertion lives in `build_messages()` in
+[`scripts/prompt_template.py`](scripts/prompt_template.py) (shared with SFT); the selection
+logic is `make_shot_picker()` in [`scripts/benchmark.py`](scripts/benchmark.py).
+
+On the cluster: [`slurm/smoke-fewshot.sbatch`](slurm/smoke-fewshot.sbatch) is a ~1h A/B of
+N-shot vs zero-shot on the cross-lingual `aya` subset (edit `SRC`/`LANG`/`SHOTS` at the top);
+[`slurm/fewshot.sbatch`](slurm/fewshot.sbatch) is the full dev run
+(`sbatch slurm/fewshot.sbatch` for 3 shots, or pass a count: `sbatch slurm/fewshot.sbatch 5`).
+Its time limit is 18h rather than 12h because every prompt carries N extra demonstration
+passages.
 
 ## Running on the Alex cluster (NHR@FAU)
 

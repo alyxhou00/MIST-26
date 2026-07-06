@@ -44,7 +44,8 @@ def _warn_unknown(lang_code: str) -> None:
               file=sys.stderr, flush=True)
 
 
-def build_messages(input_text: str, lang_code: str, lang_hint: bool = True) -> list[dict]:
+def build_messages(input_text: str, lang_code: str, lang_hint: bool = True,
+                   examples: list[tuple[str, str]] | None = None) -> list[dict]:
     """Return chat `messages` for one qa example.
 
     If `lang_hint`, prepend a system turn naming the target language. An unknown lang_code
@@ -52,6 +53,12 @@ def build_messages(input_text: str, lang_code: str, lang_hint: bool = True) -> l
     NOT crash -- it falls back to the raw code so a run still completes -- but it emits a
     one-time warning, because "Respond in abc_Xyzz." is a much weaker instruction than a real
     language name. If you see that warning at test time, add the code to LANG_NAMES.
+
+    `examples` are few-shot demonstrations as (input, gold output) pairs. They are inserted
+    as completed user/assistant chat turns before the real question -- the model sees prior
+    exchanges it can imitate -- rather than pasted into one big prompt, because chat models
+    are trained on the turn structure and imitate it more reliably. Pass None (or []) for
+    zero-shot.
     """
     messages = []
     if lang_hint:
@@ -62,5 +69,8 @@ def build_messages(input_text: str, lang_code: str, lang_hint: bool = True) -> l
             _warn_unknown(lang_code)
         messages.append({"role": "system",
                          "content": f"You are a helpful assistant. Respond in {lang}."})
+    for ex_input, ex_output in examples or ():
+        messages.append({"role": "user", "content": ex_input})
+        messages.append({"role": "assistant", "content": ex_output})
     messages.append({"role": "user", "content": input_text})
     return messages
