@@ -4,10 +4,15 @@ Splits the `qa` examples 80/20 (train/dev, seed 42), runs the model zero-shot on
 half via its chat template, and writes a predictions CSV. Scoring is a separate step --
 run `scripts/evaluate.py` on the CSV for chrF/BERTScore/ROUGE-L (single source of truth).
 
-    python scripts/benchmark.py --limit 50     # quick check on 50 examples
-    python scripts/benchmark.py                # full dev split (target-language hint ON by default)
-    python scripts/benchmark.py --no-lang-hint # raw zero-shot: no target-language instruction
+    python scripts/benchmark.py                       # full dev split; lang-hint ON by default
+    python scripts/benchmark.py --limit 50            # quick check on the first 50 dev rows
+    python scripts/benchmark.py --no-lang-hint        # raw zero-shot: no target-language instruction
     python scripts/benchmark.py --source aya --lang hin_Deva   # only the cross-lingual aya rows
+    python scripts/benchmark.py --out runs/my-run.csv          # choose where predictions are written
+
+Flags: --limit (cap dev rows) · --source (substring on `source`) · --lang (exact lang_code) ·
+--[no-]lang-hint (target-language system turn, default on) · --out (predictions CSV path) ·
+--model · --max-new-tokens · --seed. Filters combine and apply within the dev split.
 """
 
 import argparse
