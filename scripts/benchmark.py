@@ -39,16 +39,24 @@ def make_shot_picker(train, k: int, seed: int):
     consumed in iteration order), so a given dev example always gets the same shots regardless
     of --limit/--source/--lang filters or row order. That keeps A/B runs comparable and any
     single prediction exactly reproducible in isolation.
+
+    Rows whose input is byte-identical to the dev row's are excluded from every tier: a few
+    aya prompts repeat verbatim across the 80/20 split (53 of 2978 dev rows, 4 with the same
+    gold), and sampling one of those as a demonstration would hand the model its own answer.
     """
     by_src_lang = {key: grp for key, grp in train.groupby(["source", "lang_code"])}
     by_src = {key: grp for key, grp in train.groupby("source")}
+    empty = train.iloc[0:0]
 
     def pick(source: str, lang_code: str, input_text: str) -> list[tuple[str, str]]:
-        pool = by_src_lang.get((source, lang_code))
-        if pool is None or len(pool) < k:
-            pool = by_src.get(source, train)
+        def usable(pool):  # drop verbatim copies of the dev row's own question
+            return pool[pool["input"] != input_text]
+
+        pool = usable(by_src_lang.get((source, lang_code), empty))
         if len(pool) < k:
-            pool = train
+            pool = usable(by_src.get(source, train))
+        if len(pool) < k:
+            pool = usable(train)
         picked = pool.sample(
             n=min(k, len(pool)),
             random_state=zlib.crc32(f"{seed}:{input_text}".encode("utf-8")),

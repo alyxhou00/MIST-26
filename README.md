@@ -99,7 +99,10 @@ user/assistant chat turns** (real prior exchanges the model can imitate), before
 question. `--shots 0` (the default) is the zero-shot behavior above. How shots are chosen:
 
 - **Pool:** only the **train 80%** of the split — a dev example can never appear among its own
-  demonstrations, so the dev metric stays honest.
+  demonstrations, so the dev metric stays honest. Train rows whose input is byte-identical to
+  the dev example's are also excluded: a few aya prompts repeat verbatim across the split
+  (53 of 2978 dev rows, 4 with the same gold), and showing such a copy as a demonstration
+  would hand the model its own answer.
 - **Matching:** shots share the dev example's `(source, lang_code)` where possible, so they
   demonstrate both the task format (e.g. `belebele`'s multiple-choice answers) and the target
   language. If that stratum has fewer than N train rows, selection falls back to same `source`
