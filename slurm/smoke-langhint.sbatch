@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=mist-qa-smoke
+#SBATCH --job-name=mist-qa-smoke-langhint
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
 #SBATCH --time=00:40:00
@@ -7,12 +7,14 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
 #
-# Fast smoke test -- sanity-check a change before committing to the full ~10h dev run
-# (slurm/job.sbatch). Submit from the repo root ($WORK/MIST-26):  sbatch slurm/smoke.sbatch
+# Fast lang-hint smoke test -- sanity-check a prompt change before committing to the full
+# ~10h dev run (slurm/zeroshot.sbatch). Was slurm/smoke.sbatch before the one-sbatch-per-
+# experiment naming, so older logs are named logs/mist-qa-smoke-<jobid>.out.
+# Submit from the repo root ($WORK/MIST-26):  sbatch slurm/smoke-langhint.sbatch
 # Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
 #
 # What it does: A/B the language hint on the cross-lingual rows it actually affects
-# (aya_dataset, English question -> non-English answer). Same log-capture as job.sbatch:
+# (aya_dataset, English question -> non-English answer). Same log-capture as the other jobs:
 # both scripts' stdout+stderr go to logs/%x-%j.out (see --output above).
 
 module load python/3.12-base cuda/12.8.1

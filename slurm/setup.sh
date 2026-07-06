@@ -3,7 +3,7 @@
 #
 # Why this script exists: the compute nodes have no internet, so everything that needs to be
 # downloaded -- the Python deps, the model, and the dataset -- must be fetched here on the login
-# node first. job.sbatch then runs fully offline against this venv and cache.
+# node first. The experiment sbatch jobs then run fully offline against this venv and cache.
 #
 # Run from the repo root:  ssh alex && cd $WORK/MIST-26 && bash slurm/setup.sh
 set -euo pipefail
@@ -28,4 +28,4 @@ if ! python -c "from transformers import AutoConfig; AutoConfig.from_pretrained(
   pip install --upgrade "git+https://github.com/huggingface/transformers.git"
 fi
 
-echo "[setup] done -- now submit:  sbatch slurm/job.sbatch"
+echo "[setup] done -- now submit an experiment, e.g.:  sbatch slurm/zeroshot.sbatch"

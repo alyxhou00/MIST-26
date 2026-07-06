@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=mist-qa
+#SBATCH --job-name=mist-qa-zeroshot
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
 #SBATCH --time=12:00:00
@@ -7,7 +7,10 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
 #
-# Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU):  sbatch slurm/job.sbatch
+# Full zero-shot dev run (the baseline experiment). One sbatch file per experiment, named
+# after it -- this one was slurm/job.sbatch before that convention existed, so older logs
+# are named logs/mist-qa-<jobid>.out rather than logs/mist-qa-zeroshot-<jobid>.out.
+# Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU):  sbatch slurm/zeroshot.sbatch
 # Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
 #
 # Log goes to logs/ (committed -- $WORK has no backup/retention guarantee, so `git add
