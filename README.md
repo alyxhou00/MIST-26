@@ -54,7 +54,7 @@ print(ds["train"])   # the only split -- train
 | Path | Contents |
 |------|----------|
 | [`scripts/`](scripts) | `benchmark.py` (generation), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
-| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `zeroshot.sbatch` / `fewshot.sbatch` (full dev runs), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` (cheap A/Bs); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
+| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (full dev runs), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` (cheap A/Bs); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
@@ -123,7 +123,7 @@ passages.
 
 The Alex login node has internet but no GPU; the compute nodes have GPUs but no internet. So we
 download everything once on the login node ([`slurm/setup.sh`](slurm/setup.sh)) and run the GPU
-job offline. Each experiment has its own sbatch file named after it (`zeroshot.sbatch`,
+job offline. Each experiment has its own sbatch file named after it (`0shot.sbatch`,
 `fewshot.sbatch`, ...), so the exact command that produced a run is recorded and its log is
 identifiable by job name.
 
@@ -160,24 +160,23 @@ exit          # release the interactive allocation
 ...or submit [`slurm/smoke-langhint.sbatch`](slurm/smoke-langhint.sbatch)
 (`sbatch slurm/smoke-langhint.sbatch`), a short (~40 min) job that A/Bs `--lang-hint` on/off
 over just the cross-lingual `aya` rows — a cheap way to check a prompt change before spending
-~10h on the full `zeroshot.sbatch` run. Edit the `SRC`/`LANG` vars at the top to target a
+~10h on the full `0shot.sbatch` run. Edit the `SRC`/`LANG` vars at the top to target a
 different subset. The `--source`/`--lang` filters it uses are on `benchmark.py` directly
 (e.g. `--source aya --lang hin_Deva`).
 
 **4. Submit the full dev-set run** and check the result:
 
 ```bash
-sbatch slurm/zeroshot.sbatch
-squeue --me                        # PD = pending, R = running
-cat logs/mist-qa-zeroshot-*.out    # output, ending in the evaluate.py metric summary
+sbatch slurm/0shot.sbatch
+squeue --me                     # PD = pending, R = running
+cat logs/mist-qa-0shot-*.out    # output, ending in the evaluate.py metric summary
 ```
 
-Each run produces two artifacts (log names before the per-experiment renaming were
-`logs/mist-qa-<jobid>.out` / `logs/mist-qa-smoke-<jobid>.out` — same content):
+Each run produces two artifacts:
 
 | File | Contents |
 |------|----------|
-| `logs/mist-qa-zeroshot-<jobid>.out` | log: progress, warnings, final metric summary from `evaluate.py` (chrF / BERTScore / ROUGE-L, stdout + stderr) -- **committed**, so `git add logs/*.out && git commit && git push` from the cluster once the job finishes |
+| `logs/mist-qa-0shot-<jobid>.out` | log: progress, warnings, final metric summary from `evaluate.py` (chrF / BERTScore / ROUGE-L, stdout + stderr) -- **committed**, so `git add logs/*.out && git commit && git push` from the cluster once the job finishes |
 | `runs/predictions-<jobid>.csv` | per-example `source, lang_code, input, gold, prediction` -- gitignored scratch; promote it into `predictions/` (see below) only if it's worth keeping |
 
 **5. Promote the predictions CSV into `predictions/`, if it's worth keeping.** `runs/` is

@@ -28,4 +28,4 @@ if ! python -c "from transformers import AutoConfig; AutoConfig.from_pretrained(
   pip install --upgrade "git+https://github.com/huggingface/transformers.git"
 fi
 
-echo "[setup] done -- now submit an experiment, e.g.:  sbatch slurm/zeroshot.sbatch"
+echo "[setup] done -- now submit an experiment, e.g.:  sbatch slurm/0shot.sbatch"

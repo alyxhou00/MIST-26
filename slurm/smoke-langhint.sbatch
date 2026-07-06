@@ -8,8 +8,8 @@
 #SBATCH --mail-user=jenchien.hou@tum.de
 #
 # Fast lang-hint smoke test -- sanity-check a prompt change before committing to the full
-# ~10h dev run (slurm/zeroshot.sbatch). Was slurm/smoke.sbatch before the one-sbatch-per-
-# experiment naming, so older logs are named logs/mist-qa-smoke-<jobid>.out.
+# ~10h dev run (slurm/0shot.sbatch). Was slurm/smoke.sbatch (job name mist-qa-smoke)
+# before the one-sbatch-per-experiment naming.
 # Submit from the repo root ($WORK/MIST-26):  sbatch slurm/smoke-langhint.sbatch
 # Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
 #

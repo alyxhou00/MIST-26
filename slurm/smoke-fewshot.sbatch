@@ -34,7 +34,7 @@ LANG=hin_Deva
 SHOTS=3
 
 FEWSHOT="runs/smoke-fewshot$SHOTS-$SLURM_JOB_ID.csv"
-ZEROSHOT="runs/smoke-zeroshot-$SLURM_JOB_ID.csv"
+ZEROSHOT="runs/smoke-0shot-$SLURM_JOB_ID.csv"
 
 echo "=== $SHOTS-shot (source=$SRC lang=$LANG) ==="
 python scripts/benchmark.py --source "$SRC" --lang "$LANG" --shots "$SHOTS" --out "$FEWSHOT"

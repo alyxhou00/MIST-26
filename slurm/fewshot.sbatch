@@ -7,7 +7,7 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
 #
-# Full few-shot dev run -- same as slurm/zeroshot.sbatch but with --shots (default 3).
+# Full few-shot dev run -- same as slurm/0shot.sbatch but with --shots (default 3).
 # Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU):
 #     sbatch slurm/fewshot.sbatch        # 3 shots
 #     sbatch slurm/fewshot.sbatch 5      # any other shot count

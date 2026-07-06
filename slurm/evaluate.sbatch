@@ -17,7 +17,7 @@
 # Assumes setup.sh has already been (re-)run so the venv has bert-score/rouge-score installed
 # and bert-base-multilingual-cased is cached -- see README.
 #
-# Log goes to logs/ (committed -- see zeroshot.sbatch for why); `git add logs/*.out && git commit
+# Log goes to logs/ (committed -- see 0shot.sbatch for why); `git add logs/*.out && git commit
 # && git push` from the cluster once the job finishes.
 
 module load python/3.12-base cuda/12.8.1

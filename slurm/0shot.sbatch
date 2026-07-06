@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=mist-qa-zeroshot
+#SBATCH --job-name=mist-qa-0shot
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
 #SBATCH --time=12:00:00
@@ -8,9 +8,10 @@
 #SBATCH --mail-user=jenchien.hou@tum.de
 #
 # Full zero-shot dev run (the baseline experiment). One sbatch file per experiment, named
-# after it -- this one was slurm/job.sbatch before that convention existed, so older logs
-# are named logs/mist-qa-<jobid>.out rather than logs/mist-qa-zeroshot-<jobid>.out.
-# Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU):  sbatch slurm/zeroshot.sbatch
+# after it -- this one was slurm/job.sbatch (job name mist-qa) before that convention
+# existed; its committed log was renamed retroactively to match (mist-qa-3786727.out ->
+# mist-qa-0shot-3786727.out), so SLURM job IDs in old logs still line up with git history.
+# Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU):  sbatch slurm/0shot.sbatch
 # Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
 #
 # Log goes to logs/ (committed -- $WORK has no backup/retention guarantee, so `git add
