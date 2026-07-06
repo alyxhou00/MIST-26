@@ -117,7 +117,7 @@ cd MIST-26
 bash slurm/setup.sh
 ```
 
-**3. (Recommended) Smoke test on a GPU** — grab an interactive node and run 20 examples:
+**3. (Recommended) Smoke test on a GPU.** Either grab an interactive node and run 20 examples:
 
 ```bash
 srun --partition=a40 --gres=gpu:a40:1 --time=00:15:00 --pty bash -l
@@ -127,6 +127,12 @@ export HF_HOME=$WORK/hf_cache HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 python scripts/benchmark.py --limit 20
 exit          # release the interactive allocation
 ```
+
+...or submit [`slurm/smoke.sbatch`](slurm/smoke.sbatch) (`sbatch slurm/smoke.sbatch`), a short
+(~40 min) job that A/Bs `--lang-hint` on/off over just the cross-lingual `aya` rows — a cheap
+way to check a prompt change before spending ~10h on the full `job.sbatch` run. Edit the
+`SRC`/`LANG` vars at the top to target a different subset. The `--source`/`--lang` filters it
+uses are on `benchmark.py` directly (e.g. `--source aya --lang hin_Deva`).
 
 **4. Submit the full dev-set run** and check the result:
 

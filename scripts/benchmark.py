@@ -7,6 +7,7 @@ run `scripts/evaluate.py` on the CSV for chrF/BERTScore/ROUGE-L (single source o
     python scripts/benchmark.py --limit 50     # quick check on 50 examples
     python scripts/benchmark.py                # full dev split (target-language hint ON by default)
     python scripts/benchmark.py --no-lang-hint # raw zero-shot: no target-language instruction
+    python scripts/benchmark.py --source aya --lang hin_Deva   # only the cross-lingual aya rows
 """
 
 import argparse
@@ -22,6 +23,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="Qwen/Qwen3.5-2B")
     ap.add_argument("--limit", type=int, default=0, help="0 = whole dev split")
+    ap.add_argument("--source", default=None,
+                    help="only dev rows whose `source` contains this substring, case-insensitive "
+                         "(e.g. 'aya', 'belebele'). Useful for a targeted smoke test.")
+    ap.add_argument("--lang", default=None,
+                    help="only dev rows with this exact lang_code (e.g. 'hin_Deva')")
     ap.add_argument("--max-new-tokens", type=int, default=256)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="runs/predictions.csv",
@@ -39,9 +45,19 @@ def main() -> None:
     df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
     qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
     dev = qa.iloc[: int(len(qa) * 0.2)]
+    # Optional filters, applied within the dev split so we still only ever touch dev rows.
+    # --limit is applied last, so it caps whatever the filters leave.
+    if args.source:
+        dev = dev[dev["source"].str.contains(args.source, case=False, na=False)]
+    if args.lang:
+        dev = dev[dev["lang_code"] == args.lang]
     if args.limit:
         dev = dev.head(args.limit)
-    print(f"dev examples: {len(dev)}")
+    print(f"dev examples: {len(dev)}  "
+          f"(source={args.source}, lang={args.lang}, limit={args.limit or 'none'})")
+    if len(dev) == 0:
+        print("no rows match the filters; nothing to do.")
+        return
 
     # --- model (Qwen3.5-2B is multimodal; we use it text-only) ---
     import torch
