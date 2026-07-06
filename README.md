@@ -75,15 +75,21 @@ text-only (each `input` is one user turn); it needs a recent `transformers` (see
 
 ```bash
 python scripts/benchmark.py --limit 50     # quick check
-python scripts/benchmark.py                # full dev split
-python scripts/benchmark.py --lang-hint    # prefix prompts with "Please respond in <language>."
+python scripts/benchmark.py                # full dev split (target-language hint ON by default)
+python scripts/benchmark.py --no-lang-hint # raw zero-shot: no target-language instruction
 ```
 
-`--lang-hint` derives the target language from `lang_code` and adds it as an explicit
-instruction. Most examples don't need it (the input's language already matches the expected
-output language), but a few — e.g. `aya_dataset` rows where the question is in English but the
-answer is expected in another language — are otherwise ambiguous: nothing in the input signals
-that the output should switch languages.
+**Language hint (on by default).** Each prompt gets a system turn `Respond in <language>.`,
+where `<language>` is derived from `lang_code`. `lang_code` is the **output** language (verified:
+e.g. `FBK-MT/MCIF` `zho_Hans` rows have an English input passage but Chinese golds). Most examples
+don't strictly need the hint — the input's language already matches the expected output — but a
+few (e.g. `aya_dataset` rows where the question is English but the answer is expected in another
+language) are otherwise ambiguous: nothing in the input signals that the output should switch
+languages. The same template lives in [`scripts/prompt_template.py`](scripts/prompt_template.py)
+and is reused for SFT so training and inference match.
+
+Pass **`--no-lang-hint`** to drop the system turn and reproduce the raw zero-shot baseline
+(user turn only) — useful as an A/B control to measure how much the hint helps.
 
 ## Running on the Alex cluster (NHR@FAU)
 

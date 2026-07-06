@@ -4,7 +4,8 @@ Splits the `qa` examples 80/20 (train/dev, seed 42), runs the model zero-shot on
 half via its chat template, and reports chrF.
 
     python scripts/benchmark.py --limit 50     # quick check on 50 examples
-    python scripts/benchmark.py                # full dev split
+    python scripts/benchmark.py                # full dev split (target-language hint ON by default)
+    python scripts/benchmark.py --no-lang-hint # raw zero-shot: no target-language instruction
 """
 
 import argparse
@@ -13,20 +14,7 @@ from pathlib import Path
 
 from datasets import load_dataset
 
-# lang_code -> human-readable name, for the optional --lang-hint prompt prefix.
-# Covers the 27 languages listed in the WMT26 MIST task page; the 2 "surprise"
-# test languages aren't known yet.
-LANG_NAMES = {
-    "arb_Arab": "Arabic", "ben_Beng": "Bengali", "ces_Latn": "Czech",
-    "ckb_Arab": "Central Kurdish", "deu_Latn": "German", "eng_Latn": "English",
-    "fin_Latn": "Finnish", "fra_Latn": "French", "hat_Latn": "Haitian Creole",
-    "hin_Deva": "Hindi", "ind_Latn": "Indonesian", "ita_Latn": "Italian",
-    "jpn_Jpan": "Japanese", "kor_Hang": "Korean", "mar_Deva": "Marathi",
-    "pes_Arab": "Persian", "por_Latn": "Portuguese", "rus_Cyrl": "Russian",
-    "slk_Latn": "Slovak", "spa_Latn": "Spanish", "swh_Latn": "Swahili",
-    "tel_Telu": "Telugu", "tha_Thai": "Thai", "tur_Latn": "Turkish",
-    "vie_Latn": "Vietnamese", "yor_Latn": "Yoruba", "zho_Hans": "Chinese",
-}
+from prompt_template import build_messages
 
 
 def main() -> None:
@@ -37,11 +25,13 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="runs/predictions.csv",
                     help="CSV of per-example source/lang/input/gold/prediction")
-    ap.add_argument("--lang-hint", action="store_true",
-                    help="prefix each prompt with 'Please respond in <language>.', "
-                         "derived from lang_code -- disambiguates examples where the "
-                         "input's language differs from the expected output language "
-                         "(e.g. aya_dataset: English question, non-English answer)")
+    ap.add_argument("--lang-hint", action=argparse.BooleanOptionalAction, default=True,
+                    help="add a system turn 'Respond in <language>.' derived from lang_code "
+                         "(default: ON). Disambiguates examples where the input's language "
+                         "differs from the expected output language (e.g. aya_dataset: English "
+                         "question, non-English answer). Pass --no-lang-hint to disable and "
+                         "reproduce the raw zero-shot baseline. Same template is reused for SFT "
+                         "(prompt_template.py).")
     args = ap.parse_args()
 
     # --- data: qa subset, 80/20 split, evaluate on dev ---
@@ -73,12 +63,9 @@ def main() -> None:
         writer.writerow(["source", "lang_code", "input", "gold", "prediction"])
         for i, row in enumerate(dev.itertuples(index=False), 1):
             try:
-                content = row.input
-                if args.lang_hint:
-                    lang_name = LANG_NAMES.get(row.lang_code, row.lang_code)
-                    content = f"Please respond in {lang_name}.\n\n{content}"
+                messages = build_messages(row.input, row.lang_code, lang_hint=args.lang_hint)
                 prompt = tok.apply_chat_template(
-                    [{"role": "user", "content": content}],
+                    messages,
                     tokenize=False,
                     add_generation_prompt=True,
                     enable_thinking=False,  # 2B is prone to thinking loops; keep non-thinking (card)
