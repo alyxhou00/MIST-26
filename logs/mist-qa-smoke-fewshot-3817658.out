@@ -1,0 +1,360 @@
+### Starting TaskPrologue of job 3817658 on a0229 at Mon Jul  6 06:30:31 PM CEST 2026
+Running on cores 112-127 with governor performance
+Mon Jul  6 18:30:31 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:A1:00.0 Off |                  Off |
+|  0%   37C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+=== 3-shot (source=aya lang=hin_Deva) ===
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/atuin/b279bb/b279bb31/hf_cache/datasets/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Fri Jun 26 19:41:21 2026).
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+dev examples: 57  shots=3  (source=aya, lang=hin_Deva, limit=none)
+Loading weights:   0%|          | 0/617 [00:00<?, ?it/s]Loading weights:   0%|          | 1/617 [00:01<16:29,  1.61s/it]Loading weights:   2%|▏         | 10/617 [00:01<01:18,  7.72it/s]Loading weights:   3%|▎         | 18/617 [00:01<00:39, 15.04it/s]Loading weights:   4%|▍         | 24/617 [00:02<00:30, 19.30it/s]Loading weights:   5%|▍         | 29/617 [00:02<00:26, 22.09it/s]Loading weights:   6%|▌         | 37/617 [00:02<00:19, 29.98it/s]Loading weights:   7%|▋         | 42/617 [00:02<00:22, 25.52it/s]Loading weights:   7%|▋         | 46/617 [00:02<00:22, 25.25it/s]Loading weights:  10%|▉         | 60/617 [00:02<00:13, 40.03it/s]Loading weights:  11%|█         | 66/617 [00:03<00:14, 36.77it/s]Loading weights:  12%|█▏        | 77/617 [00:03<00:11, 45.50it/s]Loading weights:  13%|█▎        | 83/617 [00:03<00:11, 45.95it/s]Loading weights:  14%|█▍        | 89/617 [00:03<00:11, 44.39it/s]Loading weights:  15%|█▌        | 94/617 [00:03<00:11, 43.70it/s]Loading weights:  16%|█▌        | 99/617 [00:03<00:13, 39.00it/s]Loading weights:  17%|█▋        | 106/617 [00:03<00:11, 43.96it/s]Loading weights:  19%|█▉        | 116/617 [00:04<00:10, 47.15it/s]Loading weights:  21%|██        | 128/617 [00:04<00:08, 60.86it/s]Loading weights:  22%|██▏       | 135/617 [00:04<00:08, 55.48it/s]Loading weights:  23%|██▎       | 143/617 [00:04<00:08, 55.60it/s]Loading weights:  24%|██▍       | 149/617 [00:04<00:09, 49.75it/s]Loading weights:  25%|██▌       | 155/617 [00:04<00:10, 45.98it/s]Loading weights:  27%|██▋       | 168/617 [00:04<00:07, 60.60it/s]Loading weights:  28%|██▊       | 175/617 [00:05<00:08, 50.58it/s]Loading weights:  30%|██▉       | 183/617 [00:05<00:07, 56.31it/s]Loading weights:  31%|███       | 190/617 [00:05<00:07, 57.63it/s]Loading weights:  32%|███▏      | 198/617 [00:05<00:08, 48.99it/s]Loading weights:  33%|███▎      | 205/617 [00:05<00:09, 42.53it/s]Loading weights:  36%|███▌      | 220/617 [00:05<00:06, 61.92it/s]Loading weights:  37%|███▋      | 228/617 [00:06<00:07, 50.02it/s]Loading weights:  38%|███▊      | 235/617 [00:06<00:07, 51.37it/s]Loading weights:  39%|███▉      | 241/617 [00:06<00:08, 43.44it/s]Loading weights:  40%|████      | 248/617 [00:06<00:08, 45.34it/s]Loading weights:  41%|████      | 254/617 [00:07<00:12, 29.34it/s]Loading weights:  42%|████▏     | 259/617 [00:07<00:12, 29.71it/s]Loading weights:  44%|████▍     | 272/617 [00:07<00:08, 42.81it/s]Loading weights:  45%|████▌     | 278/617 [00:07<00:07, 44.99it/s]Loading weights:  46%|████▋     | 286/617 [00:07<00:06, 48.98it/s]Loading weights:  47%|████▋     | 292/617 [00:07<00:07, 42.29it/s]Loading weights:  49%|████▉     | 303/617 [00:07<00:05, 55.04it/s]Loading weights:  50%|█████     | 310/617 [00:08<00:06, 44.08it/s]Loading weights:  51%|█████     | 316/617 [00:08<00:07, 41.47it/s]Loading weights:  55%|█████▌    | 341/617 [00:08<00:03, 80.20it/s]Loading weights:  58%|█████▊    | 357/617 [00:08<00:02, 95.36it/s]Loading weights:  62%|██████▏   | 384/617 [00:08<00:01, 132.28it/s]Loading weights:  67%|██████▋   | 412/617 [00:08<00:01, 163.92it/s]Loading weights:  71%|███████   | 436/617 [00:08<00:01, 174.62it/s]Loading weights:  75%|███████▍  | 460/617 [00:09<00:00, 185.99it/s]Loading weights:  78%|███████▊  | 484/617 [00:09<00:00, 194.38it/s]Loading weights:  82%|████████▏ | 505/617 [00:09<00:00, 185.41it/s]Loading weights:  86%|████████▌ | 528/617 [00:09<00:00, 190.23it/s]Loading weights:  89%|████████▉ | 549/617 [00:09<00:00, 191.71it/s]Loading weights:  94%|█████████▍| 580/617 [00:09<00:00, 215.56it/s]Loading weights:  98%|█████████▊| 607/617 [00:09<00:00, 225.89it/s]Loading weights: 100%|██████████| 617/617 [00:09<00:00, 62.61it/s] 
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [1/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [2/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [3/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [4/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [5/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [6/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [7/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [8/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [9/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [10/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [11/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [12/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [13/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [14/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [15/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [16/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [17/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [18/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [19/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [20/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [21/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [22/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [23/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [24/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [25/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [26/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [27/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [28/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [29/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [30/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [31/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [32/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [33/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [34/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [35/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [36/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [37/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [38/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [39/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [40/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [41/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [42/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [43/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [44/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [45/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [46/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [47/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [48/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [49/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [50/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [51/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [52/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [53/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [54/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [55/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [56/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [57/57]
+wrote 57 rows -> runs/smoke-fewshot3-3817658.csv
+score it with:  python scripts/evaluate.py runs/smoke-fewshot3-3817658.csv
+Exception ignored in: <function ResourceTracker.__del__ at 0x14dc3be2fd80>
+Traceback (most recent call last):
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  28%|██▊       | 56/199 [00:00<00:00, 557.03it/s]Loading weights:  76%|███████▋  | 152/199 [00:00<00:00, 775.78it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 812.79it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+file: runs/smoke-fewshot3-3817658.csv
+n = 57
+overall chrF      = 17.83
+overall BERTScore = 65.84
+overall ROUGE-L   = 2.19
+
+by source:
+  CohereLabs/aya_dataset              n=   57  chrF= 17.83  BERTScore= 65.84  ROUGE-L=  2.19
+
+by language (best to worst chrF):
+  hin_Deva     n=   57  chrF= 17.83  BERTScore= 65.84  ROUGE-L=  2.19
+=== zero-shot control (source=aya lang=hin_Deva) ===
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/atuin/b279bb/b279bb31/hf_cache/datasets/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Fri Jun 26 19:41:21 2026).
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+dev examples: 57  shots=0  (source=aya, lang=hin_Deva, limit=none)
+Loading weights:   0%|          | 0/617 [00:00<?, ?it/s]Loading weights:   7%|▋         | 46/617 [00:00<00:01, 451.13it/s]Loading weights:  24%|██▎       | 146/617 [00:00<00:00, 770.08it/s]Loading weights:  39%|███▊      | 239/617 [00:00<00:00, 826.45it/s]Loading weights:  61%|██████    | 376/617 [00:00<00:00, 1037.26it/s]Loading weights: 100%|██████████| 617/617 [00:00<00:00, 1280.93it/s]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [1/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [2/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [3/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [4/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [5/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [6/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [7/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [8/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [9/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [10/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [11/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [12/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [13/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [14/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [15/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [16/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [17/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [18/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [19/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [20/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [21/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [22/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [23/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [24/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [25/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [26/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [27/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [28/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [29/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [30/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [31/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [32/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [33/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [34/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [35/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [36/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [37/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [38/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [39/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [40/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [41/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [42/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [43/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [44/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [45/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [46/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [47/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [48/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [49/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [50/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [51/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [52/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [53/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [54/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [55/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [56/57]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [57/57]
+wrote 57 rows -> runs/smoke-0shot-3817658.csv
+score it with:  python scripts/evaluate.py runs/smoke-0shot-3817658.csv
+Exception ignored in: <function ResourceTracker.__del__ at 0x14d6a644bd80>
+Traceback (most recent call last):
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 9696.29it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+file: runs/smoke-0shot-3817658.csv
+n = 57
+overall chrF      = 19.08
+overall BERTScore = 65.39
+overall ROUGE-L   = 2.68
+
+by source:
+  CohereLabs/aya_dataset              n=   57  chrF= 19.08  BERTScore= 65.39  ROUGE-L=  2.68
+
+by language (best to worst chrF):
+  hin_Deva     n=   57  chrF= 19.08  BERTScore= 65.39  ROUGE-L=  2.68
+=== JOB_STATISTICS ===
+=== current date     : Mon Jul  6 18:47:30 CEST 2026
+= Job-ID             : 3817658 on alex
+= Job-Name           : mist-qa-smoke-fewshot
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/slurm/smoke-fewshot.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:17:03
+= Total RAM usage    : 7.4 GiB of assigned  GiB (%)
+= Node list          : a0229
+= Subm/Elig/Start/End: 2026-07-06T18:30:26 / 2026-07-06T18:30:26 / 2026-07-06T18:30:27 / 2026-07-06T18:47:30
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc               5.6G   104.9G   209.7G        N/A   1,643      500K   1,000K        N/A    
+    /home/vault             0.0K  1048.6G  2097.2G        N/A       1      200K     400K        N/A    
+    /home/atuin            13.3G     0.0K     0.0K        N/A  43,095                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:A1:00.0, 1218861, 34 %, 20 %, 5256 MiB, 449609 ms
+NVIDIA A40, 00000000:A1:00.0, 1224431, 8 %, 3 %, 2714 MiB, 4901 ms
+NVIDIA A40, 00000000:A1:00.0, 1224660, 34 %, 20 %, 4644 MiB, 449851 ms
+NVIDIA A40, 00000000:A1:00.0, 1229701, 14 %, 6 %, 2718 MiB, 2910 ms
