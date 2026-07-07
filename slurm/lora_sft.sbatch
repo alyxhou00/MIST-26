@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-lora-sft
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=18:00:00
+#SBATCH --time=10:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -15,12 +15,13 @@
 # Assumes slurm/setup.sh has been (re-)run since it now also installs peft (requirements.txt)
 # and caches Qwen3.5-9B -- see README.
 #
-# 18h budget (same as fewshot.sbatch's, as a starting estimate for full-model forward+backward
-# over ~11,900 rows x 2 epochs -- there's no directly comparable prior run to scale from, since
-# every 2B/9B job so far was inference-only). If this isn't enough: the script checkpoints
-# every --save-steps (200) into ADAPTER and auto-resumes from the latest checkpoint there --
-# but only if the *next* submission points at that same directory, hence taking it as $1 above
-# (a fresh job ID would otherwise pick a fresh, empty adapter dir and restart from scratch).
+# 10h budget: job 3822375 (the first real run of this file, 18h budget at the time) logged
+# Trainer's own progress bar at step 21/1490 after 5:33 elapsed, projecting ~6.5h total -- 10h
+# leaves solid margin without the 18h of mostly-idle reserved allocation. If this isn't enough:
+# the script checkpoints every --save-steps (200) into ADAPTER and auto-resumes from the latest
+# checkpoint there -- but only if the *next* submission points at that same directory, hence
+# taking it as $1 above (a fresh job ID would otherwise pick a fresh, empty adapter dir and
+# restart from scratch).
 #
 # Output: adapter-only weights (small) to ADAPTER (default keyed by this job's ID; gitignored
 # scratch, like runs/ -- promote it elsewhere if you want to keep it beyond the cluster). Then

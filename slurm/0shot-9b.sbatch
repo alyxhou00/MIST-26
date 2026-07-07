@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-0shot-9b
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=24:00:00
+#SBATCH --time=10:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -14,11 +14,13 @@
 # Smoke-test first with slurm/smoke-9b.sbatch. Assumes slurm/setup.sh has been (re-)run since
 # it now also caches Qwen3.5-9B -- see README.
 #
-# Time limit is 24h (2x the 2B 0shot.sbatch's 12h): 9B is ~4.5x the weights of 2B and
-# generation is memory-bandwidth-bound, so per-token cost scales roughly with active weight
-# bytes; the 2B run only used 5h36m of its 12h budget, so 24h leaves real margin. 24h also
-# happens to be the hard per-job max on every partition here (`sinfo` shows
-# TIMELIMIT=1-00:00:00 on a40/a100/rtxpro6k/a100mig alike) -- if this run needs more, ask
+# Time limit is 10h: the first real run of this file (job 3822324, submitted with a 24h budget
+# before any 9B throughput was known) was measured mid-run at ~292/2978 rows in 39 minutes --
+# projects to ~6.7h total, close to the 2B baseline's 5h36m despite 9B being ~4.5x the weights
+# (Qwen3.5's hybrid attention/linear-attention layers apparently keep generation cost from
+# scaling with raw parameter count). 10h leaves real margin without reserving most of a 24h
+# slot idle. The hard per-job max on every partition here is 24h regardless (`sinfo` shows
+# TIMELIMIT=1-00:00:00 on a40/a100/rtxpro6k/a100mig) -- if a future run ever needs more, ask
 # NHR@FAU support about a longer QOS, or resume the remainder with --limit/--source/--lang and
 # concatenate CSVs (benchmark.py flushes each row as it's written, so a run that hits the wall
 # clock still leaves a valid, if incomplete, predictions CSV).

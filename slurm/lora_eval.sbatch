@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-lora-eval
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=24:00:00
+#SBATCH --time=10:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -17,9 +17,10 @@
 # Assumes slurm/setup.sh has been (re-)run since it now also installs peft (requirements.txt)
 # and caches Qwen3.5-9B -- see README.
 #
-# Time limit 24h, same as slurm/0shot-9b.sbatch (this is the same generation workload, just
+# Time limit 10h, same as slurm/0shot-9b.sbatch (this is the same generation workload, just
 # with a LoRA adapter attached -- adapter forward-pass overhead is negligible next to the base
-# 9B model's).
+# 9B model's). 0shot-9b's real run (job 3822324) measured ~6.7h projected total -- see that
+# file's comment for the math.
 #
 # Sampling params (--temperature 0.7 --top-p 0.8) come from Qwen3.5-9B's own card. --model
 # must match whatever train_lora.py used for this adapter (default Qwen3.5-9B) -- the adapter

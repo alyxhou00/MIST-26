@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-fewshot-9b
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=24:00:00
+#SBATCH --time=08:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -15,13 +15,16 @@
 # Smoke-test first with slurm/smoke-9b.sbatch. Assumes slurm/setup.sh has been (re-)run since
 # it now also caches Qwen3.5-9B -- see README.
 #
-# Time limit is 24h -- the hard per-job max on every partition here (`sinfo` shows
-# TIMELIMIT=1-00:00:00 on a40/a100/rtxpro6k/a100mig alike), so there's no headroom to give this
-# more than 0shot-9b.sbatch despite the extra per-prompt demonstration tokens. benchmark.py
-# flushes each row to the CSV as it's written, so a run that hits the wall clock still leaves a
-# valid (if incomplete) predictions CSV -- evaluate.py scores whatever's there. If it's cut off,
-# resume the remainder with --limit/--source/--lang filters and concatenate the CSVs, or ask
-# NHR@FAU support about a longer QOS for this account.
+# Time limit is 8h: the first real run of this file (job 3822329, submitted with a 30h->24h
+# budget before any 9B throughput was known) was measured mid-run at ~389/2978 rows in 33
+# minutes -- projects to ~4.3h total (faster than 0shot-9b.sbatch's ~6.7h estimate, consistently
+# with the 2B baselines too: few-shot answers imitate the shown demonstrations' brevity and hit
+# EOS sooner, where zero-shot tends to ramble -- see IMPLEMENTATION_NOTES.md's length-mismatch
+# finding). 8h leaves solid margin. The hard per-job max on every partition here is 24h
+# regardless (`sinfo` shows TIMELIMIT=1-00:00:00 on a40/a100/rtxpro6k/a100mig) -- if a future
+# run ever needs more, ask NHR@FAU support about a longer QOS, or resume the remainder with
+# --limit/--source/--lang and concatenate CSVs (benchmark.py flushes each row as it's written,
+# so a run that hits the wall clock still leaves a valid, if incomplete, predictions CSV).
 #
 # Sampling params (--temperature 0.7 --top-p 0.8) come from Qwen3.5-9B's own card.
 
