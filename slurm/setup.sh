@@ -16,10 +16,14 @@ source "$WORK/mist-venv/bin/activate"
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Pre-cache the dataset and models so the offline compute node finds them.
+# Pre-cache the dataset and models so the offline compute node finds them. Both Qwen3.5 sizes
+# are cached here (not just the one currently being benchmarked) so a single setup.sh run
+# leaves the login node ready for any experiment -- 0shot/fewshot/LoRA all take --model as a
+# flag, so switching between 2B and 9B never requires re-running setup.
 export HF_HOME="$WORK/hf_cache"
 python -c "from datasets import load_dataset; load_dataset('pinzhenchen/wmt26-mist-sample')"
 python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen3.5-2B')"
+python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen3.5-9B')"
 python -c "from huggingface_hub import snapshot_download; snapshot_download('bert-base-multilingual-cased')"  # for evaluate.py's BERTScore
 
 # Qwen3.5 is new; if this released transformers doesn't know "qwen3_5", install from source.

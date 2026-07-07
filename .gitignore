@@ -46,3 +46,7 @@ env/
 # committed (small, and $WORK has no backup guarantee).
 /runs/*
 !/runs/.gitkeep
+
+# Trained LoRA adapters (scripts/train_lora.py output) -- large, same reasoning as /runs/ above.
+/adapters/*
+!/adapters/.gitkeep

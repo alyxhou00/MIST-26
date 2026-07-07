@@ -9,3 +9,4 @@ pandas
 sacrebleu
 bert-score
 rouge-score
+peft

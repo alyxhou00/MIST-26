@@ -53,11 +53,13 @@ print(ds["train"])   # the only split -- train
 
 | Path | Contents |
 |------|----------|
-| [`scripts/`](scripts) | `benchmark.py` (generation), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
-| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (full dev runs), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` (cheap A/Bs); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
+| [`scripts/`](scripts) | `benchmark.py` (generation, zero/few-shot, base or LoRA), `train_lora.py` (LoRA SFT), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
+| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (Qwen3.5-2B full dev runs), `0shot-9b.sbatch` / `fewshot-9b.sbatch` (Qwen3.5-9B), `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` / `smoke-9b.sbatch` / `smoke-lora.sbatch` (cheap A/Bs and pipeline checks); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
+| `adapters/` | gitignored scratch dir for trained LoRA adapters (`train_lora.py --out`), same reasoning as `runs/` |
+| [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log -- one row per SLURM job ID, with its config and chrF/BERTScore/ROUGE-L |
 
 `$WORK/mist-out` (outside the repo) was the old location for predictions CSVs before this
 layout existed. It's no longer used by any sbatch job -- everything now lives
@@ -121,6 +123,48 @@ N-shot vs zero-shot on the cross-lingual `aya` subset (edit `SRC`/`LANG`/`SHOTS`
 (`sbatch slurm/fewshot.sbatch` for 3 shots, or pass a count: `sbatch slurm/fewshot.sbatch 5`).
 Its time limit is 18h rather than 12h because every prompt carries N extra demonstration
 passages.
+
+## 2. Qwen3.5-9B benchmark
+
+The organizers allow any model/approach (including fine-tuning or distillation) as long as the
+final model is under 10B parameters, so `Qwen/Qwen3.5-9B` -- the same model family as the 2B
+above, just a bigger size in the same collection -- is benchmarked the same two ways (0-shot,
+then few-shot) before building on it with LoRA SFT. `benchmark.py --model`/`--shots` already
+generalize to it; the only real difference is sampling parameters, since Qwen's model cards give
+per-size recommendations (9B's non-thinking-mode card: `temperature=0.7, top_p=0.8, top_k=20`,
+vs. the 2B-specific `1.0/1.0/20` `benchmark.py` otherwise defaults to) -- hence the new
+`--temperature`/`--top-p` flags.
+
+On the cluster: `bash slurm/setup.sh` now also caches Qwen3.5-9B (re-run it if you set up before
+this was added). [`slurm/smoke-9b.sbatch`](slurm/smoke-9b.sbatch) is a ~1h 0-shot/3-shot A/B on
+the same `aya`/`hin_Deva` subset `smoke-fewshot.sbatch` uses, to sanity-check the bigger model
+before committing to a full run; [`slurm/0shot-9b.sbatch`](slurm/0shot-9b.sbatch) (24h) and
+[`slurm/fewshot-9b.sbatch`](slurm/fewshot-9b.sbatch) (30h, shot count as `$1`) are the full
+dev-set runs -- longer time limits than their 2B counterparts since 9B is ~4.5x the weights.
+
+## 3. LoRA SFT
+
+[`scripts/train_lora.py`](scripts/train_lora.py) fine-tunes a LoRA adapter on the train 80% of
+the `qa` split (the same seed-42 split `benchmark.py` evaluates against), using the identical
+zero-shot prompt (`prompt_template.build_messages`, no demonstrations) so the adapter is trained
+to be good at the same thing `benchmark.py --shots 0` measures -- keeping "did SFT help"
+independent of "did few-shot help". LoRA attaches to the text decoder's attention (`q/k/v/o_proj`)
+and every layer's MLP (`gate/up/down_proj`); Qwen3.5 is a hybrid architecture (some decoder
+layers are full self-attention, others gated linear attention) but every layer has an MLP, so
+that half of the adaptation still reaches the whole network. Defaults to `Qwen/Qwen3.5-9B`
+(`--model` to use a different size, e.g. the already-benchmarked 2B).
+
+`benchmark.py --lora <adapter dir>` loads the trained adapter on top of `--model` (which must
+match whatever `train_lora.py` used) before generation -- everything downstream (predictions CSV
+-> `evaluate.py`) is identical in shape to the prompting-only baselines.
+
+On the cluster: `bash slurm/setup.sh` now also installs `peft` (added to `requirements.txt`).
+[`slurm/smoke-lora.sbatch`](slurm/smoke-lora.sbatch) (~30 min) trains on 200 rows for 1 epoch
+and evaluates on 50 dev rows, to check the pipeline end-to-end before the full run;
+[`slurm/lora_sft.sbatch`](slurm/lora_sft.sbatch) (18h, checkpoints every 200 steps and
+auto-resumes -- see the file for how to resubmit) trains the full adapter; then
+[`slurm/lora_eval.sbatch <adapter dir>`](slurm/lora_eval.sbatch) (24h) scores it on the full
+dev set.
 
 ## Running on the Alex cluster (NHR@FAU)
 
@@ -228,12 +272,8 @@ don't want the newest one picked automatically.
 
 ## Results so far
 
-`predictions/predictions-3786727.csv` (2978 dev examples, zero-shot, no `--lang-hint`), scored
-with `scripts/evaluate.py`:
-
-overall chrF = 18.01, BERTScore = 62.21, ROUGE-L = 12.51
-
-Best-scoring languages (chrF): Indonesian (25.7), English (25.1), French (25.0). Worst: Telugu
-(6.2), Swahili (7.2), Thai (7.2). See
+See [`EXPERIMENTS.md`](EXPERIMENTS.md) for the full experiment log (one row per SLURM job ID,
+with its config and chrF/BERTScore/ROUGE-L). Headline so far: Qwen3.5-2B 0-shot chrF=18.01 ->
+3-shot chrF=21.84 (BERTScore/ROUGE-L improve alongside it). See
 [`scripts/error_analysis.py`](scripts/error_analysis.py) for a script-mismatch/length-mismatch
-breakdown of the low scorers.
+breakdown of the low-scoring languages.

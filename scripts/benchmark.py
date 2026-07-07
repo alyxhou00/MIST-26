@@ -10,11 +10,16 @@ chat template, and writes a predictions CSV. Scoring is a separate step -- run
     python scripts/benchmark.py --no-lang-hint        # raw zero-shot: no target-language instruction
     python scripts/benchmark.py --source aya --lang hin_Deva   # only the cross-lingual aya rows
     python scripts/benchmark.py --out runs/my-run.csv          # choose where predictions are written
+    python scripts/benchmark.py --model Qwen/Qwen3.5-9B --temperature 0.7 --top-p 0.8  # a bigger base
+    python scripts/benchmark.py --lora adapters/qwen3.5-9b-qa-lora-<jobid>  # a LoRA-SFT'd model
 
 Flags: --shots (few-shot demonstrations per example, default 0 = zero-shot) · --limit (cap dev
 rows) · --source (substring on `source`) · --lang (exact lang_code) · --[no-]lang-hint
 (target-language system turn, default on) · --out (predictions CSV path) · --model ·
---max-new-tokens · --seed. Filters combine and apply within the dev split.
+--temperature/--top-p (sampling params; defaults match Qwen3.5-2B's card, override for other
+model sizes -- e.g. Qwen3.5-9B's card recommends 0.7/0.8) · --lora (adapter dir from
+scripts/train_lora.py, loaded on top of --model) · --max-new-tokens · --seed. Filters combine
+and apply within the dev split.
 """
 
 import argparse
@@ -91,6 +96,16 @@ def main() -> None:
                          "question, non-English answer). Pass --no-lang-hint to disable and "
                          "reproduce the raw zero-shot baseline. Same template is reused for SFT "
                          "(prompt_template.py).")
+    ap.add_argument("--temperature", type=float, default=1.0,
+                    help="sampling temperature (default 1.0 matches Qwen3.5-2B's non-thinking "
+                         "card recommendation; other model sizes have their own recommended "
+                         "value, e.g. Qwen3.5-9B's card says 0.7)")
+    ap.add_argument("--top-p", type=float, default=1.0,
+                    help="nucleus sampling top-p (default 1.0 matches Qwen3.5-2B's card; "
+                         "e.g. Qwen3.5-9B's card recommends 0.8)")
+    ap.add_argument("--lora", default=None,
+                    help="path to a trained LoRA adapter (from scripts/train_lora.py) to load "
+                         "on top of --model before generation. Omit for the base model.")
     args = ap.parse_args()
 
     # --- data: qa subset, 80/20 split, evaluate on dev ---
@@ -124,7 +139,11 @@ def main() -> None:
     tok = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForImageTextToText.from_pretrained(
         args.model, torch_dtype=torch.bfloat16, device_map="cuda"
-    ).eval()
+    )
+    if args.lora:
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, args.lora)
+    model = model.eval()
 
     # --- generation ---
     # Each prediction is written to the CSV and flushed immediately, so an interrupted run
@@ -156,8 +175,8 @@ def main() -> None:
                         **inputs,
                         max_new_tokens=args.max_new_tokens,
                         do_sample=True,
-                        temperature=1.0,
-                        top_p=1.0,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
                         top_k=20,
                     )
                 pred = tok.decode(
