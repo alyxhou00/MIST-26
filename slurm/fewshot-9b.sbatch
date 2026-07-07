@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-fewshot-9b
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=30:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -15,11 +15,13 @@
 # Smoke-test first with slurm/smoke-9b.sbatch. Assumes slurm/setup.sh has been (re-)run since
 # it now also caches Qwen3.5-9B -- see README.
 #
-# Time limit is 30h (1.25x the 24h 0shot-9b.sbatch budget -- the same ratio the 2B
-# 0shot->fewshot step used, 12h->18h -- since every prompt carries N extra demonstration
-# passages on top of the already-larger 9B model). If SLURM rejects this as exceeding the
-# partition's max walltime, check `sinfo -p a40` / NHR@FAU docs and either request a longer
-# QOS or split the run with --limit.
+# Time limit is 24h -- the hard per-job max on every partition here (`sinfo` shows
+# TIMELIMIT=1-00:00:00 on a40/a100/rtxpro6k/a100mig alike), so there's no headroom to give this
+# more than 0shot-9b.sbatch despite the extra per-prompt demonstration tokens. benchmark.py
+# flushes each row to the CSV as it's written, so a run that hits the wall clock still leaves a
+# valid (if incomplete) predictions CSV -- evaluate.py scores whatever's there. If it's cut off,
+# resume the remainder with --limit/--source/--lang filters and concatenate the CSVs, or ask
+# NHR@FAU support about a longer QOS for this account.
 #
 # Sampling params (--temperature 0.7 --top-p 0.8) come from Qwen3.5-9B's own card.
 

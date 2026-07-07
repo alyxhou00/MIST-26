@@ -16,10 +16,12 @@
 #
 # Time limit is 24h (2x the 2B 0shot.sbatch's 12h): 9B is ~4.5x the weights of 2B and
 # generation is memory-bandwidth-bound, so per-token cost scales roughly with active weight
-# bytes; the 2B run only used 5h36m of its 12h budget, so 24h leaves real margin. If SLURM
-# rejects this as exceeding the partition's max walltime, check `sinfo -p a40` / NHR@FAU docs
-# and either request a longer QOS or split the run with --limit (I can't check partition
-# limits myself -- no cluster shell access).
+# bytes; the 2B run only used 5h36m of its 12h budget, so 24h leaves real margin. 24h also
+# happens to be the hard per-job max on every partition here (`sinfo` shows
+# TIMELIMIT=1-00:00:00 on a40/a100/rtxpro6k/a100mig alike) -- if this run needs more, ask
+# NHR@FAU support about a longer QOS, or resume the remainder with --limit/--source/--lang and
+# concatenate CSVs (benchmark.py flushes each row as it's written, so a run that hits the wall
+# clock still leaves a valid, if incomplete, predictions CSV).
 #
 # Sampling params (--temperature 0.7 --top-p 0.8) come from Qwen3.5-9B's own card -- different
 # from the 2B-specific defaults benchmark.py otherwise uses.
