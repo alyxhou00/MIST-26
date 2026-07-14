@@ -27,19 +27,21 @@ bigger base is worth building on.
 | 3822324 | 2026-07-08 | 0-shot full dev run | Qwen3.5-9B, shots=0, lang-hint ON | 2978 | 23.12 | 66.04 | 22.75 | `0shot-9b.sbatch`, 6h01. Beats 2B 0-shot (18.01/62.21/12.51) across the board. |
 | 3822329 | 2026-07-08 | few-shot full dev run (k=3) | Qwen3.5-9B, shots=3, lang-hint ON | 2978 | 27.64 | 77.79 | 43.79 | `fewshot-9b.sbatch`, 3h42. Best run so far. Gains concentrated in belebele (chrF 17.69→52.70) and tydiqa (21.88→38.94); aya essentially flat (24.03→24.19) — few-shot teaches answer *format*, not open-ended generation. Matches smoke 3822323 (aya/hin only: 0-shot 24.34 vs 3-shot 22.03, i.e. no aya gain). |
 
-## LoRA SFT (planned)
+## LoRA SFT on gold answers
 
-Distillation/fine-tuning is allowed by the organizers as long as the final model stays under
-10B parameters -- see [scripts/train_lora.py](scripts/train_lora.py) for the training setup
+Fine-tuning is allowed by the organizers as long as the final model stays under 10B
+parameters -- see [scripts/train_lora.py](scripts/train_lora.py) for the training setup
 (same train/dev split and prompt format as the prompting experiments above, evaluated
-zero-shot so it's directly comparable).
+zero-shot so it's directly comparable). Training targets here are the dataset's **gold
+answers** -- the contrast is the distilled variant below, which is the same recipe with
+teacher outputs as targets instead.
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 3822375 | 2026-07-08 | full LoRA SFT training | Qwen3.5-9B LoRA, r=16/alpha=32, 2 epochs | n/a (train run) | n/a | n/a | n/a | `lora_sft.sbatch`, 6h35, train_loss 0.664. Adapter: `adapters/qwen3.5-9b-qa-lora-3822375` (on the cluster; gitignored). Smoke pipeline check was 3822331. |
 | 3857589 | 2026-07-14/15 | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter 3822375, shots=0 | 2978 | _running_ | | | `lora_eval.sbatch`, submitted from the `$HOME/MIST-26` clone with `HF_DATASETS_CACHE=$HOME/hf_datasets_cache` (atuin group file quota exceeded — see README). First attempt 3857583 died in 38s: offline `datasets` does **not** re-prepare from the hub cache, it needs the prepared cache under `HF_DATASETS_CACHE`, so the 79MB prepared cache was copied to `$HOME` first. |
 
-## Distillation (planned next)
+## LoRA SFT on distilled data — teacher outputs + gold mix (planned next)
 
 Key finding from the 9B runs above: few-shot's gain is almost entirely *answer format*
 (belebele chrF 17.69→52.70, tydiqa 21.88→38.94) while open-ended generation (aya) stays flat
@@ -47,9 +49,10 @@ Key finding from the 9B runs above: few-shot's gain is almost entirely *answer f
 organizers allow distillation as long as the final model is <10B, so the plan is sequence-level
 KD: (1) generate teacher answers on the qa train split (~11.9K rows) with a strong teacher
 (Qwen3.5-32B on one A40, or a quantized 72B), (2) quality-filter against the golds
-(chrF/BERTScore threshold), (3) LoRA SFT the 9B on the filtered teacher outputs (optionally
-mixed with golds) — same recipe as `train_lora.py`, only the target text changes. Directly
-comparable to the gold-SFT adapter (3822375) row above.
+(chrF/BERTScore threshold), (3) LoRA SFT the 9B on the filtered teacher outputs **mixed with
+golds**, as a *fresh* adapter (not continued from 3822375) — same recipe as `train_lora.py`,
+only the training targets change. That keeps it directly comparable to the gold-only adapter
+(3822375) above: same starting point, same recipe, one variable (the data).
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a
