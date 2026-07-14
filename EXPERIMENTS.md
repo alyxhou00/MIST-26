@@ -17,15 +17,15 @@ ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 | 3814759 | 2026-07-06 | re-score of 3786727 | (rescoring only, no generation) | 2978 | 18.01 | 62.21 | 12.51 | `evaluate.sbatch`, after `evaluate.py` gained BERTScore/ROUGE-L. Same predictions as 3786727. |
 | 3817971 | 2026-07-06 | few-shot full dev run (k=3) | Qwen3.5-2B, shots=3, lang-hint ON | 2978 | 21.84 | 71.89 | 25.67 | `fewshot.sbatch`. Net improvement over the 18.01/62.21/12.51 baseline across all 27 languages. |
 
-## Qwen3.5-9B (planned)
+## Qwen3.5-9B
 
 Under the organizers' 10B-parameter cap; benchmarked before LoRA SFT to establish whether the
 bigger base is worth building on.
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| _pending_ | | 0-shot full dev run | Qwen3.5-9B, shots=0, lang-hint ON | 2978 | | | | `0shot-9b.sbatch` |
-| _pending_ | | few-shot full dev run (k=3) | Qwen3.5-9B, shots=3, lang-hint ON | 2978 | | | | `fewshot-9b.sbatch` |
+| 3822324 | 2026-07-08 | 0-shot full dev run | Qwen3.5-9B, shots=0, lang-hint ON | 2978 | 23.12 | 66.04 | 22.75 | `0shot-9b.sbatch`, 6h01. Beats 2B 0-shot (18.01/62.21/12.51) across the board. |
+| 3822329 | 2026-07-08 | few-shot full dev run (k=3) | Qwen3.5-9B, shots=3, lang-hint ON | 2978 | 27.64 | 77.79 | 43.79 | `fewshot-9b.sbatch`, 3h42. Best run so far. Gains concentrated in belebele (chrF 17.69→52.70) and tydiqa (21.88→38.94); aya essentially flat (24.03→24.19) — few-shot teaches answer *format*, not open-ended generation. Matches smoke 3822323 (aya/hin only: 0-shot 24.34 vs 3-shot 22.03, i.e. no aya gain). |
 
 ## LoRA SFT (planned)
 
@@ -36,5 +36,5 @@ zero-shot so it's directly comparable).
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| _pending_ | | full LoRA SFT training | Qwen3.5-9B LoRA, r=16/alpha=32, 2 epochs | n/a (train run) | n/a | n/a | n/a | `lora_sft.sbatch`; produces an adapter, scored separately below |
-| _pending_ | | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter, shots=0 | 2978 | | | | `lora_eval.sbatch <adapter path>` |
+| 3822375 | 2026-07-08 | full LoRA SFT training | Qwen3.5-9B LoRA, r=16/alpha=32, 2 epochs | n/a (train run) | n/a | n/a | n/a | `lora_sft.sbatch`, 6h35, train_loss 0.664. Adapter: `adapters/qwen3.5-9b-qa-lora-3822375` (on the cluster; gitignored). Smoke pipeline check was 3822331. |
+| _pending_ | | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter, shots=0 | 2978 | | | | `lora_eval.sbatch adapters/qwen3.5-9b-qa-lora-3822375` — **next job to submit** |

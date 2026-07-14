@@ -274,6 +274,7 @@ don't want the newest one picked automatically.
 
 See [`EXPERIMENTS.md`](EXPERIMENTS.md) for the full experiment log (one row per SLURM job ID,
 with its config and chrF/BERTScore/ROUGE-L). Headline so far: Qwen3.5-2B 0-shot chrF=18.01 ->
-3-shot chrF=21.84 (BERTScore/ROUGE-L improve alongside it). See
+2B 3-shot 21.84 -> 9B 0-shot 23.12 -> 9B 3-shot 27.64 (BERTScore/ROUGE-L improve alongside).
+The trained LoRA adapter (job 3822375) is awaiting its dev-set eval. See
 [`scripts/error_analysis.py`](scripts/error_analysis.py) for a script-mismatch/length-mismatch
 breakdown of the low-scoring languages.
