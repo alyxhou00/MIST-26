@@ -270,6 +270,37 @@ git add logs/mist-qa-eval-*.out && git commit -m "add eval log" && git push
 Pass a specific file (`sbatch slurm/evaluate.sbatch predictions/predictions-<jobid>.csv`) if you
 don't want the newest one picked automatically.
 
+### Temporary layout while the atuin group file quota is exceeded (July 2026)
+
+`$WORK` (`/home/atuin`) has a **group-wide file-count quota** (500K soft / 600K hard, shared
+by all ~24 accounts of group `b279bb`). As of 2026-07-14 the group is at 578K with the grace
+period expired, so **every write to atuin fails** with `Disk quota exceeded` — our own share
+is only ~85K files (almost all the two venvs), so this can't be fixed from our side; it needs
+other group members to clean up or an NHR@FAU quota increase.
+
+Until then, the working setup is a **hybrid**:
+
+- **Active repo clone: `$HOME/MIST-26`** (`/home/hpc/...` — per-user quota, 100G/500K files,
+  nearly empty). Submit jobs from there; `logs/` and `runs/` land there and commits/pushes work.
+- **Reads still come from atuin** — `$WORK/mist-venv`, `$WORK/hf_cache`, and the trained
+  adapters under `$WORK/MIST-26/adapters/` are unaffected (reading is not blocked). Pass
+  adapter paths absolutely, e.g. `/home/atuin/b279bb/b279bb31/MIST-26/adapters/...`.
+- **`HF_DATASETS_CACHE` must point somewhere writable.** In offline mode (`HF_HUB_OFFLINE=1`)
+  the `datasets` library does *not* re-prepare a dataset from the hub cache — it needs the
+  *prepared* cache under `HF_DATASETS_CACHE`, and it also writes locks there on every load
+  (this is what killed job 3857583 in 38s). The prepared cache (79MB, 32 files) was copied
+  once: `cp -r $WORK/hf_cache/datasets $HOME/hf_datasets_cache`. So submissions look like:
+
+  ```bash
+  cd $HOME/MIST-26
+  HF_DATASETS_CACHE=$HOME/hf_datasets_cache sbatch slurm/lora_eval.sbatch \
+      /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375
+  ```
+
+Once the quota is fixed: the old `$WORK/MIST-26` checkout is stale and dirty (everything it
+had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, and drop the
+`HF_DATASETS_CACHE` override.
+
 ## Results so far
 
 See [`EXPERIMENTS.md`](EXPERIMENTS.md) for the full experiment log (one row per SLURM job ID,
