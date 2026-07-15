@@ -27,6 +27,7 @@ import re
 import string
 import sys
 import unicodedata
+from collections import Counter
 from pathlib import Path
 
 import pandas as pd
@@ -100,7 +101,10 @@ def token_f1(preds, refs) -> float:
         if not p or not r:
             scores.append(100.0 * (p == r))
             continue
-        common = sum((pd.Series(p).value_counts() & pd.Series(r).value_counts()).clip(lower=0))
+        # Multiset intersection: Counter's & takes the min of each token's count, which is
+        # what SQuAD's F1 counts. (pandas' & on two value_counts is a *logical* and, not an
+        # elementwise min -- it silently misaligns indices and then dies on int & NaN.)
+        common = sum((Counter(p) & Counter(r)).values())
         if common == 0:
             scores.append(0.0)
             continue
