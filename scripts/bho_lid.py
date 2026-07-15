@@ -22,13 +22,24 @@ are trying to remove.
 Measured with `--eval` on sib200 (FLORES-derived, 400 parallel sentences per language), by
 document length:
 
-    1 sentence    bho recall 65.0%   precision  98.9%   4-way acc 71.1%
-    3 sentences   bho recall 91.0%   precision 100.0%   4-way acc 94.2%
-    5 sentences   bho recall 95.0%   precision 100.0%   4-way acc 98.1%
+    1 sentence    bho recall  73.2%   precision  98.3%   4-way acc 73.0%
+    3 sentences   bho recall  94.0%   precision  99.2%   4-way acc 94.2%
+    5 sentences   bho recall 100.0%   precision 100.0%   4-way acc 97.8%
 
-So it is precision-safe on anything paragraph-sized (fineweb-2 documents), and should not be
-trusted on single short sentences. Recall costs us some genuine Bhojpuri; that trade is
-correct here, because we are selecting from a corpus rather than trying to keep every row.
+So: usable on anything paragraph-sized, not to be trusted on single short sentences.
+
+**Read those numbers narrowly.** sib200 is FLORES news prose, and they do NOT transfer to
+other registers -- an earlier version of this module scored 91%/100% there while confidently
+mislabelling genuine Bhojpuri *web* text as Nepali, because the marker list had been built
+from that same clean register and had no coverage of the everyday -ela/-ala verb forms
+(होला, जाला, होवेला). Treat --eval as a regression test, not as a general accuracy claim;
+judge any new corpus by sampling its rejects (`--text`), as `build_bho_pack.py --report`
+invites you to.
+
+On the corpus that actually matters, fineweb-2's bho_Deva (2,929 documents >=300 chars):
+96.2% classify as bho, 2.8% abstain, and only ~1% come back as hin/npi/mai -- i.e. that
+subset is largely clean, and this gate earns its place mainly by abstaining on the margins
+rather than by catching mass contamination.
 
 This is deliberately a stopgap: **GlotLID** (`cis-lmu/glotlid`, covers `bho_Deva` properly)
 is the real tool and is what roadmap F should gate generation with. This module exists
@@ -50,9 +61,17 @@ from collections import Counter
 # that the other three do not share -- a marker that appears in two of these languages is
 # worse than no marker, because it pushes `classify` toward abstaining rather than deciding.
 MARKERS = {
+    # The -ela/-ala habitual verb endings (होला "is", जाला "goes", करेला "does") are the
+    # single most reliable Bhojpuri signal in running text, and were missing from the first
+    # version of this list -- which was built only from sib200's FLORES news register. On
+    # fineweb's web register that gap left genuinely Bhojpuri documents scoring bho=0.0, so
+    # they were classified off whatever stray Hindi word they happened to contain.
     "bho": ["बा", "बाड़", "बाड़ी", "बाड़े", "नइखे", "करेला", "करेलें", "रहल", "एगो", "रउआ",
             "रउरा", "हमनी", "जवन", "बाकिर", "होखे", "भइल", "कइल", "सकेला", "चलेला", "दिहल",
-            "गइल", "लागल", "करत", "खातिर", "ओकर", "इहाँ", "केहू", "काहे"],
+            "गइल", "लागल", "करत", "खातिर", "ओकर", "इहाँ", "केहू", "काहे",
+            "होला", "जाला", "होखेला", "होवेला", "रहेला", "देला", "लेला", "मिलेला",
+            "जायेला", "लागेला", "फरेला", "कहल", "मनावल", "पावल", "होइल", "कहेला",
+            "बानी", "बाटे", "हवे", "हउवे", "जवना", "जौन", "अउरी", "बड़हन"],
     "hin": ["है", "हैं", "था", "थे", "थी", "और", "नहीं", "करता", "करते", "हुआ", "गया",
             "रहा", "रही", "किया", "लिए", "साथ", "बहुत", "यह", "वह", "कोई", "क्यों"],
     "mai": ["अछि", "छल", "छलाह", "छथि", "करैत", "मुदा", "एवं", "सँ", "केर", "भेल", "गेल",
@@ -68,6 +87,15 @@ _TOK = re.compile(r"[ऀ-ॿ]+")
 DEFAULT_MARGIN = 1.25
 MIN_TOKENS = 12  # below this, densities are too noisy to be worth trusting (see --eval)
 
+# A `margin` alone is not enough: "best >= 1.25 * rival" is VACUOUSLY true whenever the
+# rivals score 0.0, so a single stray token used to win outright. On fineweb web text that
+# produced confident nonsense -- genuine Bhojpuri ("आम ... के पेड़ पर फरेला") came back as
+# `npi` off one spurious marker, with densities {bho 0.0, hin 0.0, mai 0.0, npi 0.016}.
+# So the winner must also clear an ABSOLUTE floor. Calibrated on fineweb: documents that are
+# really Bhojpuri carry a marker density of p05=0.021 / p50=0.058, while noise verdicts sit
+# near 0.01, so 0.015 separates them without touching genuine matches.
+MIN_DENSITY = 0.015
+
 
 def densities(text: str) -> dict[str, float]:
     """Marker density per language: share of Devanagari tokens that are that language's
@@ -78,23 +106,30 @@ def densities(text: str) -> dict[str, float]:
     return {lang: sum(t in set(ms) for t in toks) / len(toks) for lang, ms in MARKERS.items()}
 
 
-def classify(text: str, margin: float = DEFAULT_MARGIN,
-             min_tokens: int = MIN_TOKENS) -> str | None:
-    """Best-matching language, or None when no language wins by `margin`x (or the text is
-    too short to judge)."""
+def classify(text: str, margin: float = DEFAULT_MARGIN, min_tokens: int = MIN_TOKENS,
+             min_density: float = MIN_DENSITY) -> str | None:
+    """Best-matching language, or None when the evidence is too thin or too close.
+
+    Abstains (returns None) unless the winner both clears `min_density` in absolute terms
+    AND beats every rival by `margin`x. Both conditions matter: the margin catches genuine
+    ambiguity between two languages, the floor catches the far more common case of no real
+    evidence at all (see MIN_DENSITY).
+    """
     if len(_TOK.findall(text)) < min_tokens:
         return None
     d = densities(text)
-    if not d or max(d.values()) == 0:
+    if not d:
         return None
     best = max(d, key=d.get)
+    if d[best] < min_density:
+        return None
     rival = max(v for k, v in d.items() if k != best)
     return best if d[best] >= margin * rival else None
 
 
-def is_bhojpuri(text: str, margin: float = DEFAULT_MARGIN,
-                min_tokens: int = MIN_TOKENS) -> bool:
-    return classify(text, margin, min_tokens) == "bho"
+def is_bhojpuri(text: str, margin: float = DEFAULT_MARGIN, min_tokens: int = MIN_TOKENS,
+                min_density: float = MIN_DENSITY) -> bool:
+    return classify(text, margin, min_tokens, min_density) == "bho"
 
 
 # --------------------------------------------------------------------------------------

@@ -40,9 +40,15 @@ ungated, and fineweb-2 replaces Aya as the volume source.
 
 Web-scraped "Bhojpuri" is not reliably Bhojpuri, and a Hindi document mislabelled as bho
 would *teach* the very drift we are fixing. Every candidate is therefore checked with
-`scripts/bho_lid.py`, which is precision-safe at document length (100% precision / 91%
-recall on 3-sentence documents, measured against sib200; see that module). `--report` prints
-what the gate accepted and rejected -- read it before trusting the output.
+`scripts/bho_lid.py`. `--report` prints what the gate accepted and rejected -- read it
+before trusting the output.
+
+How much this gate is really doing, measured rather than assumed: fineweb-2's bho_Deva is
+**largely clean** -- ~96% of its documents classify as Bhojpuri and only ~1% as hin/npi/mai.
+So the gate is cheap insurance and a way to abstain on mixed-register junk, not a filter
+rescuing us from mass contamination. An earlier version of this docstring claimed it caught
+"167 Hindi / 80 Nepali / 16 Maithili" documents; that was wrong -- those were mostly the
+classifier's own false negatives on genuine Bhojpuri (see bho_lid.py's MIN_DENSITY).
 
 Constraint sentences on the continuation rows come from `scripts/constraint_bank.py`, so
 these rows also carry native Bhojpuri word budgets ("150 शब्दन में जवाब दीं।"): the bho test
