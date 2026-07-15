@@ -26,17 +26,29 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 
 | # | 方法 | 原始計畫 | 現況（2026-07-15 晚） |
 |---|---|---|---|
-| A | **對齊測試格式**（必做，投報比最高） | 寫 `run_test.py` 讀官方 JSONL、直接餵 self-contained prompt、輸出 `{id, output}`；dev 改「測試格式」重跑 sanity check — lang-hint 拿掉後大跌就表示依賴自家模板 | ✅ 完成。`run_test.py`＋sbatch 就緒、TEST_SET_ANALYSIS.md 文件化。唯一未收尾：lang-hint 依賴度 A/B = job 3859645（跑步中） |
+| A | **對齊測試格式**（必做，投報比最高） | 寫 `run_test.py` 讀官方 JSONL、直接餵 self-contained prompt、輸出 `{id, output}`；dev 改「測試格式」重跑 sanity check — lang-hint 拿掉後大跌就表示依賴自家模板 | ✅ 完成。`run_test.py`＋sbatch 就緒、TEST_SET_ANALYSIS.md 文件化。未收尾：lang-hint 依賴度 A/B = job 3859645（跑步中）。⚠️ **新發現（commit df12b0a）**：官方檔案是**雙重跳脫**的——全部 8,640 筆 qa-context prompt 帶的是字面上的 `\` `n` 兩個字元（不是換行），位置正好在「文章／問題／指令」的段落邊界。目前 verbatim 餵法讓模型在 **79% 的 qa 列**讀到字面 `\n\n`。TEST_SET_ANALYSIS §2 原本寫反了（用 `'\n' in prompt` 測，那測的是真換行）。`run_test.py --unescape` 可還原，**預設關**（會動到官方輸入，且 dev 沒有對應樣本可 A/B）→ 建議先 qualitative smoke，並列為 variant 提交的候選軸 |
 | B | **蒸餾**（人工評審讓它更值錢） | teacher 在 train split 生成 → chrF/BERTScore 對 gold 過濾 → teacher+gold 混合練全新 adapter（不接續 3822375，保持單變數可比）。OEG 是主要得分空間 | 🟡 生成中。122B(vLLM)/aya+oeg ✅（3859682，17 分鐘）；35B 全量 3 shards 跑步中（3859277-79，ETA 明晨）；`filter_teacher.py` ✅ 已在真資料出 report（3860144：30/70 留 44.3%，OEG 對 GPT-4.1 gold 分數特別高）；`train_lora.py --data` ✅ |
-| C | **指令遵循增強** | 訓練例隨機加「N 字內」「條列式」等約束並改寫目標答案。非英語長度控制是通用模型弱點，可拉開差距 | ⬜ 已證實必要（smoke：字數預算 9/10 violated）。設計要點：**從答案反推約束**（量答案字數→prompt 加「約 N 字」，永遠可滿足）；約束措辭**直接從測試集挖各語言原生說法**（已探勘：471/2,259 筆 OEG prompt 有數字字數約束，24 語樣本都在） |
-| D | **Bhojpuri 應急包** | FLORES-200、Aya collection 撈 bho_Deva 混進 SFT；驗證輸出不滑回 Hindi | ⬜ 已證實必要（smoke：bho 輸出漂成 Hindi/尼泊爾語/邁蒂利語）。注意：`facebook/flores` 在 HF 是 gated，改用 `openlanguagedata/flores_plus`；Aya 系列看 `CohereLabs/aya_collection_language_split` |
+| C | **指令遵循增強** | 訓練例隨機加「N 字內」「條列式」等約束並改寫目標答案。非英語長度控制是通用模型弱點，可拉開差距 | ✅ 程式就緒（`constraint_bank.py` + `augment_constraints.py`，commit db1addc）。**改良**：約束措辭不用手寫翻譯，直接從測試集**提取**——每個語言的 qa-context 尾巴全 360 列一字不差，可原樣取用；`--selftest` 對 tests.jsonl 驗證每條主張。**兩個易錯點**：jpn/zho 的預算單位是「字」（字元）不是詞，且有換算（150 words → zho 250字 → jpn 300字）；數字字形是**逐語言**而非逐文字系統（ben ১০০、mar १००、ckb ١٠٠、pes ۱۰۰，但 arb/hin/bho 都用 ASCII 100）。副產品：拿到各語言**確切的拒答字串**（"not answerable"/"无法回答"/…），可直接對治 smoke 的假拒答。待跑：等 filter_teacher 產出後套用 |
+| D | **Bhojpuri 應急包** | FLORES-200、Aya collection 撈 bho_Deva 混進 SFT；驗證輸出不滑回 Hindi | ✅ 資料已產出：**8,009 列** `data/sft-bho.jsonl`（在叢集，commit ab5aad3 + 修正）。⚠️ **原計畫的兩個資料源都是死路**（已對 HF API 查證）：`openlanguagedata/flores_plus` **也是 gated**（正是為了避開 gated 才選它）；`CohereLabs/aya_collection_language_split` 132 個語言 config **完全沒有 bho**。改用：`HuggingFaceFW/fineweb-2` config `bho_Deva`（18,666 篇原生網頁文，唯一有量的來源）→ 續寫任務 6,000 列；`CohereLabs/xP3x` config `bho_Deva`（**未 gated** 地拿到 FLORES 的 bho）→ hin→bho 翻譯 2,009 列。注意 xP3x 的 1.22M 列其實只有 **2,009 句** unique（200+ 來源語 × 3 template 展開），列數不等於資料量。品質閘：`bho_lid.py`（功能詞判別 bho/hin/mai/npi），實測 fineweb 的 bho 子集真的**混了 167 篇 Hindi、80 篇 Nepali、16 篇 Maithili** |
 | E | **任務路由**（幾乎零成本，合法） | qa-context 用 few-shot 示範（+35 chrF 來源）、qa-oeg 用蒸餾 adapter、sum-sum 接隊友。與隊友合流成聯合系統（共用同一個 9B base，否則爆 10B）才有總榜資格 | 🟡 設計定案。缺口：`run_test.py` 還沒有 `--shots`（variant1 安全牌也需要）。3858987（adapter+3shot，跑步中）出分後拍板 adapter 角色。⚠️ belebele MC 增益不轉移（測試集無選擇題），路由決策要看 tydiqa/aya 型分數 |
-| F | **推理期品質守門** | fastText LID（<1MB）檢查輸出語言、錯了換 seed 重生成；可試 best-of-N + 9B 自評 | ⬜ 未動工。LID 直接對治實測到的 bho 漂移；vLLM 管線讓 best-of-N 成本大降（實測批次 ~250× 快） |
+| F | **推理期品質守門** | fastText LID（<1MB）檢查輸出語言、錯了換 seed 重生成；可試 best-of-N + 9B 自評 | 🟡 起步了：`bho_lid.py`（D 的副產品）已可當 bho 守門員，對 sib200 實測 3 句以上文件 **recall 91% / precision 100%**（單句只有 65%，別用）。但它只認 bho/hin/mai/npi 四語——全 24 語的守門要用 **GlotLID**（`cis-lmu/glotlid`，有 bho_Deva），fastText `lid.176` 會把 bho/mai/mag 混成一個 `bh` 別用。best-of-N 未動工 |
 | G | **三份提交對沖** | primary = 蒸餾+路由完全體；variant1 = 9B 3-shot（27.64 安全牌）；variant2 = 激進版（best-of-N） | ⬜ 策略已定，最後 3 天執行：用 100% 樣本資料重練最終版、跑測試集、提交 |
 
 ## 時程（截止 2026-08-01 AoE）
 
-- **第 1 週（~07-20）**：A ✅ → B teacher 生成 ✅/🟡 → 過濾閾值定案 → C+D 資料準備
+- **第 1 週（~07-20）**：A ✅ → B teacher 生成 ✅/🟡 → 過濾閾值定案 → C ✅ + D ✅ 資料準備
 - **第 2 週（~07-27）**：C+D 混進同一次 SFT 重練 → E（含 `run_test.py --shots`）+ F 推理管線 →
   dev 上用測試格式驗證整條路由
 - **最後 3 天**：G — 100% 資料重練最終 adapter、跑官方測試集三種配置、Google Form 提交
+
+## 待決策 / 待辦（2026-07-15 晚，主線 session 交出）
+
+1. **`--unescape` 要不要進 primary**（見 A 列）。無 dev proxy，只能靠 qualitative smoke 判斷。
+2. **寄信給主辦方**（schmidtova@ufal.mff.cuni.cz）現在有**兩件**事可講：100 筆空 prompt，
+   以及 qa-context 的雙重跳脫。屬對外聯絡 → 使用者自己決定/執行。
+3. **C 尚未套用**：等 35B shards（3859277-79）合併過濾出 `data/sft-distilled.jsonl` 後，
+   跑 `augment_constraints.py` 產 `-c.jsonl`，再跟 `data/sft-bho.jsonl` 串起來練。
+4. **D 的 bho 資料還沒被模型看過** — 8,009 列已就緒但尚未進任何一次 SFT；
+   `bho_lid.py` 可在 eval 後直接量「輸出到底是不是 bho」。
+5. **拒答字串**（`constraint_bank.context_tail(lang).refusal_phrase`）目前只是被抽出來，
+   還沒被任何訓練/推理路徑使用 — 對治 smoke 的假拒答（4/10 arb）是現成的一步。
