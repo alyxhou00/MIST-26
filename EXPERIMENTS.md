@@ -54,26 +54,44 @@ the stored predictions CSVs with the current `evaluate.py` (no regeneration).
 BERTScore (175-word golds) and adds **word-budget compliance**, which is scored at test time
 and which nothing else here can see.
 
-| System | job | qa-context EM | qa-context F1 | qa-oeg chrF | qa-oeg BERT | budget in-band | (legacy overall chrF) |
-|---|---|---|---|---|---|---|---|
-| 9B 3-shot | 3822329 | **6.54** | **32.12** | 25.55 | 69.38 | 0% of 4 (−53% short) | 27.64 |
-| 9B + gold-LoRA, 0-shot | 3857589 | _pending_ | | | | | 26.56 |
-| 9B + gold-LoRA + 3-shot | 3858987 | _pending_ | | | | | 21.64 |
-| 9B 3-shot, no lang-hint | 3859645 | _pending_ | | | | | 25.97 |
-| 9B + distilled LoRA, 0-shot | — | _not built_ | | | | | |
+| System | job | qa-context **EM** | qa-context **F1** | (qa-ctx chrF) | qa-oeg chrF | qa-oeg BERT | qa-oeg budget | (legacy overall) |
+|---|---|---|---|---|---|---|---|---|
+| 9B 3-shot | 3822329 | 6.54 | **32.12** | 37.52 | 25.55 | 69.38 | 0% of 4 (−53%) | 27.64 |
+| **9B + gold-LoRA, 0-shot** | 3857589 | **16.92** | 31.09 | 23.31 | 29.06 | 72.89 | 0% of 4 (−56%) | 26.56 |
+| 9B + gold-LoRA + 3-shot | 3858987 | 4.74 | 13.87 | 16.00 | **29.62** | **73.98** | 25% of 4 (−55%) | 21.64 |
+| 9B 3-shot, no lang-hint | 3859645 | 4.36 | 26.90 | 34.12 | 25.64 | 69.27 | 0% of 4 (−53%) | 25.97 |
+| 9B + distilled LoRA, 0-shot | — | _not built_ | | | | | | |
 
-**What the first row already changes:** 3-shot's tydiqa chrF of 38.94 was the strongest
-number in this whole file and the reason `qa-context` looked solved. On the extraction
-metric the same predictions score **6.54 EM**. The model almost never returns the gold span.
-⚠️ Low EM does not by itself mean "wrong" — a verbose-but-correct answer ("the answer is
-1650" vs gold "1650") scores 0 EM and partial F1, so some of this gap is style, not accuracy.
-Whether that style is penalised depends on the organisers' automatic metric, **which we do
-not know**. What is now certain is only that chrF was hiding the gap.
+### ⚠️ The `qa-context` routing decision is NOT settled — chrF and EM disagree
 
-**Budget compliance, first measurement:** the 3-shot model writes **53% short** and lands in
-band on 0 of 4 budgeted dev rows. n=4 is far too small to trust the magnitude (dev has almost
-no budgeted rows — TEST_SET_ANALYSIS §4), but the direction contradicts the assumption behind
-roadmap C's framing: the failure is under-writing, not over-writing.
+Every earlier version of the plan routed `qa-context` to plain 3-shot, because the adapter
+"collapsed" on tydiqa (chrF 38.94 → 19.53). **That collapse is at least partly a chrF
+artifact.** On the metric the task is normally scored with, the adapter is **2.6× better at
+returning the gold span** (16.92 vs 6.54 EM) while token F1 is a near-tie (31.09 vs 32.12).
+
+The two numbers describe different failure shapes, and both are real:
+
+- **gold-LoRA** answers tersely — which is what gold targets teach and what extraction wants —
+  so it hits the span exactly far more often, but when it misses it misses completely (chrF≈0).
+- **3-shot** answers verbosely, wrapping the right span in a sentence. Almost never an exact
+  match, almost always in the neighbourhood — which is precisely what chrF rewards and EM does not.
+
+**Which one wins depends entirely on the organisers' automatic metric, and we do not know what
+it is.** This is now the highest-value unknown in the project: it flips the routing for 8,640
+of our 10,999 test rows, and no further experiment of ours can resolve it. It belongs in the
+email to the organisers (ROADMAP open item #2) alongside the 100 empty prompts and the
+double-escaping. Until then, treat `qa-context → 3-shot` as **unjustified**, not as decided.
+
+### Budget compliance: every system writes ~half of what it is asked for
+
+All four configs undershoot `qa-oeg` budgets by **53–56%** and land in band on 0–1 of 4 rows.
+n=4 (dev has almost no budgeted rows — TEST_SET_ANALYSIS §4) so the magnitude is not
+trustworthy, but the sign is consistent across four independent systems, and it contradicts
+the framing roadmap C was built on: the failure is **under**-writing, not over-writing.
+Worth re-measuring on real test outputs, where ~20% of qa-oeg rows carry a budget.
+
+(Curiosity, n=1: adapter+3-shot overshoots a budgeted `qa-context` row by **+1133%** — another
+face of the demos-confuse-the-adapter effect that sinks its EM to 4.74.)
 
 ## Qwen3.5-2B
 
