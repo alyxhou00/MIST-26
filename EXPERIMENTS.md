@@ -78,6 +78,8 @@ cached at `$HOME/hf_cache_teacher` (atuin unwritable).
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
+| 3859176 | 2026-07-15 | teacher smoke (`smoke-teacher.sbatch`) | Qwen3.5-35B-A3B bf16, 1× a100_80, 15 train rows | 15 | n\a (generation only) | | | COMPLETED 6m33s; 67.7GB GPU peak (fits with ~12GB headroom). Outputs eyeballed (`predictions/smoke-teacher-3859176.jsonl`): fluent, well-structured, but **hallucinates on knowledge questions** (wrong Japanese quiz answer, wrong NHL draft year, invented geography) — confirms the gold-filter step is load-bearing, not optional. Throughput ~14 s/row (verbose answers) → full 11,915-row train split ≈ 46h ⇒ split in 3. |
+| 3859277-79 | 2026-07-15 | full teacher generation, 3 shards | Qwen3.5-35B-A3B bf16, `--shard {1,2,3}/3`, lang-hint ON | 11,915 | _queued_ | | | `teacher_gen.sbatch --shard i/3 --out runs/teacher-s{i}of3.jsonl` (stable names → resumable on resubmit). ~15.5h/shard projected. Submitted 14:0x CEST, PD on Priority (a100 36/37 busy). |
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a

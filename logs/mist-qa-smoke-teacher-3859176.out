@@ -1,0 +1,76 @@
+### Starting TaskPrologue of job 3859176 on a0535 at Wed Jul 15 12:48:57 CEST 2026
+Running on cores 112-127 with governor performance
+Wed Jul 15 12:48:57 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:D1:00.0 Off |                    0 |
+| N/A   39C    P0             68W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/hpc/b279bb/b279bb31/hf_datasets_cache/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Tue Jul 14 23:54:09 2026).
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+train rows: 15 after shard=None, limit=15; 15 to generate
+Loading weights:   0%|          | 0/1026 [00:00<?, ?it/s]Loading weights:   0%|          | 1/1026 [00:01<29:14,  1.71s/it]Loading weights:   0%|          | 2/1026 [00:03<29:57,  1.76s/it]Loading weights:   1%|          | 8/1026 [00:03<05:11,  3.27it/s]Loading weights:   1%|          | 11/1026 [00:03<03:31,  4.81it/s]Loading weights:   1%|▏         | 14/1026 [00:07<08:47,  1.92it/s]Loading weights:   3%|▎         | 27/1026 [00:07<02:52,  5.78it/s]Loading weights:   3%|▎         | 32/1026 [00:10<04:52,  3.40it/s]Loading weights:   4%|▍         | 41/1026 [00:10<02:57,  5.54it/s]Loading weights:   4%|▍         | 45/1026 [00:10<02:28,  6.60it/s]Loading weights:   5%|▍         | 49/1026 [00:11<02:54,  5.61it/s]Loading weights:   5%|▌         | 52/1026 [00:13<04:25,  3.66it/s]Loading weights:   5%|▌         | 54/1026 [00:13<03:51,  4.20it/s]Loading weights:   6%|▌         | 58/1026 [00:14<03:57,  4.08it/s]Loading weights:   6%|▌         | 60/1026 [00:16<05:55,  2.72it/s]Loading weights:   7%|▋         | 68/1026 [00:16<03:01,  5.28it/s]Loading weights:   7%|▋         | 73/1026 [00:16<02:11,  7.23it/s]Loading weights:   8%|▊         | 78/1026 [00:17<01:40,  9.41it/s]Loading weights:   8%|▊         | 81/1026 [00:17<01:27, 10.78it/s]Loading weights:   8%|▊         | 84/1026 [00:20<04:53,  3.21it/s]Loading weights:   9%|▉         | 91/1026 [00:20<02:51,  5.47it/s]Loading weights:  10%|▉         | 100/1026 [00:21<02:08,  7.23it/s]Loading weights:  10%|█         | 103/1026 [00:23<03:21,  4.57it/s]Loading weights:  11%|█         | 114/1026 [00:23<01:49,  8.34it/s]Loading weights:  12%|█▏        | 118/1026 [00:24<02:14,  6.75it/s]Loading weights:  12%|█▏        | 121/1026 [00:26<03:43,  4.05it/s]Loading weights:  12%|█▏        | 127/1026 [00:29<05:03,  2.96it/s]Loading weights:  13%|█▎        | 136/1026 [00:29<02:59,  4.95it/s]Loading weights:  14%|█▍        | 147/1026 [00:29<01:51,  7.88it/s]Loading weights:  15%|█▍        | 151/1026 [00:30<02:11,  6.65it/s]Loading weights:  15%|█▌        | 154/1026 [00:33<03:32,  4.10it/s]Loading weights:  16%|█▌        | 164/1026 [00:33<02:02,  7.02it/s]Loading weights:  16%|█▋        | 169/1026 [00:33<02:07,  6.75it/s]Loading weights:  17%|█▋        | 173/1026 [00:36<03:22,  4.21it/s]Loading weights:  18%|█▊        | 183/1026 [00:36<01:57,  7.17it/s]Loading weights:  18%|█▊        | 188/1026 [00:40<04:13,  3.31it/s]Loading weights:  19%|█▉        | 196/1026 [00:45<05:55,  2.33it/s]Loading weights:  20%|██        | 207/1026 [00:45<03:31,  3.87it/s]Loading weights:  21%|██        | 217/1026 [00:46<02:19,  5.78it/s]Loading weights:  22%|██▏       | 223/1026 [00:49<03:27,  3.87it/s]Loading weights:  23%|██▎       | 233/1026 [00:49<02:16,  5.83it/s]Loading weights:  23%|██▎       | 239/1026 [00:53<03:44,  3.50it/s]Loading weights:  25%|██▍       | 252/1026 [00:53<02:11,  5.88it/s]Loading weights:  25%|██▌       | 258/1026 [00:56<03:11,  4.01it/s]Loading weights:  26%|██▌       | 265/1026 [01:00<03:53,  3.26it/s]Loading weights:  27%|██▋       | 274/1026 [01:00<02:41,  4.65it/s]Loading weights:  28%|██▊       | 285/1026 [01:00<01:44,  7.10it/s]Loading weights:  28%|██▊       | 291/1026 [01:05<03:38,  3.37it/s]Loading weights:  29%|██▉       | 299/1026 [01:05<02:34,  4.69it/s]Loading weights:  30%|██▉       | 307/1026 [01:06<02:15,  5.29it/s]Loading weights:  30%|███       | 311/1026 [01:08<02:57,  4.02it/s]Loading weights:  31%|███▏      | 322/1026 [01:08<01:46,  6.61it/s]Loading weights:  32%|███▏      | 327/1026 [01:11<02:48,  4.15it/s]Loading weights:  33%|███▎      | 334/1026 [01:14<03:28,  3.32it/s]Loading weights:  34%|███▎      | 346/1026 [01:15<02:02,  5.55it/s]Loading weights:  35%|███▍      | 354/1026 [01:15<01:29,  7.52it/s]Loading weights:  35%|███▍      | 359/1026 [01:18<02:36,  4.26it/s]Loading weights:  36%|███▋      | 373/1026 [01:18<01:26,  7.51it/s]Loading weights:  37%|███▋      | 380/1026 [01:21<02:23,  4.49it/s]Loading weights:  38%|███▊      | 390/1026 [01:22<01:37,  6.50it/s]Loading weights:  39%|███▊      | 396/1026 [01:25<02:29,  4.22it/s]Loading weights:  39%|███▉      | 403/1026 [01:32<04:40,  2.22it/s]Loading weights:  40%|████      | 412/1026 [01:32<03:09,  3.25it/s]Loading weights:  41%|████▏     | 424/1026 [01:32<01:56,  5.18it/s]Loading weights:  42%|████▏     | 430/1026 [01:43<05:25,  1.83it/s]Loading weights:  43%|████▎     | 440/1026 [01:43<03:33,  2.74it/s]Loading weights:  43%|████▎     | 446/1026 [01:47<03:57,  2.45it/s]Loading weights:  45%|████▍     | 460/1026 [01:47<02:13,  4.22it/s]Loading weights:  46%|████▌     | 467/1026 [01:50<02:35,  3.61it/s]Loading weights:  46%|████▌     | 472/1026 [01:51<02:27,  3.77it/s]Loading weights:  46%|████▋     | 476/1026 [01:53<02:44,  3.34it/s]Loading weights:  47%|████▋     | 482/1026 [01:53<02:00,  4.50it/s]Loading weights:  48%|████▊     | 491/1026 [01:53<01:16,  6.97it/s]Loading weights:  48%|████▊     | 496/1026 [01:54<01:26,  6.13it/s]Loading weights:  49%|████▊     | 500/1026 [01:56<01:50,  4.74it/s]Loading weights:  50%|█████     | 514/1026 [01:57<01:11,  7.11it/s]Loading weights:  50%|█████     | 517/1026 [01:59<01:46,  4.78it/s]Loading weights:  51%|█████▏    | 528/1026 [01:59<01:06,  7.52it/s]Loading weights:  52%|█████▏    | 531/1026 [02:00<01:18,  6.28it/s]Loading weights:  52%|█████▏    | 533/1026 [02:02<02:05,  3.93it/s]Loading weights:  53%|█████▎    | 541/1026 [02:03<01:36,  5.03it/s]Loading weights:  53%|█████▎    | 543/1026 [02:04<02:18,  3.50it/s]Loading weights:  54%|█████▍    | 552/1026 [02:05<01:18,  6.05it/s]Loading weights:  55%|█████▍    | 564/1026 [02:05<00:43, 10.61it/s]Loading weights:  55%|█████▌    | 569/1026 [02:07<01:21,  5.64it/s]Loading weights:  57%|█████▋    | 580/1026 [02:07<00:49,  9.00it/s]Loading weights:  57%|█████▋    | 585/1026 [02:10<01:33,  4.73it/s]Loading weights:  58%|█████▊    | 600/1026 [02:10<00:49,  8.63it/s]Loading weights:  59%|█████▉    | 606/1026 [02:13<01:20,  5.24it/s]Loading weights:  60%|█████▉    | 611/1026 [02:16<01:55,  3.58it/s]Loading weights:  61%|██████    | 622/1026 [02:16<01:11,  5.63it/s]Loading weights:  61%|██████    | 628/1026 [02:17<00:55,  7.13it/s]Loading weights:  62%|██████▏   | 634/1026 [02:18<00:59,  6.56it/s]Loading weights:  62%|██████▏   | 638/1026 [02:19<01:19,  4.90it/s]Loading weights:  63%|██████▎   | 647/1026 [02:20<00:50,  7.58it/s]Loading weights:  63%|██████▎   | 651/1026 [02:21<01:10,  5.32it/s]Loading weights:  64%|██████▎   | 654/1026 [02:22<01:19,  4.67it/s]Loading weights:  65%|██████▌   | 668/1026 [02:22<00:37,  9.57it/s]Loading weights:  66%|██████▌   | 673/1026 [02:25<01:07,  5.26it/s]Loading weights:  66%|██████▌   | 679/1026 [02:26<00:58,  5.97it/s]Loading weights:  66%|██████▋   | 682/1026 [02:27<01:23,  4.11it/s]Loading weights:  67%|██████▋   | 691/1026 [02:28<00:49,  6.73it/s]Loading weights:  69%|██████▉   | 709/1026 [02:28<00:22, 13.90it/s]Loading weights:  70%|██████▉   | 717/1026 [02:28<00:17, 17.38it/s]Loading weights:  71%|███████   | 725/1026 [02:28<00:15, 19.86it/s]Loading weights:  71%|███████▏  | 732/1026 [02:28<00:12, 23.84it/s]Loading weights:  72%|███████▏  | 741/1026 [02:28<00:09, 30.47it/s]Loading weights:  74%|███████▍  | 757/1026 [02:28<00:05, 47.22it/s]Loading weights:  75%|███████▌  | 770/1026 [02:28<00:04, 59.10it/s]Loading weights:  77%|███████▋  | 795/1026 [02:29<00:02, 90.87it/s]Loading weights:  79%|███████▉  | 814/1026 [02:29<00:02, 102.84it/s]Loading weights:  82%|████████▏ | 841/1026 [02:29<00:01, 133.76it/s]Loading weights:  84%|████████▎ | 858/1026 [02:29<00:01, 126.94it/s]Loading weights:  86%|████████▌ | 879/1026 [02:29<00:01, 144.73it/s]Loading weights:  87%|████████▋ | 896/1026 [02:29<00:00, 138.09it/s]Loading weights:  89%|████████▉ | 917/1026 [02:29<00:00, 149.60it/s]Loading weights:  91%|█████████ | 934/1026 [02:29<00:00, 142.81it/s]Loading weights:  93%|█████████▎| 950/1026 [02:30<00:00, 127.39it/s]Loading weights:  95%|█████████▍| 971/1026 [02:30<00:00, 146.20it/s]Loading weights:  96%|█████████▋| 989/1026 [02:30<00:00, 147.29it/s]Loading weights:  99%|█████████▊| 1012/1026 [02:30<00:00, 160.78it/s]Loading weights: 100%|██████████| 1026/1026 [02:30<00:00,  6.81it/s] 
+  [1/15] qa_idx=2978
+  [2/15] qa_idx=2979
+  [3/15] qa_idx=2980
+  [4/15] qa_idx=2981
+  [5/15] qa_idx=2982
+  [6/15] qa_idx=2983
+  [7/15] qa_idx=2984
+  [8/15] qa_idx=2985
+  [9/15] qa_idx=2986
+  [10/15] qa_idx=2987
+  [11/15] qa_idx=2988
+  [12/15] qa_idx=2989
+  [13/15] qa_idx=2990
+  [14/15] qa_idx=2991
+  [15/15] qa_idx=2992
+appended 15 rows -> runs/smoke-teacher-3859176.jsonl
+Exception ignored in: <function ResourceTracker.__del__ at 0x1466a804fe20>
+Traceback (most recent call last):
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 12:55:05 CEST 2026
+= Job-ID             : 3859176 on alex
+= Job-Name           : mist-qa-smoke-teacher
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/smoke-teacher.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a100
+= Slurm account      : b279bb with QOS=normal
+= Features           : a100_80
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:06:33
+= Total RAM usage    : 68.2 GiB of assigned  GiB (%)
+= Node list          : a0535
+= Subm/Elig/Start/End: 2026-07-15T12:48:11 / 2026-07-15T12:48:11 / 2026-07-15T12:48:32 / 2026-07-15T12:55:05
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+!!! /home/hpc             146.8G   104.9G   209.7G  -29054days   2,109      500K   1,000K        N/A !!!
+    /home/vault             0.0K  1048.6G  2097.2G        N/A       1      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A100-SXM4-80GB, 00000000:D1:00.0, 1139868, 19 %, 3 %, 67660 MiB, 344278 ms
