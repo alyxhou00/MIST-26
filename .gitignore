@@ -50,3 +50,6 @@ env/
 # Trained LoRA adapters (scripts/train_lora.py output) -- large, same reasoning as /runs/ above.
 /adapters/*
 !/adapters/.gitkeep
+# Official test set (47MB tests.jsonl) -- not committed; download per README "The official
+# test set" section. Same relative path locally and on the cluster.
+/data/

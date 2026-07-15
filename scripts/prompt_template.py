@@ -17,8 +17,6 @@ a Hindi gold). We deliberately:
 
 import sys
 
-# July-1 test set adds two "surprise" languages not in the sample data. Add their
-# {code: name} here once revealed; until then an unknown code triggers _warn_unknown().
 LANG_NAMES = {
     "arb_Arab": "Arabic", "ben_Beng": "Bengali", "ces_Latn": "Czech",
     "ckb_Arab": "Central Kurdish", "deu_Latn": "German", "eng_Latn": "English",
@@ -30,6 +28,21 @@ LANG_NAMES = {
     "tel_Telu": "Telugu", "tha_Thai": "Thai", "tur_Latn": "Turkish",
     "vie_Latn": "Vietnamese", "yor_Latn": "Yoruba", "zho_Hans": "Chinese",
 }
+
+# The official test set (pinzhenchen/wmt26-mist-test) identifies languages by bare
+# 3-letter `question_lang` codes ("zho", "ita", ...) -- no script suffix -- and adds one
+# surprise language with zero training rows: Bhojpuri ("bho", Devanagari, close to Hindi).
+# Derived from LANG_NAMES so the two can never disagree on a name.
+TEST_LANG_NAMES = {code.split("_")[0]: name for code, name in LANG_NAMES.items()}
+TEST_LANG_NAMES["bho"] = "Bhojpuri"
+
+
+def system_turn(lang_name: str) -> dict:
+    """The target-language system turn, shared verbatim by training (SFT), dev benchmarking
+    and test inference -- the exact phrasing is part of what a fine-tuned model learns, so
+    there must be only one copy of it."""
+    return {"role": "system",
+            "content": f"You are a helpful assistant. Respond in {lang_name}."}
 
 
 _warned_codes: set[str] = set()
@@ -67,8 +80,7 @@ def build_messages(input_text: str, lang_code: str, lang_hint: bool = True,
         else:
             lang = lang_code
             _warn_unknown(lang_code)
-        messages.append({"role": "system",
-                         "content": f"You are a helpful assistant. Respond in {lang}."})
+        messages.append(system_turn(lang))
     for ex_input, ex_output in examples or ():
         messages.append({"role": "user", "content": ex_input})
         messages.append({"role": "assistant", "content": ex_output})

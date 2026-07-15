@@ -49,12 +49,50 @@ ds = load_dataset("pinzhenchen/wmt26-mist-sample")
 print(ds["train"])   # the only split -- train
 ```
 
+## The official test set (`pinzhenchen/wmt26-mist-test`)
+
+Released 14 July 2026; submissions due **1 August 2026 23:59 AoE** (Google Form, JSONL of
+`{id, output}`, ≤3 systems/team with one marked primary; human eval may only cover the
+primary). One file, `tests.jsonl` (47MB, 12,775 rows) — gitignored here, download it into
+`data/`:
+
+```bash
+curl -sL "https://huggingface.co/datasets/pinzhenchen/wmt26-mist-test/resolve/main/tests.jsonl" \
+  -o data/tests.jsonl
+```
+
+Each row is `{id, prompt, task, question_lang}`; `id` = `task_int_questionlang_contextlang`
+(e.g. `qa-context_2_ita_spa`). `prompt` is **self-contained** (context + constraints +
+question). [`scripts/run_test.py`](scripts/run_test.py) runs inference on it in the
+submission format (verbatim prompt as a single user turn, no template;
+[`slurm/run_test.sbatch`](slurm/run_test.sbatch) / `smoke-run-test.sbatch` on the cluster).
+
+What inspecting the file shows (all counts for the qa tasks unless noted):
+
+- **12,775 rows = 8,640 `qa-context` + 2,359 `qa-oeg` (ours) + 1,776 `sum-sum` (teammate's).**
+  460 qa rows per language × 24 languages (yoruba 419), incl. the surprise **`bho`
+  (Bhojpuri)**; `question_lang` is a bare 3-letter code, no script suffix.
+- **8,300 of 10,999 qa rows are cross-lingual** — context in one language (usually not the
+  question's), question + expected answer in another. Far more central than in the sample data.
+- **No multiple-choice prompts at all** — belebele-style MC formats don't appear, so dev
+  gains concentrated on belebele overstate test-set transfer; tydiqa-style free-form
+  extraction is the closest dev proxy for `qa-context`.
+- **Embedded format instructions are the norm**, not the exception: every English
+  `qa-context` prompt carries one ("answer in one sentence, using only what the passage
+  says", "List …"), and `qa-oeg` prompts routinely specify word budgets ("in 120–150
+  words") — in every language, including Bhojpuri.
+- Prompts are single-line prose (only 2 rows contain a real newline; 2 contain a literal
+  `\n`); qa prompt length ≤ 2,607 chars, median 654.
+- **Known data bug: the 100 English `qa-oeg` rows (`qa-oeg_1..100_eng_eng`) have an empty
+  `prompt`.** `run_test.py` emits `output: ""` for them and warns; worth reporting to the
+  organizers.
+
 ## Layout
 
 | Path | Contents |
 |------|----------|
-| [`scripts/`](scripts) | `benchmark.py` (generation, zero/few-shot, base or LoRA), `train_lora.py` (LoRA SFT), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
-| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (Qwen3.5-2B full dev runs), `0shot-9b.sbatch` / `fewshot-9b.sbatch` (Qwen3.5-9B), `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` / `smoke-9b.sbatch` / `smoke-lora.sbatch` (cheap A/Bs and pipeline checks); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
+| [`scripts/`](scripts) | `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA), `run_test.py` (official test-set inference → submission JSONL), `train_lora.py` (LoRA SFT), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
+| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (Qwen3.5-2B full dev runs), `0shot-9b.sbatch` / `fewshot-9b.sbatch` (Qwen3.5-9B), `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT), `run_test.sbatch` (official test set), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` / `smoke-9b.sbatch` / `smoke-lora.sbatch` / `smoke-run-test.sbatch` (cheap A/Bs and pipeline checks); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
