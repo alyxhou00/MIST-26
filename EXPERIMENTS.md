@@ -42,6 +42,18 @@ teacher outputs as targets instead.
 | 3858987 | 2026-07-15 | LoRA adapter + few-shot dev eval (k=3) | Qwen3.5-9B + LoRA adapter 3822375, shots=3 | 2978 | _running_ | | | `lora_eval.sbatch` with the new extra-args passthrough (`--shots 3`). Tests whether few-shot demos stack with the adapter: hoping demos recover tydiqa (38.94 with plain 3-shot vs 19.53 adapter-only) while keeping the adapter's belebele/MCIF/OEG format gains. Same `$HOME` clone + `HF_DATASETS_CACHE` workaround as 3857589. |
 | 3857589 | 2026-07-14/15 | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter 3822375, shots=0 | 2978 | 26.56 | 79.15 | 48.00 | `lora_eval.sbatch`, 6h52. Below 9B 3-shot on chrF (27.64) but above it on BERTScore (77.79) and ROUGE-L (43.79). Strongly complementary per-source vs 3-shot: belebele 52.70→**85.82**, MCIF 34.61→**49.26**, OEG 25.55→**29.06** (ROUGE-L 10.96→37.38 — gold-SFT *does* move OEG, unlike prompting), but tydiqa **38.94→19.53** (below even the 0-shot base's 21.88) and aya 24.19→21.95. Next: adapter+3-shot to see if the demos recover tydiqa without losing the format gains. Submitted from the `$HOME/MIST-26` clone with `HF_DATASETS_CACHE=$HOME/hf_datasets_cache` (atuin group file quota exceeded — see README). First attempt 3857583 died in 38s: offline `datasets` does **not** re-prepare from the hub cache, it needs the prepared cache under `HF_DATASETS_CACHE`, so the 79MB prepared cache was copied to `$HOME` first. |
 
+## Test-format alignment (official test set)
+
+The official test prompts (README "The official test set") are self-contained conversational
+prompts with embedded format/length/language instructions — a different distribution from our
+templated dev prompts. [`scripts/run_test.py`](scripts/run_test.py) feeds them verbatim (no
+template, no lang-hint by default) and writes submission-format `{id, output}` JSONL.
+
+| Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 3859059 | 2026-07-15 | test-set smoke (`smoke-run-test.sbatch`) | Qwen3.5-9B base, verbatim prompt, 10× qa-context arb + 10× qa-oeg bho | 20 | n\a (no golds) | | | Pipeline works end-to-end, outputs eyeballed. Findings: (1) test prompts *themselves* instruct 'if the answer is not in the passage, write only "no answer"' and end with an explicit "answer in <language>" — so an unanswerable-detection behavior and the output language are part of the task; (2) the base model **false-refuses**: 4/10 arb qa-context rows got "لا توجد إجابة" including a definitional question whose answer is verbatim in the passage; (3) **Bhojpuri OEG output drifts into Hindi (most rows), Nepali and Maithili** — the feared bho→hin slide is real and worse (roadmap D confirmed); (4) word budgets are mostly violated (150→235w, 120–150→282w, 100→60w; only 1/10 in range — roadmap C confirmed); (5) OEG outputs come out in heavy markdown (###, **bold**, emoji) — fine or not for human eval, TBD. |
+| 3859058 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | _running_ | | | `fewshot-9b.sbatch 3 --no-lang-hint` (new passthrough). A/B against 3822329 (27.64/77.79/43.79, hint ON): measures how much of our best config leans on the lang-hint system turn. Matters because test prompts embed their own language instruction, so the hint is redundant-at-best there; a big drop would mean the model depends on our scaffolding. |
+
 ## LoRA SFT on distilled data — teacher outputs + gold mix (planned next)
 
 Key finding from the 9B runs above: few-shot's gain is almost entirely *answer format*

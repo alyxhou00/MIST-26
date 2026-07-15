@@ -1,0 +1,98 @@
+### Starting TaskPrologue of job 3859059 on a0429 at Wed Jul 15 12:20:01 CEST 2026
+Running on cores 16-31 with governor performance
+Wed Jul 15 12:20:01 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:01:00.0 Off |                  Off |
+|  0%   37C    P8             21W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+test rows: 10 after filters (task=['qa-context'], lang=None, shard=None, limit=10), 10 to generate
+Loading weights:   0%|          | 0/760 [00:00<?, ?it/s]Loading weights:   0%|          | 1/760 [00:08<1:45:36,  8.35s/it]Loading weights:   1%|▏         | 10/760 [00:08<07:42,  1.62it/s] Loading weights:   2%|▏         | 15/760 [00:08<04:54,  2.53it/s]Loading weights:   3%|▎         | 23/760 [00:09<02:33,  4.80it/s]Loading weights:   4%|▎         | 28/760 [00:09<02:01,  6.01it/s]Loading weights:   4%|▍         | 32/760 [00:09<01:37,  7.45it/s]Loading weights:   5%|▍         | 37/760 [00:09<01:22,  8.73it/s]Loading weights:   5%|▌         | 40/760 [00:10<01:16,  9.36it/s]Loading weights:   6%|▌         | 43/760 [00:11<01:53,  6.30it/s]Loading weights:   6%|▌         | 46/760 [00:11<01:48,  6.56it/s]Loading weights:   6%|▋         | 48/760 [00:12<02:12,  5.38it/s]Loading weights:   7%|▋         | 54/760 [00:12<01:35,  7.37it/s]Loading weights:   8%|▊         | 61/760 [00:12<01:06, 10.46it/s]Loading weights:   9%|▊         | 66/760 [00:13<01:11,  9.66it/s]Loading weights:   9%|▉         | 68/760 [00:13<01:09,  9.98it/s]Loading weights:  10%|▉         | 73/760 [00:13<00:53, 12.86it/s]Loading weights:  10%|█         | 79/760 [00:14<00:40, 16.84it/s]Loading weights:  11%|█         | 82/760 [00:14<01:00, 11.16it/s]Loading weights:  12%|█▏        | 88/760 [00:15<00:51, 13.09it/s]Loading weights:  12%|█▏        | 94/760 [00:15<00:46, 14.18it/s]Loading weights:  13%|█▎        | 96/760 [00:15<01:06, 10.06it/s]Loading weights:  13%|█▎        | 99/760 [00:16<01:00, 10.87it/s]Loading weights:  13%|█▎        | 101/760 [00:16<01:38,  6.67it/s]Loading weights:  14%|█▍        | 105/760 [00:17<01:11,  9.20it/s]Loading weights:  14%|█▍        | 107/760 [00:17<01:07,  9.68it/s]Loading weights:  15%|█▌        | 114/760 [00:17<00:44, 14.64it/s]Loading weights:  16%|█▌        | 118/760 [00:17<00:52, 12.18it/s]Loading weights:  16%|█▌        | 120/760 [00:18<01:00, 10.50it/s]Loading weights:  16%|█▌        | 122/760 [00:18<01:14,  8.62it/s]Loading weights:  17%|█▋        | 129/760 [00:18<00:48, 13.04it/s]Loading weights:  17%|█▋        | 131/760 [00:19<00:51, 12.27it/s]Loading weights:  18%|█▊        | 133/760 [00:19<01:06,  9.41it/s]Loading weights:  18%|█▊        | 135/760 [00:20<01:55,  5.42it/s]Loading weights:  19%|█▉        | 144/760 [00:20<00:57, 10.76it/s]Loading weights:  19%|█▉        | 146/760 [00:20<00:54, 11.30it/s]Loading weights:  19%|█▉        | 148/760 [00:21<01:15,  8.10it/s]Loading weights:  20%|██        | 152/760 [00:21<00:59, 10.22it/s]Loading weights:  20%|██        | 154/760 [00:22<01:21,  7.44it/s]Loading weights:  21%|██        | 159/760 [00:22<00:54, 10.96it/s]Loading weights:  22%|██▏       | 167/760 [00:22<00:43, 13.79it/s]Loading weights:  23%|██▎       | 172/760 [00:22<00:37, 15.86it/s]Loading weights:  23%|██▎       | 175/760 [00:23<00:39, 15.00it/s]Loading weights:  24%|██▍       | 182/760 [00:23<00:34, 16.86it/s]Loading weights:  24%|██▍       | 185/760 [00:23<00:32, 17.84it/s]Loading weights:  25%|██▍       | 188/760 [00:24<00:51, 11.17it/s]Loading weights:  26%|██▌       | 196/760 [00:24<00:35, 16.01it/s]Loading weights:  26%|██▌       | 199/760 [00:24<00:33, 16.81it/s]Loading weights:  27%|██▋       | 202/760 [00:25<00:45, 12.37it/s]Loading weights:  27%|██▋       | 205/760 [00:25<00:47, 11.66it/s]Loading weights:  27%|██▋       | 207/760 [00:26<01:07,  8.25it/s]Loading weights:  28%|██▊       | 213/760 [00:26<00:49, 11.08it/s]Loading weights:  29%|██▉       | 219/760 [00:26<00:38, 13.88it/s]Loading weights:  29%|██▉       | 224/760 [00:26<00:31, 17.14it/s]Loading weights:  30%|██▉       | 227/760 [00:27<01:09,  7.72it/s]Loading weights:  31%|███       | 235/760 [00:28<00:44, 11.91it/s]Loading weights:  31%|███▏      | 238/760 [00:28<00:40, 13.01it/s]Loading weights:  32%|███▏      | 241/760 [00:28<00:55,  9.36it/s]Loading weights:  33%|███▎      | 249/760 [00:29<00:35, 14.49it/s]Loading weights:  33%|███▎      | 252/760 [00:29<00:32, 15.67it/s]Loading weights:  34%|███▎      | 255/760 [00:29<00:49, 10.27it/s]Loading weights:  34%|███▍      | 258/760 [00:30<00:43, 11.48it/s]Loading weights:  34%|███▍      | 260/760 [00:30<00:56,  8.82it/s]Loading weights:  35%|███▍      | 264/760 [00:30<00:41, 12.05it/s]Loading weights:  35%|███▌      | 267/760 [00:30<00:38, 12.93it/s]Loading weights:  36%|███▌      | 274/760 [00:30<00:24, 19.61it/s]Loading weights:  36%|███▋      | 277/760 [00:31<00:24, 19.74it/s]Loading weights:  37%|███▋      | 280/760 [00:31<00:39, 12.17it/s]Loading weights:  38%|███▊      | 288/760 [00:31<00:25, 18.28it/s]Loading weights:  38%|███▊      | 291/760 [00:31<00:24, 18.91it/s]Loading weights:  39%|███▊      | 294/760 [00:32<00:53,  8.73it/s]Loading weights:  40%|███▉      | 302/760 [00:33<00:33, 13.78it/s]Loading weights:  40%|████      | 305/760 [00:33<00:33, 13.65it/s]Loading weights:  41%|████      | 308/760 [00:42<05:34,  1.35it/s]Loading weights:  41%|████      | 311/760 [00:42<04:21,  1.72it/s]Loading weights:  41%|████      | 313/760 [00:43<03:53,  1.91it/s]Loading weights:  42%|████▏     | 317/760 [00:43<02:40,  2.76it/s]Loading weights:  43%|████▎     | 325/760 [00:43<01:21,  5.32it/s]Loading weights:  43%|████▎     | 329/760 [00:43<01:04,  6.67it/s]Loading weights:  44%|████▎     | 332/760 [00:45<01:25,  4.99it/s]Loading weights:  44%|████▍     | 335/760 [00:45<01:16,  5.53it/s]Loading weights:  45%|████▍     | 340/760 [00:45<00:58,  7.17it/s]Loading weights:  45%|████▌     | 344/760 [00:45<00:46,  9.00it/s]Loading weights:  46%|████▌     | 346/760 [00:46<00:53,  7.75it/s]Loading weights:  46%|████▌     | 348/760 [00:46<00:49,  8.36it/s]Loading weights:  47%|████▋     | 355/760 [00:46<00:30, 13.44it/s]Loading weights:  47%|████▋     | 358/760 [00:46<00:29, 13.55it/s]Loading weights:  47%|████▋     | 360/760 [00:47<00:45,  8.77it/s]Loading weights:  48%|████▊     | 362/760 [00:47<00:45,  8.76it/s]Loading weights:  48%|████▊     | 364/760 [00:47<00:43,  9.05it/s]Loading weights:  48%|████▊     | 366/760 [00:48<00:52,  7.43it/s]Loading weights:  49%|████▊     | 370/760 [00:48<00:37, 10.48it/s]Loading weights:  49%|████▉     | 372/760 [00:48<00:35, 10.79it/s]Loading weights:  50%|█████     | 380/760 [00:48<00:22, 16.75it/s]Loading weights:  50%|█████     | 383/760 [00:49<00:22, 16.54it/s]Loading weights:  51%|█████     | 385/760 [00:50<00:49,  7.61it/s]Loading weights:  52%|█████▏    | 393/760 [00:50<00:26, 14.09it/s]Loading weights:  52%|█████▏    | 397/760 [00:50<00:28, 12.95it/s]Loading weights:  53%|█████▎    | 400/760 [00:51<00:42,  8.52it/s]Loading weights:  54%|█████▎    | 407/760 [00:51<00:30, 11.65it/s]Loading weights:  54%|█████▍    | 410/760 [00:51<00:27, 12.59it/s]Loading weights:  54%|█████▍    | 412/760 [00:52<00:34, 10.16it/s]Loading weights:  54%|█████▍    | 414/760 [00:52<00:45,  7.56it/s]Loading weights:  55%|█████▍    | 417/760 [00:52<00:38,  8.92it/s]Loading weights:  55%|█████▌    | 419/760 [00:53<00:45,  7.55it/s]Loading weights:  56%|█████▌    | 424/760 [00:53<00:35,  9.36it/s]Loading weights:  57%|█████▋    | 433/760 [00:53<00:18, 17.34it/s]Loading weights:  59%|█████▉    | 447/760 [00:53<00:09, 31.59it/s]Loading weights:  60%|██████    | 459/760 [00:54<00:07, 42.75it/s]Loading weights:  63%|██████▎   | 479/760 [00:54<00:04, 65.57it/s]Loading weights:  65%|██████▍   | 491/760 [00:54<00:03, 74.01it/s]Loading weights:  67%|██████▋   | 507/760 [00:54<00:02, 89.73it/s]Loading weights:  69%|██████▉   | 524/760 [00:54<00:02, 106.98it/s]Loading weights:  71%|███████   | 540/760 [00:54<00:01, 119.08it/s]Loading weights:  73%|███████▎  | 555/760 [00:54<00:01, 118.84it/s]Loading weights:  76%|███████▌  | 574/760 [00:54<00:01, 136.44it/s]Loading weights:  78%|███████▊  | 589/760 [00:54<00:01, 138.83it/s]Loading weights:  80%|████████  | 611/760 [00:55<00:00, 153.13it/s]Loading weights:  82%|████████▎ | 627/760 [00:55<00:01, 114.25it/s]Loading weights:  84%|████████▍ | 641/760 [00:55<00:01, 114.99it/s]Loading weights:  86%|████████▌ | 654/760 [00:55<00:01, 105.94it/s]Loading weights:  88%|████████▊ | 666/760 [00:55<00:00, 106.90it/s]Loading weights:  90%|████████▉ | 682/760 [00:55<00:00, 115.41it/s]Loading weights:  92%|█████████▏| 697/760 [00:55<00:00, 110.60it/s]Loading weights:  94%|█████████▎| 711/760 [00:56<00:00, 117.26it/s]Loading weights:  95%|█████████▌| 724/760 [00:56<00:00, 116.80it/s]Loading weights:  98%|█████████▊| 741/760 [00:56<00:00, 115.50it/s]Loading weights:  99%|█████████▉| 753/760 [00:56<00:00, 81.12it/s] Loading weights: 100%|██████████| 760/760 [00:56<00:00, 13.39it/s]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [1/10] qa-context_1_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [2/10] qa-context_2_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [3/10] qa-context_3_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [4/10] qa-context_4_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [5/10] qa-context_5_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [6/10] qa-context_6_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [7/10] qa-context_7_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [8/10] qa-context_8_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [9/10] qa-context_9_arb_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [10/10] qa-context_10_arb_arb
+appended 10 rows -> runs/smoke-test-context-3859059.jsonl
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+test rows: 10 after filters (task=['qa-oeg'], lang=bho, shard=None, limit=10), 10 to generate
+Loading weights:   0%|          | 0/760 [00:00<?, ?it/s]Loading weights:   0%|          | 1/760 [00:00<04:56,  2.56it/s]Loading weights:   4%|▍         | 29/760 [00:00<00:09, 75.86it/s]Loading weights:   7%|▋         | 54/760 [00:00<00:05, 123.56it/s]Loading weights:  11%|█         | 82/760 [00:00<00:04, 164.58it/s]Loading weights:  14%|█▍        | 107/760 [00:00<00:03, 187.79it/s]Loading weights:  18%|█▊        | 135/760 [00:00<00:02, 209.11it/s]Loading weights:  21%|██        | 160/760 [00:01<00:02, 219.61it/s]Loading weights:  25%|██▍       | 188/760 [00:01<00:02, 232.54it/s]Loading weights:  28%|██▊       | 213/760 [00:01<00:02, 237.18it/s]Loading weights:  32%|███▏      | 241/760 [00:01<00:02, 244.85it/s]Loading weights:  35%|███▌      | 267/760 [00:01<00:01, 248.75it/s]Loading weights:  39%|███▊      | 294/760 [00:01<00:01, 253.45it/s]Loading weights:  42%|████▏     | 320/760 [00:01<00:01, 254.27it/s]Loading weights:  46%|████▌     | 347/760 [00:01<00:01, 255.19it/s]Loading weights:  49%|████▉     | 373/760 [00:01<00:01, 254.85it/s]Loading weights:  53%|█████▎    | 400/760 [00:01<00:01, 255.34it/s]Loading weights:  56%|█████▌    | 426/760 [00:02<00:01, 254.96it/s]Loading weights:  93%|█████████▎| 707/760 [00:02<00:00, 999.79it/s]Loading weights: 100%|██████████| 760/760 [00:02<00:00, 349.75it/s]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [1/10] qa-oeg_1_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [2/10] qa-oeg_2_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [3/10] qa-oeg_3_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [4/10] qa-oeg_4_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [5/10] qa-oeg_5_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [6/10] qa-oeg_6_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [7/10] qa-oeg_7_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [8/10] qa-oeg_8_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [9/10] qa-oeg_9_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [10/10] qa-oeg_10_bho_bho
+appended 10 rows -> runs/smoke-test-oeg-bho-3859059.jsonl
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 12:25:50 CEST 2026
+= Job-ID             : 3859059 on alex
+= Job-Name           : mist-qa-smoke-test
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/smoke-run-test.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:05:49
+= Total RAM usage    : 19.9 GiB of assigned  GiB (%)
+= Node list          : a0429
+= Subm/Elig/Start/End: 2026-07-15T12:20:00 / 2026-07-15T12:20:00 / 2026-07-15T12:20:01 / 2026-07-15T12:25:50
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc               6.3G   104.9G   209.7G        N/A   1,995      500K   1,000K        N/A    
+    /home/vault             0.0K  1048.6G  2097.2G        N/A       1      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:01:00.0, 1153293, 15 %, 11 %, 18400 MiB, 79240 ms
+NVIDIA A40, 00000000:01:00.0, 1153415, 67 %, 57 %, 18410 MiB, 234752 ms
