@@ -5,6 +5,12 @@ One row per SLURM job on the `qa` sub-task dev split (n=2978 unless narrowed by 
 `runs/predictions-*-<jobid>.csv` (or `predictions/predictions-<jobid>.csv` once promoted), and
 this table -- see [README.md](README.md) for what each script/sbatch file does.
 
+**What gets a row:** full runs that support a meaningful comparison (baselines, ablations,
+full generation/training passes). Smoke tests, pipeline checks and failed/aborted jobs are
+NOT logged here -- their logs are still committed under `logs/`, infra failure post-mortems
+live in [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md) §6, and the teacher-selection
+smoke comparison lives in IMPLEMENTATION_NOTES §5.1.
+
 **Adding a row:** after a job finishes and its log is committed, add one row below with the job
 ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 `logs/<jobname>-<jobid>.out`.
@@ -13,9 +19,8 @@ ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 3786727 | 2026-06-26/27 | 0-shot baseline | Qwen3.5-2B, shots=0, **no lang-hint** | 2978 | 18.01 | -- | -- | Ran before `--lang-hint` existed; chrF only at the time. `job.sbatch` (pre-rename). |
-| 3814759 | 2026-07-06 | re-score of 3786727 | (rescoring only, no generation) | 2978 | 18.01 | 62.21 | 12.51 | `evaluate.sbatch`, after `evaluate.py` gained BERTScore/ROUGE-L. Same predictions as 3786727. |
-| 3817971 | 2026-07-06 | few-shot full dev run (k=3) | Qwen3.5-2B, shots=3, lang-hint ON | 2978 | 21.84 | 71.89 | 25.67 | `fewshot.sbatch`. Net improvement over the 18.01/62.21/12.51 baseline across all 27 languages. |
+| 3786727 | 2026-06-26/27 | 0-shot baseline | Qwen3.5-2B, shots=0, **no lang-hint** | 2978 | 18.01 | 62.21 | 12.51 | 5h36. Ran before `--lang-hint` existed; chrF only at the time -- BERTScore/ROUGE-L added by re-scoring the same predictions after `evaluate.py` gained those metrics (job 3814759, `evaluate.sbatch`, 1m11s). |
+| 3817971 | 2026-07-06 | few-shot full dev run (k=3) | Qwen3.5-2B, shots=3, lang-hint ON | 2978 | 21.84 | 71.89 | 25.67 | `fewshot.sbatch`, 3h29. Net improvement over the 18.01/62.21/12.51 baseline across all 27 languages. |
 
 ## Qwen3.5-9B
 
@@ -25,7 +30,8 @@ bigger base is worth building on.
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 3822324 | 2026-07-08 | 0-shot full dev run | Qwen3.5-9B, shots=0, lang-hint ON | 2978 | 23.12 | 66.04 | 22.75 | `0shot-9b.sbatch`, 6h01. Beats 2B 0-shot (18.01/62.21/12.51) across the board. |
-| 3822329 | 2026-07-08 | few-shot full dev run (k=3) | Qwen3.5-9B, shots=3, lang-hint ON | 2978 | 27.64 | 77.79 | 43.79 | `fewshot-9b.sbatch`, 3h42. Best run so far. Gains concentrated in belebele (chrF 17.69→52.70) and tydiqa (21.88→38.94); aya essentially flat (24.03→24.19) — few-shot teaches answer *format*, not open-ended generation. Matches smoke 3822323 (aya/hin only: 0-shot 24.34 vs 3-shot 22.03, i.e. no aya gain). |
+| 3822329 | 2026-07-08 | few-shot full dev run (k=3) | Qwen3.5-9B, shots=3, lang-hint ON | 2978 | 27.64 | 77.79 | 43.79 | `fewshot-9b.sbatch`, 3h42. Best chrF so far. Gains concentrated in belebele (chrF 17.69→52.70) and tydiqa (21.88→38.94); aya essentially flat (24.03→24.19) — few-shot teaches answer *format*, not open-ended generation. |
+| 3859645 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | _running_ | | | `fewshot-9b.sbatch 3 --no-lang-hint`. A/B against 3822329 (27.64/77.79/43.79, hint ON): measures how much of our best config leans on the lang-hint system turn — matters because the official test prompts embed their own language instruction, so the hint is redundant-at-best there (TEST_SET_ANALYSIS.md §4). |
 
 ## LoRA SFT on gold answers
 
@@ -38,54 +44,35 @@ teacher outputs as targets instead.
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 3822375 | 2026-07-08 | full LoRA SFT training | Qwen3.5-9B LoRA, r=16/alpha=32, 2 epochs | n/a (train run) | n/a | n/a | n/a | `lora_sft.sbatch`, 6h35, train_loss 0.664. Adapter: `adapters/qwen3.5-9b-qa-lora-3822375` (on the cluster; gitignored). Smoke pipeline check was 3822331. |
-| 3858987 | 2026-07-15 | LoRA adapter + few-shot dev eval (k=3) | Qwen3.5-9B + LoRA adapter 3822375, shots=3 | 2978 | _running_ | | | `lora_eval.sbatch` with the new extra-args passthrough (`--shots 3`). Tests whether few-shot demos stack with the adapter: hoping demos recover tydiqa (38.94 with plain 3-shot vs 19.53 adapter-only) while keeping the adapter's belebele/MCIF/OEG format gains. Same `$HOME` clone + `HF_DATASETS_CACHE` workaround as 3857589. |
-| 3857589 | 2026-07-14/15 | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter 3822375, shots=0 | 2978 | 26.56 | 79.15 | 48.00 | `lora_eval.sbatch`, 6h52. Below 9B 3-shot on chrF (27.64) but above it on BERTScore (77.79) and ROUGE-L (43.79). Strongly complementary per-source vs 3-shot: belebele 52.70→**85.82**, MCIF 34.61→**49.26**, OEG 25.55→**29.06** (ROUGE-L 10.96→37.38 — gold-SFT *does* move OEG, unlike prompting), but tydiqa **38.94→19.53** (below even the 0-shot base's 21.88) and aya 24.19→21.95. Next: adapter+3-shot to see if the demos recover tydiqa without losing the format gains. Submitted from the `$HOME/MIST-26` clone with `HF_DATASETS_CACHE=$HOME/hf_datasets_cache` (atuin group file quota exceeded — see README). First attempt 3857583 died in 38s: offline `datasets` does **not** re-prepare from the hub cache, it needs the prepared cache under `HF_DATASETS_CACHE`, so the 79MB prepared cache was copied to `$HOME` first. |
-
-## Test-format alignment (official test set)
-
-The official test prompts (README "The official test set") are self-contained conversational
-prompts with embedded format/length/language instructions — a different distribution from our
-templated dev prompts. [`scripts/run_test.py`](scripts/run_test.py) feeds them verbatim (no
-template, no lang-hint by default) and writes submission-format `{id, output}` JSONL.
-
-| Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
-|---|---|---|---|---|---|---|---|---|
-| 3859059 | 2026-07-15 | test-set smoke (`smoke-run-test.sbatch`) | Qwen3.5-9B base, verbatim prompt, 10× qa-context arb + 10× qa-oeg bho | 20 | n\a (no golds) | | | Pipeline works end-to-end, outputs eyeballed. Findings: (1) test prompts *themselves* instruct 'if the answer is not in the passage, write only "no answer"' and end with an explicit "answer in <language>" — so an unanswerable-detection behavior and the output language are part of the task; (2) the base model **false-refuses**: 4/10 arb qa-context rows got "لا توجد إجابة" including a definitional question whose answer is verbatim in the passage; (3) **Bhojpuri OEG output drifts into Hindi (most rows), Nepali and Maithili** — the feared bho→hin slide is real and worse (roadmap D confirmed); (4) word budgets are mostly violated (150→235w, 120–150→282w, 100→60w; only 1/10 in range — roadmap C confirmed); (5) OEG outputs come out in heavy markdown (###, **bold**, emoji) — fine or not for human eval, TBD. |
-| 3859058 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint — **NODE_FAIL, resubmitted** | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | n\a | | | `fewshot-9b.sbatch 3 --no-lang-hint`. Died at 1187/2978 (2h11m) when node a0125 went `down*` (cluster hardware fault, confirmed via `sinfo`, unrelated to this job). benchmark.py has no partial-CSV resume, so resubmitted fresh as **3859591**. |
-| 3859591 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint (retry of 3859058) | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | _running_ | | | Same config as 3859058. A/B against 3822329 (27.64/77.79/43.79, hint ON): measures how much of our best config leans on the lang-hint system turn — matters because test prompts embed their own language instruction, so the hint is redundant-at-best there. |
+| 3822375 | 2026-07-08 | full LoRA SFT training | Qwen3.5-9B LoRA, r=16/alpha=32, 2 epochs | n/a (train run) | n/a | n/a | n/a | `lora_sft.sbatch`, 6h35, train_loss 0.664, 29,097,984 trainable params (0.31% of the 9,438,911,728-param base). Adapter: `adapters/qwen3.5-9b-qa-lora-3822375` (on the cluster; gitignored). |
+| 3857589 | 2026-07-14/15 | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter 3822375, shots=0 | 2978 | 26.56 | 79.15 | 48.00 | `lora_eval.sbatch`, 6h52. Below 9B 3-shot on chrF (27.64) but above it on BERTScore (77.79) and ROUGE-L (43.79). Strongly complementary per-source vs 3-shot: belebele 52.70→**85.82**, MCIF 34.61→**49.26**, OEG 25.55→**29.06** (ROUGE-L 10.96→37.38 — gold-SFT *does* move OEG, unlike prompting), but tydiqa **38.94→19.53** (below even the 0-shot base's 21.88) and aya 24.19→21.95. |
+| 3858987 | 2026-07-15 | LoRA adapter + few-shot dev eval (k=3) | Qwen3.5-9B + LoRA adapter 3822375, shots=3 | 2978 | _running_ | | | `lora_eval.sbatch ... --shots 3`. Tests whether few-shot demos stack with the adapter: hoping demos recover tydiqa (38.94 with plain 3-shot vs 19.53 adapter-only) while keeping the adapter's belebele/MCIF/OEG gains. |
 
 ## LoRA SFT on distilled data — teacher outputs + gold mix (in progress)
 
 Key finding from the 9B runs above: few-shot's gain is almost entirely *answer format*
 (belebele chrF 17.69→52.70, tydiqa 21.88→38.94) while open-ended generation (aya) stays flat
-(24.03→24.19) — prompting and gold-SFT both lack a lever for answer *quality* there. The
-organizers allow distillation as long as the final model is <10B, so the plan is sequence-level
-KD: (1) generate teacher answers on the qa train split (~11.9K rows) with a strong teacher
-(Qwen3.5-32B on one A40, or a quantized 72B), (2) quality-filter against the golds
-(chrF/BERTScore threshold), (3) LoRA SFT the 9B on the filtered teacher outputs **mixed with
-golds**, as a *fresh* adapter (not continued from 3822375) — same recipe as `train_lora.py`,
-only the training targets change. That keeps it directly comparable to the gold-only adapter
-(3822375) above: same starting point, same recipe, one variable (the data).
+(24.03→24.19) — prompting lacks a lever for answer *quality* there. The organizers allow
+distillation as long as the final model is <10B, so the plan is sequence-level KD:
+(1) generate teacher answers on the qa train split (11,915 rows; same seed-42 80/20 split,
+dev untouched), (2) quality-filter against the golds ([scripts/filter_teacher.py](scripts/filter_teacher.py),
+per-row sentence chrF OR BERTScore, thresholds calibrated per source via `--report`),
+(3) LoRA SFT the 9B on the filtered teacher+gold mix (`train_lora.py --data`) as a *fresh*
+adapter (not continued from 3822375) — same recipe, one variable (the data), directly
+comparable to the gold-only adapter above.
 
-Teacher choice (2026-07-15): there is **no Qwen3.5-32B** — the family is 27B (dense) and
-35B-A3B (MoE). Picked **Qwen3.5-35B-A3B bf16 on one a100_80 node** (~70GB weights): largest
-family member that fits a single GPU without quantization (the GPTQ-Int4 variants would fit an
-a40 but need packages we can't install while the atuin venv is unwritable), and its 3B active
-params make decoding fast enough for ~11.9K rows inside the 24h cap.
-[`scripts/teacher_generate.py`](scripts/teacher_generate.py) generates over the train split
-(same seed-42 80/20 split; dev untouched) with lang-hint ON, resumable via `qa_idx`; weights
-cached at `$HOME/hf_cache_teacher` (atuin unwritable).
+**Teacher selection** (full 3-way smoke comparison and the transformers-GPTQ dead end:
+IMPLEMENTATION_NOTES §5.1): Qwen3.5-35B-A3B bf16 (1× a100_80, transformers, ~14 s/row) for
+the whole corpus, plus **Qwen3.5-122B-A10B-GPTQ-Int4 via vLLM** (2× a100_80, ~250× faster
+per row batched) for the aya+oeg subset — the only teacher that got both knowledge probes
+right, and knowledge-grounded open-ended rows are exactly where a better teacher raises the
+filter pass rate. Teacher weights live on `$HPCVAULT` (README "Temporary layout").
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 3859176 | 2026-07-15 | teacher smoke (`smoke-teacher.sbatch`) | Qwen3.5-35B-A3B bf16, 1× a100_80, 15 train rows | 15 | n\a (generation only) | | | COMPLETED 6m33s; 67.7GB GPU peak (fits with ~12GB headroom). Outputs eyeballed (`predictions/smoke-teacher-3859176.jsonl`): fluent, well-structured, but **hallucinates on knowledge questions** (wrong Japanese quiz answer, wrong NHL draft year, invented geography) — confirms the gold-filter step is load-bearing, not optional. Throughput ~14 s/row (verbose answers) → full 11,915-row train split ≈ 46h ⇒ split in 3. |
 | 3859277-79 | 2026-07-15 | full teacher generation, 3 shards | Qwen3.5-35B-A3B bf16, `--shard {1,2,3}/3`, lang-hint ON | 11,915 | _running_ | | | `teacher_gen.sbatch --shard i/3 --out runs/teacher-s{i}of3.jsonl` (stable names → resumable on resubmit). ~16h/shard projected from observed rate. |
-| 3859315 | 2026-07-15 | teacher smoke: 27B | Qwen3.5-27B bf16, 1× a100_80, same 15 rows | 15 | n\a | | | 9m31s, 53GB peak. Row-by-row vs 35B (`predictions/smoke-teacher-3859315.jsonl`): 27B slightly better — gets the Japanese quiz answer right (35B hallucinated), nails belebele option format more often (tur), one reverse case (vie). Both still hallucinate pure-knowledge answers (NHL draft year). ~1.5× slower generation than 35B-A3B. |
-| 3859341, -45, -81, -98 | 2026-07-15 | teacher smoke: 122B GPTQ via transformers — **dead end, see vLLM below** | Qwen3.5-122B-A10B-GPTQ-Int4, 2× a100_80, venv2 | 15 | n\a | | | Four failures: missing `optimum`, missing `torchvision` (gptqmodel imports it unconditionally), Marlin kernel rejects the checkpoint's out_features=1 layer, and `--gptq-backend torch` fallback hits CUDA illegal memory access on every row. gptqmodel 7.1.0 can't run this brand-new MoE arch through transformers — switched to vLLM. |
-| 3859535, 3859578 | 2026-07-15 | teacher smoke: 122B GPTQ via **vLLM** — works | Qwen3.5-122B-A10B-GPTQ-Int4, `teacher_generate_vllm.py`, 2× a100_80, `$HOME/vllm-venv` | 15 | n\a | | | 3859535 failed in 1m49s (venv missing `datasets`/`pandas` — teacher_generate_vllm.py needs them for the split, vllm-venv only had vllm itself); fixed, 3859578 **COMPLETED 10m19s, all 15 rows non-empty**. Of that, only ~75s was model load (54s) + CUDA graph capture (~20s); actual batched decode for 15 rows was **13s** (`Processed prompts: 100%\|...\| 15/15 [00:13<00:00]`, 190 tok/s output) — dramatically faster than transformers' ~14s/ROW serial loop. **3-way quality comparison** (`predictions/smoke-teacher*-3859176/3315/3859578.jsonl`, same 15 rows): 122B is the only teacher to get the Japanese trivia answer right AND the NHL draft year exactly right (both 35B and 27B hallucinated both); no edge on belebele MC-format matching (gets one tur row wrong that 27B got right) — but that's irrelevant since the chrF/BERTScore filter falls back to gold for MC-format answers regardless of teacher. **Decision: use 122B via vLLM for the aya_dataset+oeg sources specifically** (`teacher_gen_vllm.sbatch --source aya,oeg`, ~4,300 of 11,915 train rows, estimated from dev-split source shares: aya 978/2978 + oeg 97/2978 ≈ 32.8%+3.3% of train) — where a stronger teacher directly raises the filter pass rate on the highest-headroom sources; the cheaper 35B-A3B full-corpus run (3859277-79, already in-flight) covers the rest, including belebele/tydiqa/MCIF where teacher choice barely matters. |
-| 3859682 | 2026-07-15 | full teacher generation: aya+oeg via 122B/vLLM | Qwen3.5-122B-A10B-GPTQ-Int4, `teacher_gen_vllm.sbatch --source aya,oeg`, 2× a100_80 | 4,126 | n\a (generation only) | | | **COMPLETED in 17m10s** (vs the ~16h/shard the 35B transformers loop needs) — confirms vLLM's batched throughput advantage at scale, not just on the 15-row smoke. All 4,126 rows written, no generation failures. Output: `runs/teacher122b-aya-oeg.jsonl` (gitignored, feeds `filter_teacher.py`). |
-| 3860144 | 2026-07-15 | filter report on 122B aya+oeg output | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl --report` (a40) | 4,126 | n\a (report) | | | 1m16s. Distributions: aya (n=3763) chrF p25/p50/p75 = 11.4/22.1/33.4, BERT p50 = 66.9; **oeg (n=363) scores much higher — chrF p50 = 34.5, BERT p50 = 72.2** (plausible: the oeg golds are themselves GPT-4.1 outputs, so a strong teacher style-matches them). Threshold grid (keep = chrF≥C OR BERT≥B): 30/70 → 44.3%, 20/70 → 60.9%, 30/75 → 36.3%. Candidate default 30/70; consider a deliberately looser OEG-only threshold per the human-eval argument (IMPLEMENTATION_NOTES §5.3). Final choice after the 35B full-corpus shards land. (First attempt at this scoring ran as login-node nohup, pegged ~67 cores on alex1 and was killed by the admin — hence `filter_teacher.sbatch` and the new house rule: ALL compute through sbatch, no exceptions for "quick" scoring.) |
+| 3859682 | 2026-07-15 | full teacher generation: aya+oeg via 122B/vLLM | Qwen3.5-122B-A10B-GPTQ-Int4, `teacher_gen_vllm.sbatch --source aya,oeg`, 2× a100_80 | 4,126 | n/a (generation only) | | | **COMPLETED in 17m10s** (vs ~16h/shard for the 35B transformers loop) — vLLM's batched throughput advantage holds at scale. All 4,126 rows written, no generation failures. Output: `runs/teacher122b-aya-oeg.jsonl` (gitignored, feeds `filter_teacher.py`). |
+| 3860144 | 2026-07-15 | filter report on 122B aya+oeg output | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl --report` (a40) | 4,126 | n/a (report) | | | 1m16s. Distributions: aya (n=3763) chrF p25/p50/p75 = 11.4/22.1/33.4, BERT p50 = 66.9; **oeg (n=363) scores much higher — chrF p50 = 34.5, BERT p50 = 72.2** (plausible: the oeg golds are themselves GPT-4.1 outputs, so a strong teacher style-matches them). Threshold grid (keep = chrF≥C OR BERT≥B): 30/70 → 44.3%, 20/70 → 60.9%, 30/75 → 36.3%. Candidate default 30/70; consider a deliberately looser OEG-only threshold per the human-eval argument (IMPLEMENTATION_NOTES §5.3). Final choice after the 35B full-corpus shards land. |
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a
