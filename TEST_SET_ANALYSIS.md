@@ -68,13 +68,20 @@ Every inspected qa prompt carries explicit instructions **inside the prompt text
   passage says"), an explicit **"no answer" escape** (*"if the answer is not in the
   passage, write only 'no answer'"* — so unanswerable detection is scored, tydiqa-style),
   and a closing **"Answer in \<language\>."**
-- `qa-oeg`: word budgets are routine ("in 120–150 words", "150 शब्दन में"), in every
-  language **including Bhojpuri**.
+- `qa-oeg`: word budgets ("in 120–150 words", "150 शब्दन में") appear in every language
+  **including Bhojpuri** — but they are **not** on every prompt. Measured 2026-07-15:
+  exactly **21 of the 100 unique qa-oeg prompts per language** carry a numeric budget
+  (471/2,359 rows; identical 21/100 in all 23 non-empty languages, because qa-oeg is a
+  **parallel corpus** — the same 100 prompts translated 24 ways, yoruba 59). An earlier
+  version of this doc called budgets "routine", which reads as "on every prompt"; the real
+  scale is ~1/5 of qa-oeg. Roadmap C still stands, just at that scale.
 
 Implications: (a) the test prompt already tells the model the output language, so our
-lang-hint system turn is redundant-at-best there (job 3859058 measures what dropping it
-costs on dev); (b) instruction-following — especially non-English length control — is
-directly scored, validating roadmap C.
+lang-hint system turn is redundant-at-best there — **measured (job 3859645): dropping it
+costs 25.97 vs 27.64 overall, but the loss is almost entirely belebele (52.70→32.42), which
+does not transfer; on the sources the test set actually has, the cost is under 1 chrF and
+OEG is +0.09. The test format can be used as-is**; (b) instruction-following — especially
+non-English length control — is directly scored, validating roadmap C.
 
 ## 5. No multiple-choice anywhere
 
@@ -82,9 +89,52 @@ Zero qa prompts match MC patterns (`(A)`, `A. … B. …`). The belebele-style f
 dominates our dev set (1,123/2,978 rows) and where the gold-SFT adapter got its biggest
 win (chrF 52.70 → 85.82) **does not appear at test time**. Free-form extraction
 (tydiqa-like) is the closest dev proxy for `qa-context` — and that is exactly where the
-adapter collapsed (38.94 → 19.53). Dev overall chrF is **not** a faithful test predictor;
-weight tydiqa + aya/OEG when comparing systems, and consider re-weighting or re-splitting
-dev to mirror the test mix.
+adapter collapsed (38.94 → 19.53). Dev overall chrF is **not** a faithful test predictor.
+
+## 5b. aya is not a proxy for `qa-oeg` either (verified 2026-07-15 against the official file)
+
+An earlier version of this doc said to "weight tydiqa + aya/OEG". **That was wrong about
+aya.** README's sub-task table groups `CohereLabs/aya_dataset` with `wmt25-mist-oeg-gpt-4.1`
+under "open-ended generation" — a fair *task* grouping, but not a statement that the two
+behave alike, and they do not. Measured gold length (dev split, whitespace word count):
+
+| dev source | gold words p25/p50/p75 | test task it supposedly proxies |
+|---|---|---|
+| `wmt25-mist-oeg-gpt-4.1` (n=97) | 30 / **175** / 227 | `qa-oeg` — asks for **120–180 words**: exact match |
+| `CohereLabs/aya_dataset` (n=978) | 6 / **24** / 60 | `qa-oeg` — **7× too short**, wrong output regime |
+| `copenlu/answerable_tydiqa` (n=615) | 1 / **2** / 3 | `qa-context` — extraction: match |
+
+aya rows are short questions with short answers ("Fortnite mobilde var mı?", gold 152 chars)
+and carry **no passage**, so they are neither `qa-context` (which is passage+question) nor
+`qa-oeg` (which is 120–180-word composition). Consequence: **the faithful dev proxy is only
+tydiqa (615) + MCIF (165) for `qa-context` and OEG (97) for `qa-oeg` — ~877 of 2,978 rows
+(29%).** belebele (1,123, no MC at test) and aya (978, wrong length regime) are the other
+71% and should not drive system choice.
+
+⚠️ Scope of this claim: aya's unsuitability as an *evaluation proxy* is measured. Whether
+aya rows are harmful as *training* data is a separate, untested question — a `qa-oeg`
+adapter trained mostly on 24-word targets would plausibly learn the wrong length, but that
+has not been run.
+
+⚠️ This makes `qa-oeg` the thin part of the whole plan: 2,359 test rows backed by 97 dev
+rows and 363 train rows (see §5c).
+
+## 5c. What each teacher run actually covers
+
+Train-split row counts behind the distillation pipeline (README sub-task table minus the
+2,978 dev rows), which decide what can be built before the 35B shards land:
+
+| source | train rows | teacher that generated them | serves test task |
+|---|---|---|---|
+| `CohereLabs/aya_dataset` | 3,763 | 122B (job 3859682) | — (see §5b) |
+| `wmt25-mist-oeg-gpt-4.1` | 363 | 122B (job 3859682) | `qa-oeg` |
+| `facebook/belebele` | 4,577 | 35B (3859277-79) | — (no MC at test) |
+| `copenlu/answerable_tydiqa` | 2,497 | 35B (3859277-79) | `qa-context` |
+| `FBK-MT/MCIF` (QA) | 715 | 35B (3859277-79) | `qa-context` |
+
+Total 11,915. Note the shape: the 122B run is **91% aya**, so it does *not* amount to a
+ready-made `qa-oeg` training set; and 4,577 of the 35B shards' 7,789 unique rows are
+belebele, whose format does not transfer.
 
 ## 6. Data bug: 100 empty prompts
 
@@ -117,10 +167,10 @@ organizers** (schmidtova@ufal.mff.cuni.cz); if fixed data ships, re-run just
 
 | Roadmap item | Verdict after analysis |
 |---|---|
-| A (test-format alignment) | Done — `run_test.py` + this analysis. Dev A/B without lang-hint = job 3859058. |
-| B (distillation) | Unchanged priority. Teacher should see prompts in the **test's conversational style** where possible; OEG is 2,359 rows of mostly-unfixed headroom. |
-| C (instruction following) | **Upgraded from "nice" to "scored"**: constraints are in every prompt; length control fails today. Augment SFT data with word-budget/format constraints + rewritten targets. |
+| A (test-format alignment) | Done — `run_test.py` + this analysis. Dev A/B without lang-hint = job **3859645** (not 3859058): dropping the hint is ~free on the sources that matter (§4). |
+| B (distillation) | Unchanged priority, but see §5c for what each teacher run covers: the 122B run is 91% aya, so it is **not** a ready-made `qa-oeg` training set, and only 363 train rows match the `qa-oeg` regime. OEG is 2,359 test rows of mostly-unfixed headroom on the thinnest data we have. |
+| C (instruction following) | **Upgraded from "nice" to "scored"**: format constraints are on every `qa-context` prompt; numeric word budgets are on **21% of `qa-oeg`** (§4), not all of it. Length control fails today. Augment SFT data with word-budget/format constraints + rewritten targets. |
 | D (Bhojpuri kit) | **Confirmed essential** (drift is real). Only one surprise language — target bho specifically. |
-| E (routing) | Legal and easy (`task` given). But belebele-format wins don't transfer; route on measured test-proxy performance (tydiqa/aya-like), not dev overall. |
+| E (routing) | Legal and easy (`task` given). Route on the *faithful* proxies only (§5b): `qa-context` → tydiqa says plain 3-shot (38.94 vs adapter 19.53); `qa-oeg` → OEG says adapter (29.06 vs 3-shot 25.55). belebele and aya wins do not transfer and must not drive the choice. |
 | F (LID gate) | Directly addresses observed bho drift; cheap. |
 | G (3 submissions) | Unchanged: primary = distilled+routed, variant = 9B 3-shot safe bet, variant = aggressive. |
