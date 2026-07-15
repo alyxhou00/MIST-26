@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-fewshot
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=18:00:00
+#SBATCH --time=06:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -14,8 +14,10 @@
 # Assumes the one-time login-node setup (venv + cached model/dataset) is done; see README.
 # Smoke-test first with slurm/smoke-fewshot.sbatch before spending a full run.
 #
-# Time limit is 18h (vs 12h zero-shot): each prompt carries N extra demonstration passages,
-# so prefill is a few times longer per example. Log goes to logs/ (committed -- $WORK has no
+# Time limit 6h: the real run (job 3817971) took 3h29m -- few-shot is *faster* than the
+# 5h36m zero-shot run despite longer prefill, because answers imitate the demonstrations'
+# brevity and hit EOS sooner (see IMPLEMENTATION_NOTES.md). (Was 18h, a pre-measurement
+# guess that assumed prefill would dominate; it doesn't -- decode length does.) Log goes to logs/ (committed -- $WORK has no
 # backup/retention guarantee, so `git add logs/*.out && git commit && git push` from the
 # cluster once the job finishes). Predictions CSV goes to runs/ (gitignored scratch --
 # promote it to predictions/ only if worth keeping).
@@ -25,12 +27,17 @@ source "$WORK/mist-venv/bin/activate"
 
 # Compute nodes have no internet -> use the cache populated on the login node.
 export HF_HOME="$WORK/hf_cache"
-# Prepared-dataset cache must be somewhere writable: in offline mode `datasets` does NOT
-# re-prepare from the hub cache, and it also takes a lock file on every load -- $WORK/hf_cache
-# is unwritable while the atuin group quota is exceeded (README "Temporary layout"; this is
-# what killed jobs 3857583 and 3859591). Baked in here (not left to the submitter to set) so
-# it can't be forgotten again.
-export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+# Prepared-dataset cache: prefer the canonical atuin copy, and only retreat to the $HOME
+# copy while atuin writes fail (group file quota exceeded -- README "Temporary layout").
+# Offline `datasets` writes a lock file on every load, so an unwritable cache dir kills the
+# job in seconds (jobs 3857583, 3859591). Probed at runtime so the scripts heal themselves
+# the moment the quota is fixed; baked in here (not left to the submitter to set).
+if touch "$WORK/hf_cache/datasets/.write-probe" 2>/dev/null; then
+  rm -f "$WORK/hf_cache/datasets/.write-probe"
+  export HF_DATASETS_CACHE="$WORK/hf_cache/datasets"
+else
+  export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 

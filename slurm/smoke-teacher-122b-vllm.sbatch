@@ -21,7 +21,14 @@ source "$HOME/vllm-venv/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node.
 export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"
-export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+# Prepared-dataset cache: prefer atuin, retreat to $HOME while atuin is unwritable
+# (README "Temporary layout"); probed at runtime so this heals when the quota is fixed.
+if touch "$WORK/hf_cache/datasets/.write-probe" 2>/dev/null; then
+  rm -f "$WORK/hf_cache/datasets/.write-probe"
+  export HF_DATASETS_CACHE="$WORK/hf_cache/datasets"
+else
+  export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 

@@ -203,3 +203,171 @@ random_state = zlib.crc32(f"{seed}:{input_text}".encode("utf-8"))
 - Venv + cache is one-time setup (`slurm/setup.sh`)
 - Per-experiment sbatch names mean job history is immediately identifiable
 - Deterministic shot selection (CRC32 of input text) means any run can be reproduced exactly
+
+---
+
+# System Architecture as of 2026-07-15 (paper notes)
+
+This section is the running architecture record for the qa subtask (context QA + OEG; the
+`sum` subtask is a teammate's). Everything below is backed by a SLURM job ID in
+EXPERIMENTS.md and a committed log in `logs/`.
+
+## 1. Architecture overview
+
+One **Qwen3.5-9B** base (9,438,911,728 params total, vision tower included — the exact
+number PEFT reports), adapted per task type at inference time ("routing"). The official
+test set gives `task` ∈ {qa-context, qa-oeg, sum-sum} per row, so routing on it is
+explicitly legal:
+
+| Test task | Planned serving config | Why |
+|---|---|---|
+| `qa-context` | base + 3-shot demonstrations (prompting) | few-shot's +35 chrF on format-heavy dev sources; teaches extraction format, incl. calibrating the "no answer" escape |
+| `qa-oeg` | base + distilled LoRA adapter | prompting is flat on open-ended rows (aya 24.03→24.19); only better training targets move it |
+| `sum-sum` | teammate's system (same base if joint submission) | not ours |
+
+Inference-time additions planned: fastText LID gate (detect wrong-language output →
+resample), optionally best-of-N with self-judging for the aggressive submission variant.
+
+## 2. The 10B accounting
+
+The organizers cap **total parameters of all deployed components** at 10B (MoE counts
+total, not active). Our accounting:
+
+| Component | Params | Note |
+|---|---|---|
+| Qwen3.5-9B base | 9,438,911,728 | shared by all routes; single copy |
+| LoRA adapter, r=16 (per adapter) | 29,097,984 | measured (job 3822375 PEFT printout); ~0.31% of base |
+| fastText LID (lid.176) | <1M | compressed model is <1MB on disk |
+| **Total with 3 adapters** | **≈9.53B** | **fits, ~0.47B headroom** |
+
+Few-shot prompting adds zero parameters. Teachers (35B-A3B, 122B-A10B) do NOT count —
+they are never deployed, only their outputs are (as training data). The one real
+constraint: a **joint submission with the sum teammate must share the same 9B base** —
+two different ~9B bases would be ~19B and blow the cap; N task-specific LoRA adapters on
+one shared base are nearly free (0.03B each).
+
+## 3. Measured baselines (dev = held-out 20% of the sample data, n=2978)
+
+chrF / BERTScore / ROUGE-L:
+
+| Config | Overall | Job |
+|---|---|---|
+| 2B 0-shot | 18.01 / 62.21 / 12.51 | 3786727 |
+| 2B 3-shot | 21.84 / 71.89 / 25.67 | 3817971 |
+| 9B 0-shot | 23.12 / 66.04 / 22.75 | 3822324 |
+| 9B 3-shot | **27.64** / 77.79 / 43.79 | 3822329 |
+| 9B + gold-SFT LoRA, 0-shot | 26.56 / **79.15** / **48.00** | 3857589 |
+
+Key structure in these numbers (per-source figures in EXPERIMENTS.md):
+
+- **Few-shot's gain is answer format, not knowledge**: belebele 17.69→52.70, tydiqa
+  21.88→38.94, aya flat (24.03→24.19).
+- **Gold-SFT and few-shot are complementary, not ordered**: the adapter wins belebele
+  (85.82), MCIF (49.26) and OEG (29.06 vs 25.55) but collapses tydiqa (38.94→19.53, below
+  even the untuned base's 21.88). Whether the two stack is being measured right now
+  (adapter + 3-shot, job 3858987).
+- Gold-SFT *does* move the OEG source (contradicting our earlier aya-only reading) — but
+  aya proper stays flat, so distillation remains the OEG lever.
+
+## 4. Test-set alignment (roadmap A) — what changed our plans
+
+Full analysis in TEST_SET_ANALYSIS.md; the three findings that reshaped the architecture:
+
+1. **No multiple-choice prompts exist in the test set.** Our dev set is 38% belebele
+   (1,123/2,978) in "N: option" MC format, and both few-shot's and the adapter's biggest
+   dev wins are exactly there — so **dev overall chrF systematically overstates test
+   transfer**. tydiqa-style free-form extraction is the honest qa-context proxy; weight it
+   (and aya/OEG) when comparing systems. For the paper: a clean train/test
+   distribution-shift story with numbers.
+2. **Every test prompt embeds its own instructions** (format: "answer in one sentence,
+   using only what the passage says"; an explicit "no answer" escape — so unanswerable
+   detection is scored; word budgets "in 120–150 words" in every language; a closing
+   "Answer in \<language\>"). Consequences: (a) our lang-hint system turn is
+   redundant-at-best at test time (dev A/B without it = job 3859645, running); (b)
+   instruction-following, especially non-English length control, is directly scored —
+   the test-format smoke showed word budgets violated on 9/10 Bhojpuri OEG rows and the
+   base model **false-refusing** ("no answer") on an answerable definitional question.
+3. **Bhojpuri (bho, the surprise language, zero training rows) drifts**: base-model OEG
+   outputs came out as standard Hindi (most rows), Nepali (one), Maithili (one). A
+   fastText LID gate catches exactly this failure class.
+
+Also: 100 test rows (`qa-oeg_1..100_eng_eng`, the whole English OEG block) have empty
+prompts — a data bug worth reporting to the organizers; `run_test.py` guards them.
+
+## 5. Distillation pipeline (roadmap B)
+
+Sequence-level KD: teacher generates on the train split (never dev), answers are
+quality-filtered against golds, student LoRA is trained on the filtered mix.
+
+### 5.1 Teacher selection — measured, not assumed
+
+Same 15 deterministic train rows (the seed-42 split makes smokes row-by-row comparable)
+across three teachers:
+
+| Teacher | Infra | Result |
+|---|---|---|
+| Qwen3.5-35B-A3B bf16 | 1× a100_80, transformers | fluent; hallucinated a Japanese quiz answer, an NHL draft year, invented geography (3859176) |
+| Qwen3.5-27B bf16 | 1× a100_80, transformers | slightly better (fixed the Japanese answer, better MC-format compliance), own hallucinations (3859315) |
+| Qwen3.5-122B-A10B GPTQ-Int4 | 2× a100_80, **vLLM** | only teacher to get both knowledge probes right (3859578) |
+
+Decision: **122B for aya+oeg** (the knowledge-grounded, open-ended sources where teacher
+quality raises the filter pass rate) = 4,126 rows, generated in one 17-minute vLLM job
+(3859682); **35B for the whole corpus** (3859277-79, 3× ~16h shards) covers
+belebele/tydiqa/MCIF, where teacher choice barely matters (see 5.2).
+
+Infra note for the appendix: the 122B GPTQ checkpoint is unrunnable through
+transformers+gptqmodel 7.1.0 (Marlin kernel rejects an out_features=1 layer; torch-backend
+fallback hits CUDA illegal memory accesses — jobs 3859341/45/81/98); vLLM runs it natively
+and its batched decode measured **~250× faster per row** than the serial transformers loop
+(13s decode for 15 rows vs ~14 s/row).
+
+### 5.2 The gold filter is load-bearing
+
+`scripts/filter_teacher.py`: per-row **sentence chrF OR BERTScore F1** against the gold,
+both thresholds calibrated per-source via `--report`'s distribution/threshold grid.
+
+- Why OR: chrF alone kills verbose-but-correct answers (teacher answers scored against
+  short golds — smoke medians were chrF ≈16 / BERTScore ≈66); BERTScore alone is too
+  lenient on fluent, on-topic hallucinations. Two calibrated thresholds OR'd beat either
+  alone.
+- **belebele behaves as a built-in fallback**: teacher answers are explanatory prose that
+  never chrF-matches a "2: \<option\>" gold, so belebele rows fail the filter and keep
+  their gold targets regardless of teacher — which is what we want, since the gold-SFT
+  adapter already proved gold targets teach that format perfectly (85.82 chrF). Teacher
+  choice therefore only matters where the filter can pass teacher rows: aya/OEG/tydiqa
+  prose.
+- Empty teacher answers auto-fail. Mix policies: `replace` (default; teacher-where-passed
+  else gold — keeps the dataset identical in size/rows to the gold-SFT run 3822375, so the
+  distilled-vs-gold comparison stays one-variable), `both`, `teacher`.
+- Output feeds `train_lora.py --data` (same columns as the HF split); the distilled
+  adapter is trained **fresh** from the base, never continued from the gold adapter.
+
+### 5.3 Known open issue
+
+The teacher's style is verbose markdown (headers/bold/emoji in OEG answers); golds are
+short and dry. Automatic metrics score against golds, but **human eval** (which decides
+the primary submission's ranking) plausibly prefers teacher-style answers. Threshold
+choice is therefore a metric-vs-human tradeoff; we may deliberately keep a looser filter
+for OEG rows. Decide after the filter report on real data (job 3860144).
+
+## 6. Infrastructure record (reproducibility appendix material)
+
+- **atuin ($WORK) group file quota exceeded** since 2026-07-14 (578K→561K / 500K files,
+  grace expired; our share ~85K): all atuin writes fail. Hybrid layout: active clone in
+  $HOME, reads (venv, hf_cache, adapters) from atuin, prepared-datasets cache copied to
+  $HOME. Every sbatch script now probes atuin writability at runtime and falls back to the
+  $HOME cache — two jobs (3857583, 3859591) died in <40s from an unwritable lock path
+  before this was baked in.
+- **Both /home/hpc and /home/vault double-count usage against quota** (every file's
+  allocated blocks measure exactly 2.00× apparent size; mirrored storage). Budget at 2×
+  nominal: the three teacher checkpoints (35B bf16 + 27B bf16 + 122B int4 ≈ 210GB nominal)
+  sit on $HPCVAULT (1TB soft quota) as ~403G accounted.
+- **Login node is for submitting, not computing**: a BERTScore pass run via nohup on alex1
+  pegged ~67 cores and was killed by the admin. Everything — including "quick" scoring —
+  goes through sbatch (slurm/filter_teacher.sbatch exists for exactly this).
+- Three venvs: `$WORK/mist-venv` (main transformers stack), `$HOME/mist-venv2`
+  (+gptqmodel/optimum/torchvision; only needed for the transformers-GPTQ dead end),
+  `$HOME/vllm-venv` (vllm + datasets/pandas; pins its own torch).
+- Measured runtimes that set the sbatch budgets: 2B 0-shot 5h36, 2B 3-shot 3h29, 9B 0-shot
+  6h01, 9B 3-shot 3h42, 9B LoRA SFT 6h35, 9B LoRA eval 6h52, scoring 2,978 rows 1m11s,
+  35B teacher ~14 s/row (~16h per 1/3 shard), 122B-vLLM 4,126 rows in 17m10s.

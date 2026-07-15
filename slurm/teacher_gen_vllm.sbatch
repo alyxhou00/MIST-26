@@ -3,7 +3,7 @@
 #SBATCH --partition=a100
 #SBATCH --gres=gpu:a100:2
 #SBATCH --constraint=a100_80
-#SBATCH --time=06:00:00
+#SBATCH --time=02:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -17,18 +17,24 @@
 # Run from the repo root on Alex (NHR@FAU):
 #     sbatch slurm/teacher_gen_vllm.sbatch --source aya,oeg --out runs/teacher122b-aya-oeg.jsonl
 #
-# Time limit 6h: ~4,300 rows (aya_dataset + oeg share of the train split) at the smoke's
-# observed batched throughput (190 tok/s output, 15 concurrent requests, not yet
-# GPU-saturated) projects well under this; generous margin since throughput at larger
-# batch sizes is unmeasured. Resubmit with the same --out to resume (skips qa_idx already
-# present) if it runs long.
+# Time limit 2h: the real aya+oeg run (job 3859682, 4,126 rows) took 17m10s end to end --
+# ~13min of that was one-time engine startup (load 79GB of weights, CUDA-graph capture) and
+# only ~4min was decode. Even the full 11,915-row split projects to well under 1h; 2h is
+# pure margin. Resubmit with the same --out to resume (skips qa_idx already present).
 
 module load python/3.12-base cuda/12.8.1
 source "$HOME/vllm-venv/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node.
 export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"
-export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+# Prepared-dataset cache: prefer atuin, retreat to $HOME while atuin is unwritable
+# (README "Temporary layout"); probed at runtime so this heals when the quota is fixed.
+if touch "$WORK/hf_cache/datasets/.write-probe" 2>/dev/null; then
+  rm -f "$WORK/hf_cache/datasets/.write-probe"
+  export HF_DATASETS_CACHE="$WORK/hf_cache/datasets"
+else
+  export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 

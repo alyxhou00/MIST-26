@@ -8,9 +8,16 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
 #
-# Smoke test for the BIG teacher candidate: Qwen3.5-122B-A10B-GPTQ-Int4 on the same
-# deterministic 15 rows as smoke-teacher.sbatch (35B-A3B) and its --model Qwen/Qwen3.5-27B
-# variant -- three teachers, row-by-row comparable.
+# *** DEAD END -- kept only as the record of what was tried. Use ***
+# *** slurm/smoke-teacher-122b-vllm.sbatch instead.                ***
+# transformers+gptqmodel cannot run this checkpoint: after fixing two missing packages
+# (optimum, torchvision), the Marlin kernel rejects its out_features=1 layer (job 3859381)
+# and the --gptq-backend torch fallback hits CUDA illegal memory accesses on every row
+# (job 3859398). vLLM loads and runs it fine. Full history in EXPERIMENTS.md.
+#
+# Original purpose: smoke test for the BIG teacher candidate, Qwen3.5-122B-A10B-GPTQ-Int4,
+# on the same deterministic 15 rows as smoke-teacher.sbatch (35B-A3B) and its
+# --model Qwen/Qwen3.5-27B variant -- three teachers, row-by-row comparable.
 #
 # Differences from smoke-teacher.sbatch, all forced by the GPTQ quantization:
 # - 2x a100_80: the int4 checkpoint is 79GB of weights -- fits neither one 80GB GPU (with
@@ -27,7 +34,14 @@ source "$HOME/mist-venv2/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node.
 export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"
-export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+# Prepared-dataset cache: prefer atuin, retreat to $HOME while atuin is unwritable
+# (README "Temporary layout"); probed at runtime so this heals when the quota is fixed.
+if touch "$WORK/hf_cache/datasets/.write-probe" 2>/dev/null; then
+  rm -f "$WORK/hf_cache/datasets/.write-probe"
+  export HF_DATASETS_CACHE="$WORK/hf_cache/datasets"
+else
+  export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 

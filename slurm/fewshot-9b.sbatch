@@ -34,12 +34,17 @@ source "$WORK/mist-venv/bin/activate"
 
 # Compute nodes have no internet -> use the cache populated on the login node.
 export HF_HOME="$WORK/hf_cache"
-# Prepared-dataset cache must be somewhere writable: in offline mode `datasets` does NOT
-# re-prepare from the hub cache, and it also takes a lock file on every load -- $WORK/hf_cache
-# is unwritable while the atuin group quota is exceeded (README "Temporary layout"; this is
-# what killed jobs 3857583 and 3859591). Baked in here (not left to the submitter to set) so
-# it can't be forgotten again.
-export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+# Prepared-dataset cache: prefer the canonical atuin copy, and only retreat to the $HOME
+# copy while atuin writes fail (group file quota exceeded -- README "Temporary layout").
+# Offline `datasets` writes a lock file on every load, so an unwritable cache dir kills the
+# job in seconds (jobs 3857583, 3859591). Probed at runtime so the scripts heal themselves
+# the moment the quota is fixed; baked in here (not left to the submitter to set).
+if touch "$WORK/hf_cache/datasets/.write-probe" 2>/dev/null; then
+  rm -f "$WORK/hf_cache/datasets/.write-probe"
+  export HF_DATASETS_CACHE="$WORK/hf_cache/datasets"
+else
+  export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 

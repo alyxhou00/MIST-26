@@ -11,7 +11,11 @@ student on the filtered teacher+gold mix.
     python scripts/teacher_generate.py --shard 1/2 --out runs/teacher-s1of2.jsonl
 
 Teacher default is Qwen/Qwen3.5-35B-A3B (bf16): the largest family member that fits one
-A100 80GB, and MoE (3B active), so generation is fast enough for ~11.9K rows in one job.
+A100 80GB. NOTE the measured throughput: ~14 s/row (this serial transformers loop is
+overhead-bound, so the MoE's 3B active params do not translate into speed) -- the full
+11,915-row split is ~46h, past the 24h partition cap, so always --shard (3 ways = ~16h
+each) or resume. For big batches prefer scripts/teacher_generate_vllm.py (~250x faster
+per row measured).
 There is no Qwen3.5-32B (the family is 27B dense / 35B-A3B MoE); the quantized variants
 would fit an A40 but need packages we cannot install while the atuin venv is read-only
 (README "Temporary layout"). The teacher is never deployed, so its parameters don't count

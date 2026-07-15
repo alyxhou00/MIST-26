@@ -16,25 +16,37 @@
 # Smoke-test first with slurm/smoke-teacher.sbatch.
 #
 # Hardware: Qwen3.5-35B-A3B in bf16 is ~70GB of weights -> needs the a100_80 nodes
-# (a100_40 would need gres=gpu:a100:2 + the script's device_map=auto). MoE with 3B active
-# params, so decoding is fast despite the size; if throughput projects past the 24h cap
-# anyway, resubmit with the same --out (rows already generated are skipped) or split with
-# --shard i/n across two jobs.
+# (a100_40 would need gres=gpu:a100:2 + the script's device_map=auto).
+#
+# Time: MEASURED throughput is ~14 s/row (smoke 3859176 and the real shards agree) -- the
+# transformers loop is serial and overhead-bound, so the MoE's 3B active params do NOT make
+# it fast. The full 11,915-row train split projects to ~46h >> the 24h partition cap:
+# ALWAYS split (`--shard i/3` => ~16h/shard, what jobs 3859277-79 ran) or resubmit with the
+# same --out to resume (rows already generated are skipped). For large batches prefer
+# scripts/teacher_generate_vllm.py -- its batched decode measured ~250x faster per row
+# (4,126 rows in 17min, job 3859682).
 #
 # Teacher weights are cached on $HPCVAULT, NOT $WORK/hf_cache (atuin group file quota
 # exceeded) and NOT $HOME (its 100GB soft quota is blown by double-counted NFS accounting
 # with even one big model cached) -- README "Temporary layout". Populate on the login node
 # first (internet):
 #     HF_HOME=/home/vault/b279bb/b279bb31/hf_cache_teacher hf download Qwen/Qwen3.5-35B-A3B
-# The prepared datasets cache must also be the $HOME copy (offline `datasets` will not
-# re-prepare from the hub cache -- job 3857583's failure mode).
+# The prepared datasets cache is probed below (offline `datasets` will not re-prepare from
+# the hub cache -- job 3857583's failure mode).
 
 module load python/3.12-base cuda/12.8.1
 source "$WORK/mist-venv/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node (see header).
 export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"
-export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+# Prepared-dataset cache: prefer atuin, retreat to $HOME while atuin is unwritable
+# (README "Temporary layout"); probed at runtime so this heals when the quota is fixed.
+if touch "$WORK/hf_cache/datasets/.write-probe" 2>/dev/null; then
+  rm -f "$WORK/hf_cache/datasets/.write-probe"
+  export HF_DATASETS_CACHE="$WORK/hf_cache/datasets"
+else
+  export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
+fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
