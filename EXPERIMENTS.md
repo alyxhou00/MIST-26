@@ -31,7 +31,7 @@ bigger base is worth building on.
 |---|---|---|---|---|---|---|---|---|
 | 3822324 | 2026-07-08 | 0-shot full dev run | Qwen3.5-9B, shots=0, lang-hint ON | 2978 | 23.12 | 66.04 | 22.75 | `0shot-9b.sbatch`, 6h01. Beats 2B 0-shot (18.01/62.21/12.51) across the board. |
 | 3822329 | 2026-07-08 | few-shot full dev run (k=3) | Qwen3.5-9B, shots=3, lang-hint ON | 2978 | 27.64 | 77.79 | 43.79 | `fewshot-9b.sbatch`, 3h42. Best chrF so far. Gains concentrated in belebele (chrF 17.69→52.70) and tydiqa (21.88→38.94); aya essentially flat (24.03→24.19) — few-shot teaches answer *format*, not open-ended generation. |
-| 3859645 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | _running_ | | | `fewshot-9b.sbatch 3 --no-lang-hint`. A/B against 3822329 (27.64/77.79/43.79, hint ON): measures how much of our best config leans on the lang-hint system turn — matters because the official test prompts embed their own language instruction, so the hint is redundant-at-best there (TEST_SET_ANALYSIS.md §4). |
+| 3859645 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | 25.97 | 73.71 | 36.80 | `fewshot-9b.sbatch 3 --no-lang-hint`, 4h51. A/B against 3822329 (27.64/77.79/43.79, hint ON): −1.67 chrF overall, but the overall hides the shape. Per-source chrF vs hint-ON: belebele 52.70→**32.42**, tydiqa 38.94→34.39, MCIF 34.61→33.80, aya 24.19→23.85, OEG 25.55→**25.64**. The loss is almost entirely belebele (also BERTScore 92.06→83.49, ROUGE-L 79.85→64.69) — i.e. the hint was holding up MC *format*, the same thing few-shot was credited with teaching. On the sources the test set actually contains, dropping the hint costs ~1 chrF or less, and OEG is flat-to-up. |
 
 ## LoRA SFT on gold answers
 
