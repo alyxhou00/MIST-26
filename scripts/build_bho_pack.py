@@ -138,20 +138,35 @@ def xp3x_rows(args, stats: Counter) -> list[dict]:
         if src not in keep_srcs:
             stats["xp3x: source language not wanted"] += 1
             continue
+        if row.get("template") != args.xp3x_template:
+            stats["xp3x: other template"] += 1
+            continue
         target = (row.get("targets") or "").strip()
         source_text = (row.get("inputs") or "").strip()
         if not target or not source_text:
             stats["xp3x: empty"] += 1
             continue
-        if target in seen_targets:  # same FLORES sentence via another template
+        if target in seen_targets:  # same FLORES sentence, another source language
             stats["xp3x: duplicate target"] += 1
             continue
-        # xP3x bakes the task into `inputs` ("... The previous text is in Hindi. Here is a
-        # translation to Bhojpuri:"). Strip that trailing framing and re-frame in Bhojpuri,
-        # so these rows match the continuation rows' shape instead of xP3x's English one.
-        stem = re.split(r"\s*The previous text is in\b", source_text)[0].strip()
+        # xP3x bakes the task into `inputs` and does it differently per template:
+        #   continuation-x-x  <text> | The previous text is in Hindi. Here is a translation
+        #                     to Bhojpuri:
+        #   command-x-x       <text> Give me the same text in Bhojpuri.
+        #   question-x-x      A text in English: "<text>\nWhat's the text in Bhojpuri?
+        # We keep only continuation-x-x (--xp3x-template) and strip its framing: its marker
+        # is unambiguous, and question-x-x is malformed upstream anyway (it opens a quote it
+        # never closes). Restricting to one template costs no data -- every FLORES sentence
+        # appears under all three -- and it is what makes the strip below reliable.
+        stem = re.split(r"\s*\|?\s*The previous text is in\b", source_text)[0].strip()
+        stem = stem.rstrip("|").strip()
         if not stem:
             stats["xp3x: no stem after stripping framing"] += 1
+            continue
+        # Belt and braces: if any English task framing survived, the row is malformed --
+        # drop it rather than train on a half-stripped prompt.
+        if re.search(r"(text in Bhojpuri|previous text is in|Give me the same text)", stem):
+            stats["xp3x: framing survived stripping"] += 1
             continue
         seen_targets.add(target)
         out.append({"source": SOURCE_XP3X, "lang_code": "bho_Deva",
@@ -177,6 +192,11 @@ def main() -> None:
                     help="stop after this many fineweb docs (0 = all 18,666)")
     ap.add_argument("--limit-fineweb", type=int, default=6000)
     ap.add_argument("--limit-xp3x", type=int, default=4000)
+    ap.add_argument("--xp3x-template", default="continuation-x-x",
+                    choices=["continuation-x-x", "command-x-x", "question-x-x"],
+                    help="xP3x wraps each pair in three prompt templates; keep just one so "
+                         "the framing can be stripped reliably (default: continuation-x-x). "
+                         "Costs no data -- every sentence appears under all three")
     ap.add_argument("--xp3x-source-langs", default="eng_Latn,hin_Deva",
                     help="xP3x source languages to keep. Default eng+hin: both are in the "
                          "test set, and hin->bho contrasts the two confusable languages "
