@@ -8,7 +8,26 @@ transformers+gptqmodel: the default Marlin kernel rejects its out_features=1 lay
 inference is a large throughput win over the one-row-at-a-time transformers loop anyway.
 
     python scripts/teacher_generate_vllm.py --limit 15          # smoke (same 15 rows)
+    python scripts/teacher_generate_vllm.py --source aya,oeg --out runs/teacher122b-aya-oeg.jsonl
     python scripts/teacher_generate_vllm.py --shard 1/2 --out runs/teacher122b-s1of2.jsonl
+
+Smoke result (job 3859578, 15 deterministic rows, compared against Qwen3.5-35B-A3B and
+Qwen3.5-27B on the same rows -- see EXPERIMENTS.md): the 122B teacher is measurably better
+on knowledge-grounded questions specifically (got a Japanese trivia answer right that both
+smaller teachers hallucinated; got an NHL draft year exactly right where both smaller
+teachers guessed wrong years) -- exactly the failure mode the gold-filter step exists to
+catch, so a higher-quality teacher there means fewer rows lost to filtering. It showed no
+edge on belebele-style multiple-choice formatting (irrelevant anyway: MC-format teacher
+answers rarely chrF-match a "N: option text" gold, so the filter falls back to gold for
+belebele regardless of teacher). Conclusion: use 122B (via this script) specifically for
+the aya_dataset + oeg sources (`--source aya,oeg`, ~4,300 of the 11,915 train rows,
+estimated from these sources' dev-split share) where teacher quality is the actual lever;
+the cheaper Qwen3.5-35B-A3B full-corpus run (scripts/teacher_generate.py, already
+in-flight as of 2026-07-15) covers the rest. Batched vLLM generation is also dramatically
+faster than the transformers row-by-row loop once warmed up: 15 rows completed in 13s of
+actual decode (vs ~14s/ROW for 35B via transformers) -- the ~10 minutes job 3859578 took
+overall was almost entirely one-time model load (54s) + CUDA graph capture (~20s) +
+Triton kernel JIT warmup, which amortizes to nothing over thousands of rows.
 
 Rows are generated in chunks of --chunk (default 128) and appended to --out after each
 chunk, so an interrupted job loses at most one chunk and resumes via qa_idx like the
@@ -30,6 +49,11 @@ def main() -> None:
     ap.add_argument("--model", default="Qwen/Qwen3.5-122B-A10B-GPTQ-Int4")
     ap.add_argument("--tensor-parallel", type=int, default=2,
                     help="GPUs to shard over (the int4 122B needs 2x a100_80)")
+    ap.add_argument("--source", default=None,
+                    help="only rows whose `source` contains any of these comma-separated "
+                         "substrings, case-insensitive (e.g. 'aya,oeg' for the two sources "
+                         "where a stronger teacher matters most -- see EXPERIMENTS.md's "
+                         "3-way teacher comparison)")
     ap.add_argument("--shard", default=None, metavar="I/N")
     ap.add_argument("--limit", type=int, default=0, help="0 = whole train split")
     ap.add_argument("--chunk", type=int, default=128,
@@ -52,6 +76,9 @@ def main() -> None:
     qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
     qa["qa_idx"] = qa.index
     train = qa.iloc[int(len(qa) * 0.2):]
+    if args.source:
+        patterns = [p.strip() for p in args.source.split(",")]
+        train = train[train["source"].str.contains("|".join(patterns), case=False, na=False)]
     if args.shard:
         i, n = (int(x) for x in args.shard.split("/"))
         if not 1 <= i <= n:

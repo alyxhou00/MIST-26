@@ -43,6 +43,9 @@ from prompt_template import build_messages
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="Qwen/Qwen3.5-35B-A3B")
+    ap.add_argument("--source", default=None,
+                    help="only rows whose `source` contains any of these comma-separated "
+                         "substrings, case-insensitive (e.g. 'aya,oeg')")
     ap.add_argument("--shard", default=None, metavar="I/N",
                     help="process the i-th of n contiguous chunks of the train split "
                          "(1-based, e.g. '2/3'); applied before --limit")
@@ -72,6 +75,9 @@ def main() -> None:
     qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
     qa["qa_idx"] = qa.index  # stable row key, shared with any future script using this split
     train = qa.iloc[int(len(qa) * 0.2):]
+    if args.source:
+        patterns = [p.strip() for p in args.source.split(",")]
+        train = train[train["source"].str.contains("|".join(patterns), case=False, na=False)]
     if args.shard:
         i, n = (int(x) for x in args.shard.split("/"))
         if not 1 <= i <= n:
