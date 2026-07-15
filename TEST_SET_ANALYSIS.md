@@ -32,8 +32,23 @@ is the full analysis and what it means for the plan. Submission deadline: **1 Au
   Arabic context): *"I have a question about this passage: … The question is: … Could you
   please answer in one sentence, using only what the passage says? …"* — a different
   distribution from our templated `context + question` sample inputs.
-- Prompts are effectively single-line: only 2 of 10,999 qa rows contain a real newline
-  (and 2 contain a literal `\n` escape). No unescaping needed.
+- **All 8,640 `qa-context` prompts contain LITERAL `\n\n`** — the two characters `\` and
+  `n`, not a newline. The organizers' file is double-escaped: the JSON holds `"...\\n\\n..."`,
+  so `json.loads` yields a backslash-n that survives into the prompt string. Real newlines
+  appear in exactly 2 qa rows (both `qa-oeg`).
+  - *This corrects an earlier claim here* ("only 2 rows contain a literal `\n` escape; no
+    unescaping needed"), which came from testing `'\n' in prompt` — that finds real
+    newlines, not the escape. Verified by counting `chr(92)+'n'`: 8,640/8,640 qa-context,
+    0/2,259 qa-oeg.
+  - `qa-context` layout is `<lead-in>:\n\n<passage>\n\nThe question is: <q>\n\n<instructions>`,
+    so the literal escapes sit at exactly the structural boundaries — the passage/question
+    separators. Feeding the prompt verbatim (what `run_test.py` does by default) shows the
+    model `\n\n` as text at every boundary, in **79% of our qa test rows**.
+  - `run_test.py --unescape` turns them back into real newlines. Not the default: it changes
+    the official input, and we have no dev proxy to A/B it on (the sample data has no such
+    escapes). Worth a qualitative smoke and a candidate axis for the variant submissions.
+  - Useful side effect: the literal `\n\n` is a reliable section delimiter — `constraint_bank.py`
+    splits on it to lift the per-language instruction tails.
 - qa prompt lengths: median 654 chars, p95 1,475, max 2,607 — no long-context pressure.
 
 ## 3. Cross-lingual is the norm, not the edge case

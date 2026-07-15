@@ -19,9 +19,12 @@ can be resubmitted with the same --out and it resumes where it stopped. --shard 
 the (filtered) rows into n contiguous chunks for parallel jobs over multiple nodes; give
 each shard its own --out and concatenate afterwards.
 
-Known test-set quirk (v. 14 July 2026): the 100 qa-oeg English rows (qa-oeg_1..100_eng_eng)
-have an EMPTY prompt string. Generating from an empty prompt would produce unrelated text,
-so those rows get output "" and a warning; re-run once the organizers fix the data.
+Known test-set quirks (v. 14 July 2026), both reportable to the organizers:
+  * the 100 qa-oeg English rows (qa-oeg_1..100_eng_eng) have an EMPTY prompt string.
+    Generating from an empty prompt would produce unrelated text, so those rows get output ""
+    and a warning; re-run once the organizers fix the data.
+  * every qa-context prompt is double-escaped and carries LITERAL backslash-n at its section
+    boundaries -- see --unescape and TEST_SET_ANALYSIS.md section 2.
 """
 
 import argparse
@@ -49,6 +52,14 @@ def main() -> None:
     ap.add_argument("--lora", default=None,
                     help="path to a trained LoRA adapter (from scripts/train_lora.py) to load "
                          "on top of --model before generation. Omit for the base model.")
+    ap.add_argument("--unescape", action="store_true",
+                    help="turn literal backslash-n in the prompt into real newlines. The "
+                         "official file is double-escaped: ALL 8,640 qa-context prompts carry "
+                         "the two characters '\\' 'n' at their section boundaries (passage / "
+                         "question / instructions), so by default the model reads '\\n\\n' as "
+                         "text in 79%% of qa rows. Off by default because it edits the "
+                         "official input and there is no dev proxy to A/B it on -- see "
+                         "TEST_SET_ANALYSIS.md section 2")
     ap.add_argument("--lang-hint", action=argparse.BooleanOptionalAction, default=False,
                     help="prepend the shared 'Respond in <language>.' system turn derived from "
                          "question_lang (default: OFF -- the test prompt is self-contained)")
@@ -119,11 +130,14 @@ def main() -> None:
                 f.flush()
                 continue
             try:
+                prompt_text = row["prompt"]
+                if args.unescape:
+                    prompt_text = prompt_text.replace(chr(92) + "n", "\n")
                 messages = []
                 if args.lang_hint:
                     name = TEST_LANG_NAMES.get(row["question_lang"], row["question_lang"])
                     messages.append(system_turn(name))
-                messages.append({"role": "user", "content": row["prompt"]})
+                messages.append({"role": "user", "content": prompt_text})
                 prompt = tok.apply_chat_template(
                     messages, tokenize=False, add_generation_prompt=True,
                     enable_thinking=False,
