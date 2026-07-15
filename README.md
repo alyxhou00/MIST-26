@@ -67,7 +67,8 @@ question). [`scripts/run_test.py`](scripts/run_test.py) runs inference on it in 
 submission format (verbatim prompt as a single user turn, no template;
 [`slurm/run_test.sbatch`](slurm/run_test.sbatch) / `smoke-run-test.sbatch` on the cluster).
 
-What inspecting the file shows (all counts for the qa tasks unless noted):
+What inspecting the file shows (all counts for the qa tasks unless noted; full analysis
+with strategic implications in [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md)):
 
 - **12,775 rows = 8,640 `qa-context` + 2,359 `qa-oeg` (ours) + 1,776 `sum-sum` (teammate's).**
   460 qa rows per language × 24 languages (yoruba 419), incl. the surprise **`bho`
@@ -98,6 +99,7 @@ What inspecting the file shows (all counts for the qa tasks unless noted):
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
 | `adapters/` | gitignored scratch dir for trained LoRA adapters (`train_lora.py --out`), same reasoning as `runs/` |
 | [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log -- one row per SLURM job ID, with its config and chrF/BERTScore/ROUGE-L |
+| [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md) | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically |
 
 `$WORK/mist-out` (outside the repo) was the old location for predictions CSVs before this
 layout existed. It's no longer used by any sbatch job -- everything now lives

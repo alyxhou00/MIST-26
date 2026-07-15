@@ -54,7 +54,7 @@ template, no lang-hint by default) and writes submission-format `{id, output}` J
 | 3859059 | 2026-07-15 | test-set smoke (`smoke-run-test.sbatch`) | Qwen3.5-9B base, verbatim prompt, 10× qa-context arb + 10× qa-oeg bho | 20 | n\a (no golds) | | | Pipeline works end-to-end, outputs eyeballed. Findings: (1) test prompts *themselves* instruct 'if the answer is not in the passage, write only "no answer"' and end with an explicit "answer in <language>" — so an unanswerable-detection behavior and the output language are part of the task; (2) the base model **false-refuses**: 4/10 arb qa-context rows got "لا توجد إجابة" including a definitional question whose answer is verbatim in the passage; (3) **Bhojpuri OEG output drifts into Hindi (most rows), Nepali and Maithili** — the feared bho→hin slide is real and worse (roadmap D confirmed); (4) word budgets are mostly violated (150→235w, 120–150→282w, 100→60w; only 1/10 in range — roadmap C confirmed); (5) OEG outputs come out in heavy markdown (###, **bold**, emoji) — fine or not for human eval, TBD. |
 | 3859058 | 2026-07-15 | 3-shot dev run WITHOUT lang-hint | Qwen3.5-9B, shots=3, lang-hint OFF | 2978 | _running_ | | | `fewshot-9b.sbatch 3 --no-lang-hint` (new passthrough). A/B against 3822329 (27.64/77.79/43.79, hint ON): measures how much of our best config leans on the lang-hint system turn. Matters because test prompts embed their own language instruction, so the hint is redundant-at-best there; a big drop would mean the model depends on our scaffolding. |
 
-## LoRA SFT on distilled data — teacher outputs + gold mix (planned next)
+## LoRA SFT on distilled data — teacher outputs + gold mix (in progress)
 
 Key finding from the 9B runs above: few-shot's gain is almost entirely *answer format*
 (belebele chrF 17.69→52.70, tydiqa 21.88→38.94) while open-ended generation (aya) stays flat
@@ -66,6 +66,18 @@ KD: (1) generate teacher answers on the qa train split (~11.9K rows) with a stro
 golds**, as a *fresh* adapter (not continued from 3822375) — same recipe as `train_lora.py`,
 only the training targets change. That keeps it directly comparable to the gold-only adapter
 (3822375) above: same starting point, same recipe, one variable (the data).
+
+Teacher choice (2026-07-15): there is **no Qwen3.5-32B** — the family is 27B (dense) and
+35B-A3B (MoE). Picked **Qwen3.5-35B-A3B bf16 on one a100_80 node** (~70GB weights): largest
+family member that fits a single GPU without quantization (the GPTQ-Int4 variants would fit an
+a40 but need packages we can't install while the atuin venv is unwritable), and its 3B active
+params make decoding fast enough for ~11.9K rows inside the 24h cap.
+[`scripts/teacher_generate.py`](scripts/teacher_generate.py) generates over the train split
+(same seed-42 80/20 split; dev untouched) with lang-hint ON, resumable via `qa_idx`; weights
+cached at `$HOME/hf_cache_teacher` (atuin unwritable).
+
+| Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
+|---|---|---|---|---|---|---|---|---|
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a
