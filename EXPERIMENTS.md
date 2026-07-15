@@ -15,6 +15,33 @@ smoke comparison lives in IMPLEMENTATION_NOTES §5.1.
 ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 `logs/<jobname>-<jobid>.out`.
 
+> ## ⚠️ READ THIS BEFORE COMPARING ANY TWO NUMBERS IN THIS FILE
+>
+> **The `chrF` / `BERTScore` / `ROUGE-L` columns are dev *overall* scores, and dev overall is
+> NOT a faithful predictor of test performance. 71% of the dev set is noise for our purposes.**
+> Never pick a system by the overall column. Verified against the official test file
+> 2026-07-15 (TEST_SET_ANALYSIS §5b):
+>
+> | dev source | rows | represents the test set? |
+> |---|---|---|
+> | `facebook/belebele` | 1,123 | ❌ **multiple choice — the test set has none at all** |
+> | `CohereLabs/aya_dataset` | 978 | ❌ **golds are 24 words (p50); test `qa-oeg` asks for 120–180. No passage either, so it isn't `qa-context`. It resembles neither test task.** |
+> | `copenlu/answerable_tydiqa` | 615 | ✅ the proxy for **`qa-context`** |
+> | `FBK-MT/MCIF` | 165 | ✅ `qa-context` |
+> | `wmt25-mist-oeg-gpt-4.1` | 97 | ✅ the proxy for **`qa-oeg`** (golds 175 words p50 — matches) |
+>
+> **Rules:** judge `qa-context` on **tydiqa**, judge `qa-oeg` on **OEG**, and treat belebele and
+> aya as unscored. Only ~877/2,978 rows (29%) carry signal.
+>
+> Why this matters concretely — job 3859645 lost only 1.67 overall chrF, which reads as a mild
+> regression, but the entire loss was belebele collapsing 20 points while every source that
+> matters barely moved. The overall column hid the shape completely. It cuts the other way too:
+> a system can win the overall column purely on belebele and be worse where it counts.
+>
+> ⚠️ The trap that produced this warning: README's sub-task table groups aya with OEG under
+> "open-ended generation". That is a *task taxonomy*, not a claim that the two behave alike —
+> do not read it as a dev→test proxy mapping.
+
 ## Qwen3.5-2B
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
