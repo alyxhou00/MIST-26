@@ -21,6 +21,12 @@ source "$WORK/mist-venv/bin/activate"
 
 # Compute nodes have no internet -> use the cache populated on the login node.
 export HF_HOME="$WORK/hf_cache"
+# Prepared-dataset cache must be somewhere writable: in offline mode `datasets` does NOT
+# re-prepare from the hub cache, and it also takes a lock file on every load -- $WORK/hf_cache
+# is unwritable while the atuin group quota is exceeded (README "Temporary layout"; this is
+# what killed jobs 3857583 and 3859591). Baked in here (not left to the submitter to set) so
+# it can't be forgotten again.
+export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 

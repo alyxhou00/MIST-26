@@ -327,14 +327,18 @@ Until then, the working setup is a **hybrid**:
   adapter paths absolutely, e.g. `/home/atuin/b279bb/b279bb31/MIST-26/adapters/...`.
 - **`HF_DATASETS_CACHE` must point somewhere writable.** In offline mode (`HF_HUB_OFFLINE=1`)
   the `datasets` library does *not* re-prepare a dataset from the hub cache — it needs the
-  *prepared* cache under `HF_DATASETS_CACHE`, and it also writes locks there on every load
-  (this is what killed job 3857583 in 38s). The prepared cache (79MB, 32 files) was copied
-  once: `cp -r $WORK/hf_cache/datasets $HOME/hf_datasets_cache`. So submissions look like:
+  *prepared* cache under `HF_DATASETS_CACHE`, and it also writes a lock file there on every
+  load. `$WORK/hf_cache` is unwritable while atuin is over quota, so **every sbatch script
+  that loads the HF dataset bakes in `export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"`**
+  (the prepared cache, 79MB/32 files, was copied once: `cp -r $WORK/hf_cache/datasets
+  $HOME/hf_datasets_cache`) — this is not something the submitter needs to set. Relying on a
+  caller-supplied env var instead of baking it in is exactly what killed job 3857583 (38s) and
+  later **job 3859591** (37s, same error, after the fix had only been applied to
+  `lora_eval.sbatch` and not yet to `fewshot-9b.sbatch`) — so submissions are just:
 
   ```bash
   cd $HOME/MIST-26
-  HF_DATASETS_CACHE=$HOME/hf_datasets_cache sbatch slurm/lora_eval.sbatch \
-      /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375
+  sbatch slurm/lora_eval.sbatch /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375
   ```
 
 - **Big model weights (the distillation teachers) live on `$HPCVAULT`**
