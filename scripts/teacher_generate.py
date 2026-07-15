@@ -54,6 +54,11 @@ def main() -> None:
     ap.add_argument("--temperature", type=float, default=0.7,
                     help="sampling temperature (Qwen3.5 instruct card recommendation)")
     ap.add_argument("--top-p", type=float, default=0.8)
+    ap.add_argument("--gptq-backend", default=None,
+                    help="force the gptqmodel kernel backend ('torch', 'triton', "
+                         "'exllama_v2', ...) when loading a GPTQ checkpoint. The default "
+                         "Marlin kernel rejects Qwen3.5-122B-A10B-GPTQ-Int4's out_features=1 "
+                         "layer (job 3859381); 'torch' accepts any shape at some speed cost.")
     ap.add_argument("--seed", type=int, default=42,
                     help="split seed AND sampling seed; must stay 42 to match "
                          "benchmark.py's 80/20 split or the dev set leaks into training")
@@ -94,8 +99,12 @@ def main() -> None:
     from transformers import AutoModelForImageTextToText, AutoTokenizer, set_seed
 
     tok = AutoTokenizer.from_pretrained(args.model)
+    extra = {}
+    if args.gptq_backend:
+        from transformers import GPTQConfig
+        extra["quantization_config"] = GPTQConfig(bits=4, backend=args.gptq_backend)
     model = AutoModelForImageTextToText.from_pretrained(
-        args.model, torch_dtype=torch.bfloat16, device_map="auto"
+        args.model, torch_dtype=torch.bfloat16, device_map="auto", **extra
     ).eval()
 
     # --- generation: same sampling recipe as benchmark.py, flushed per row ---
