@@ -124,18 +124,23 @@ def fineweb_rows(args, stats: Counter) -> list[dict]:
 
 
 def xp3x_rows(args, stats: Counter) -> list[dict]:
-    """Translate-into-Bhojpuri rows from FLORES via xP3x, deduplicated on the bho side."""
+    """Translate-into-Bhojpuri rows from FLORES via xP3x, one row per Bhojpuri sentence."""
     from datasets import load_dataset
 
-    keep_srcs = {s.strip() for s in args.xp3x_source_langs.split(",") if s.strip()}
+    # Preference order, not just membership: position in --xp3x-source-langs breaks ties
+    # when the same Bhojpuri sentence is reachable from several source languages.
+    prefs = [s.strip() for s in args.xp3x_source_langs.split(",") if s.strip()]
+    rank_of = {src: i for i, src in enumerate(prefs)}
     ds = load_dataset("CohereLabs/xP3x", "bho_Deva", split="train", streaming=args.streaming)
-    seen_targets: set[str] = set()
-    out = []
+
+    # target -> (rank, row). Keeping ONE row per Bhojpuri target: the unique content is only
+    # ~2k sentences, and repeating each of them per source language would just reweight them.
+    best: dict[str, tuple[int, dict]] = {}
     for row in ds:
         stats["xp3x: seen"] += 1
         cfg = row.get("config") or ""            # e.g. "hin_Deva-bho_Deva"
         src = cfg.split("-")[0]
-        if src not in keep_srcs:
+        if src not in rank_of:
             stats["xp3x: source language not wanted"] += 1
             continue
         if row.get("template") != args.xp3x_template:
@@ -146,10 +151,11 @@ def xp3x_rows(args, stats: Counter) -> list[dict]:
         if not target or not source_text:
             stats["xp3x: empty"] += 1
             continue
-        if target in seen_targets:  # same FLORES sentence, another source language
-            stats["xp3x: duplicate target"] += 1
+        rank = rank_of[src]
+        if target in best and best[target][0] <= rank:
+            stats["xp3x: duplicate target (kept better source)"] += 1
             continue
-        # xP3x bakes the task into `inputs` and does it differently per template:
+        # xP3x bakes the task into `inputs`, differently per template:
         #   continuation-x-x  <text> | The previous text is in Hindi. Here is a translation
         #                     to Bhojpuri:
         #   command-x-x       <text> Give me the same text in Bhojpuri.
@@ -157,9 +163,9 @@ def xp3x_rows(args, stats: Counter) -> list[dict]:
         # We keep only continuation-x-x (--xp3x-template) and strip its framing: its marker
         # is unambiguous, and question-x-x is malformed upstream anyway (it opens a quote it
         # never closes). Restricting to one template costs no data -- every FLORES sentence
-        # appears under all three -- and it is what makes the strip below reliable.
-        stem = re.split(r"\s*\|?\s*The previous text is in\b", source_text)[0].strip()
-        stem = stem.rstrip("|").strip()
+        # appears under all three -- and it is what makes this strip reliable.
+        stem = re.split(r"\s*\|?\s*The previous text is in\b", source_text)[0]
+        stem = stem.strip().rstrip("|").strip()
         if not stem:
             stats["xp3x: no stem after stripping framing"] += 1
             continue
@@ -168,14 +174,17 @@ def xp3x_rows(args, stats: Counter) -> list[dict]:
         if re.search(r"(text in Bhojpuri|previous text is in|Give me the same text)", stem):
             stats["xp3x: framing survived stripping"] += 1
             continue
-        seen_targets.add(target)
-        out.append({"source": SOURCE_XP3X, "lang_code": "bho_Deva",
-                    "input": f"{TRANSLATE_INSTRUCTION}\n\n{stem}",
-                    "output": target, "origin": "bho-pack", "constraint": ""})
-        stats["xp3x: KEPT"] += 1
-        if args.limit_xp3x and len(out) >= args.limit_xp3x:
-            break
-    return out
+        if target in best:
+            stats["xp3x: duplicate target (replaced, better source)"] += 1
+        best[target] = (rank, {"source": SOURCE_XP3X, "lang_code": "bho_Deva",
+                               "input": f"{TRANSLATE_INSTRUCTION}\n\n{stem}",
+                               "output": target, "origin": "bho-pack",
+                               "constraint": "", "xp3x_source": src})
+    out = [r for _, r in best.values()]
+    stats["xp3x: KEPT"] += len(out)
+    for src, n in Counter(r["xp3x_source"] for r in out).items():
+        stats[f"xp3x: kept from {src}"] = n
+    return out[: args.limit_xp3x] if args.limit_xp3x else out
 
 
 def main() -> None:
@@ -197,10 +206,12 @@ def main() -> None:
                     help="xP3x wraps each pair in three prompt templates; keep just one so "
                          "the framing can be stripped reliably (default: continuation-x-x). "
                          "Costs no data -- every sentence appears under all three")
-    ap.add_argument("--xp3x-source-langs", default="eng_Latn,hin_Deva",
-                    help="xP3x source languages to keep. Default eng+hin: both are in the "
-                         "test set, and hin->bho contrasts the two confusable languages "
-                         "directly. 200+ others exist but are off-task")
+    ap.add_argument("--xp3x-source-langs", default="hin_Deva,eng_Latn",
+                    help="xP3x source languages to keep, MOST WANTED FIRST -- order breaks "
+                         "ties when one Bhojpuri sentence is reachable from several sources. "
+                         "Default hin,eng: both are in the test set, and hin->bho is first "
+                         "because it shows the model Hindi and Bhojpuri side by side, which "
+                         "is the exact contrast it fails. 200+ others exist but are off-task")
     ap.add_argument("--min-sentences", type=int, default=4,
                     help="skip short fineweb docs: the LID gate needs document length to be "
                          "precision-safe, and we split the doc into lead + target")
