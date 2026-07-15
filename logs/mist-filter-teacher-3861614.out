@@ -1,0 +1,73 @@
+### Starting TaskPrologue of job 3861614 on a0222 at Wed Jul 15 23:03:47 CEST 2026
+Running on cores 48-63 with governor performance
+Wed Jul 15 23:03:48 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:61:00.0 Off |                  Off |
+|  0%   36C    P8             23W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+loaded 2706 teacher rows from 1 file(s)
+scoring: per-row sentence chrF + BERTScore F1 ...
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3704.64it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+
+pass rate (OR, chrF>=30.0, BERTScore>=70.0): 39.8% overall
+  CohereLabs/aya_dataset               44.6% of n=837
+  FBK-MT/MCIF                          62.6% of n=163
+  copenlu/answerable_tydiqa            31.5% of n=571
+  facebook/belebele                    33.3% of n=1064
+  wmt25-mist-oeg-gpt-4.1               94.4% of n=71
+wrote 2706 rows (1076 teacher / 1630 gold) -> /tmp/throwaway-probe.jsonl
+train with:  python scripts/train_lora.py --data /tmp/throwaway-probe.jsonl
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 23:04:28 CEST 2026
+= Job-ID             : 3861614 on alex
+= Job-Name           : mist-filter-teacher
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/filter_teacher.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:00:46
+= Total RAM usage    : 8.5 GiB of assigned  GiB (%)
+= Node list          : a0222
+= Subm/Elig/Start/End: 2026-07-15T23:03:40 / 2026-07-15T23:03:40 / 2026-07-15T23:03:42 / 2026-07-15T23:04:28
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              55.6G   104.9G   209.7G        N/A     156K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:61:00.0, 1160628, 76 %, 37 %, 2706 MiB, 27306 ms

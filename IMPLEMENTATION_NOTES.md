@@ -330,12 +330,31 @@ both thresholds calibrated per-source via `--report`'s distribution/threshold gr
   short golds — smoke medians were chrF ≈16 / BERTScore ≈66); BERTScore alone is too
   lenient on fluent, on-topic hallucinations. Two calibrated thresholds OR'd beat either
   alone.
-- **belebele behaves as a built-in fallback**: teacher answers are explanatory prose that
+- ~~**belebele behaves as a built-in fallback**: teacher answers are explanatory prose that
   never chrF-matches a "2: \<option\>" gold, so belebele rows fail the filter and keep
-  their gold targets regardless of teacher — which is what we want, since the gold-SFT
-  adapter already proved gold targets teach that format perfectly (85.82 chrF). Teacher
-  choice therefore only matters where the filter can pass teacher rows: aya/OEG/tydiqa
-  prose.
+  their gold targets regardless of teacher.~~ **WRONG — disproved 2026-07-15 (job 3861614,
+  2,706 real 35B rows from the partial shard 1). Measured pass rates at 30/70:**
+
+  | source | pass rate | n |
+  |---|---|---|
+  | `wmt25-mist-oeg-gpt-4.1` | **94.4%** | 71 |
+  | `FBK-MT/MCIF` | 62.6% | 163 |
+  | `CohereLabs/aya_dataset` | 44.6% | 837 |
+  | **`facebook/belebele`** | **33.3%** | 1,064 |
+  | `copenlu/answerable_tydiqa` | 31.5% | 571 |
+  | overall | 39.8% | 2,706 |
+
+  **The error: the filter is `chrF >= 30` OR `BERTScore >= 70`, and the argument above only
+  covers the chrF half.** chrF really is ~0 for prose-vs-`2: <option>` — but BERTScore
+  happily scores on-topic prose against a short option at ≥70 (belebele BERTScore p75 =
+  70.7). So a third of belebele rows *do* pass, and passing means the `2: <option>` gold
+  target gets **replaced by prose** — destroying exactly the format the gold-SFT adapter
+  learned best (85.82). There is no built-in fallback; it has to be built.
+- **Any "the filter will catch it" claim must be checked against BOTH halves of the OR.**
+  The same slip was made a second time in an earlier draft of §5.4 (tydiqa "cannot match a
+  2-word gold, so it falls back") — measured 31.5% pass, on a source that *does* reach the
+  test set.
+- Teacher choice therefore matters everywhere the filter can pass rows, which is everywhere.
 - Empty teacher answers auto-fail. Mix policies: `replace` (default; teacher-where-passed
   else gold — keeps the dataset identical in size/rows to the gold-SFT run 3822375, so the
   distilled-vs-gold comparison stays one-variable), `both`, `teacher`.
@@ -362,12 +381,12 @@ Distillation's premise is "the teacher's answer is a better training target than
 Lining that premise up against where each source actually lands at test time
 (TEST_SET_ANALYSIS §5b/§5c) produces an uncomfortable crossing:
 
-| source | train rows | what the gold is | teacher upside | reaches the test set? |
-|---|---|---|---|---|
-| `aya` | 3,763 | human, 24 words (p50) | **high** — teacher writes fuller answers | **no** (§5b: wrong length regime, resembles neither test task) |
-| `wmt25-mist-oeg-gpt-4.1` | 363 | **GPT-4.1, 175 words, markdown** | **unclear** — gold is already a strong model's output, and the filter specifically keeps the teacher answers most *similar* to it | **yes** — this is `qa-oeg` |
-| `copenlu/answerable_tydiqa` | 2,497 | 2-word extraction | **low** — a prose answer cannot chrF-match a 2-word gold, so it fails the filter and falls back to gold | yes — this is `qa-context` |
-| `facebook/belebele` | 4,577 | `2: <option>` | **none by construction** (§5.2: always fails, always falls back to gold) | **no** (no MC at test) |
+| source | train rows | what the gold is | measured pass @30/70 (3861614) | teacher upside | reaches the test set? |
+|---|---|---|---|---|---|
+| `aya` | 3,763 | human, 24 words (p50) | 44.6% | **high** — teacher writes fuller answers | **no** (§5b: wrong length regime, resembles neither test task) |
+| `wmt25-mist-oeg-gpt-4.1` | 363 | **GPT-4.1, 175 words, markdown** | **94.4%** | **unclear** — gold is already a strong model's output, and the filter passes almost everything, so it is barely filtering at all | **yes** — this is `qa-oeg` |
+| `copenlu/answerable_tydiqa` | 2,497 | 2-word extraction | 31.5% | **questionable** — a third of rows swap a 2-word extraction target for prose | yes — this is `qa-context` |
+| `facebook/belebele` | 4,577 | `2: <option>` | 33.3% | **negative** — a third swap the MC-format gold for prose, wrecking the one thing gold-SFT nailed (85.82) | **no** (no MC at test) |
 
 **Read the two right-hand columns together: distillation has the most headroom exactly where
 it does not transfer (aya), and the least headroom where it matters (OEG).** Additionally,
@@ -383,8 +402,32 @@ bet — "distillation is the lever, OEG is the scoring headroom" — rests on th
 than the plan records, and the merged filter report (per-source pass rates on real data) is
 the thing that should settle it before we commit training time.
 
-**Corollary for the teacher runs themselves:** if §5.2 holds, the ~4,577 belebele rows in
-the 35B shards are compute spent on answers that are guaranteed to be discarded. See §5.5.
+### 5.5 Per-source thresholds are now required, not optional
+
+Measured pass rates (§5.2 table) make a single global threshold indefensible — the same
+30/70 does something different, and something wrong, on each source:
+
+- **belebele (4,577 rows): must always keep gold.** 33.3% pass today, and every passing row
+  replaces a `2: <option>` target with prose. There is no upside to weigh against it —
+  belebele does not reach the test set (no MC), so the passing rows buy nothing and cost the
+  format the gold-SFT adapter learned best. It also **confounds the headline experiment**:
+  a distilled adapter trained on corrupted belebele targets will crater on belebele in dev,
+  drag the overall column down, and look like "distillation failed" when the only thing that
+  failed is a source we already decided is noise (EXPERIMENTS.md warning).
+- **OEG (363 rows): 94.4% pass = the filter is not filtering.** Whatever threshold we pick
+  here is close to a no-op; the real question is §5.4's (is the 122B better than GPT-4.1 at
+  all), and the filter cannot answer it.
+- **tydiqa (2,497 rows): 31.5% pass, and this one reaches the test set.** Swapping a 2-word
+  extraction gold for teacher prose on a third of rows is a real intervention on a source
+  that matters. Note gold-SFT *already* collapsed on tydiqa (38.94→19.53) while training on
+  the clean 2-word golds, so this is the source where target choice is least understood.
+
+**Corollary for the running teacher shards:** the ~4,577 belebele rows are compute spent on
+answers we should never use. Not worth killing 3859277-79 over — they were ~68% done at
+2026-07-15 23:00 with ~5h left, so the saving is ~2h against the risk of losing 10h of work.
+Exclude belebele at *filter* time instead, which is free. A `--source` policy (per-source
+thresholds, or a "this source is gold-only" list) is the missing piece in
+`scripts/filter_teacher.py`.
 
 ## 6. Infrastructure record (reproducibility appendix material)
 
