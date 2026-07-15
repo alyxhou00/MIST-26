@@ -2,7 +2,7 @@
 #SBATCH --job-name=mist-qa-lora-eval
 #SBATCH --partition=a40
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=10:00:00
+#SBATCH --time=16:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jenchien.hou@tum.de
@@ -19,10 +19,18 @@
 # Assumes slurm/setup.sh has been (re-)run since it now also installs peft (requirements.txt)
 # and caches Qwen3.5-9B -- see README.
 #
-# Time limit 10h, same as slurm/0shot-9b.sbatch (this is the same generation workload, just
-# with a LoRA adapter attached -- adapter forward-pass overhead is negligible next to the base
-# 9B model's). 0shot-9b's real run (job 3822324) measured ~6.7h projected total -- see that
-# file's comment for the math.
+# Time limit 16h. It was 10h (copied from slurm/0shot-9b.sbatch on the theory that the adapter
+# forward-pass overhead is negligible), and job 3858987 -- adapter + `--shots 3` -- died at
+# 10:00:05 having generated all 2,978 rows but not yet scored them. Measured generation times
+# on this dev set: 3-shot no adapter 3h42 (3822329), adapter 0-shot 6h52 (3857589), adapter
+# 3-shot ~9h59 (3858987, scoring adds only ~1min -- see 3861569). Few-shot demos lengthen every
+# prompt, and that cost lands on top of the adapter's, so this config is ~2.7x the plain 3-shot
+# run and 10h had no margin at all.
+#
+# If a run does time out after generating, do NOT rerun it: benchmark.py has already written
+# runs/predictions-lora-<jobid>.csv, so re-score that instead --
+#     sbatch slurm/evaluate.sbatch runs/predictions-lora-<jobid>.csv
+# which is how 3858987's numbers were recovered in 59s rather than in another 10h.
 #
 # Sampling params (--temperature 0.7 --top-p 0.8) come from Qwen3.5-9B's own card. --model
 # must match whatever train_lora.py used for this adapter (default Qwen3.5-9B) -- the adapter
