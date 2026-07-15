@@ -42,6 +42,39 @@ ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 > "open-ended generation". That is a *task taxonomy*, not a claim that the two behave alike —
 > do not read it as a dev→test proxy mapping.
 
+## System comparison — read this one to choose a system
+
+The tables further down are a chronological log, one row per job, scored on dev *overall*.
+This one is the decision view: each candidate on the metric its test sub-task actually
+deserves, with the 71% of dev that predicts nothing already excluded. Produced by re-scoring
+the stored predictions CSVs with the current `evaluate.py` (no regeneration).
+
+`qa-context` (8,640 test rows) is scored with **Exact Match + token F1** — the golds are
+2-word extractions and chrF cannot resolve them. `qa-oeg` (2,359 test rows) keeps chrF /
+BERTScore (175-word golds) and adds **word-budget compliance**, which is scored at test time
+and which nothing else here can see.
+
+| System | job | qa-context EM | qa-context F1 | qa-oeg chrF | qa-oeg BERT | budget in-band | (legacy overall chrF) |
+|---|---|---|---|---|---|---|---|
+| 9B 3-shot | 3822329 | **6.54** | **32.12** | 25.55 | 69.38 | 0% of 4 (−53% short) | 27.64 |
+| 9B + gold-LoRA, 0-shot | 3857589 | _pending_ | | | | | 26.56 |
+| 9B + gold-LoRA + 3-shot | 3858987 | _pending_ | | | | | 21.64 |
+| 9B 3-shot, no lang-hint | 3859645 | _pending_ | | | | | 25.97 |
+| 9B + distilled LoRA, 0-shot | — | _not built_ | | | | | |
+
+**What the first row already changes:** 3-shot's tydiqa chrF of 38.94 was the strongest
+number in this whole file and the reason `qa-context` looked solved. On the extraction
+metric the same predictions score **6.54 EM**. The model almost never returns the gold span.
+⚠️ Low EM does not by itself mean "wrong" — a verbose-but-correct answer ("the answer is
+1650" vs gold "1650") scores 0 EM and partial F1, so some of this gap is style, not accuracy.
+Whether that style is penalised depends on the organisers' automatic metric, **which we do
+not know**. What is now certain is only that chrF was hiding the gap.
+
+**Budget compliance, first measurement:** the 3-shot model writes **53% short** and lands in
+band on 0 of 4 budgeted dev rows. n=4 is far too small to trust the magnitude (dev has almost
+no budgeted rows — TEST_SET_ANALYSIS §4), but the direction contradicts the assumption behind
+roadmap C's framing: the failure is under-writing, not over-writing.
+
 ## Qwen3.5-2B
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
@@ -99,9 +132,32 @@ filter pass rate. Teacher weights live on `$HPCVAULT` (README "Temporary layout"
 
 | Job ID | Date | Step | Config | Rows | Outcome |
 |---|---|---|---|---|---|
-| 3859277-79 | 2026-07-15 | teacher generation, whole corpus (3 shards) | Qwen3.5-35B-A3B bf16, `teacher_gen.sbatch --shard {1,2,3}/3`, lang-hint ON | 11,915 | _running_, ~16h/shard projected. Stable `--out runs/teacher-s{i}of3.jsonl` names → resumable on resubmit. |
+| 3859277-79 | 2026-07-15 | teacher generation, whole corpus (3 shards) | Qwen3.5-35B-A3B bf16, `teacher_gen.sbatch --shard {1,2,3}/3`, lang-hint ON | 11,915 | _running_ (~68% at 23:00, ~270 rows/h → ~4h left; the earlier "ETA next morning" was a large under-estimate). Stable `--out runs/teacher-s{i}of3.jsonl` names → resumable on resubmit. **⚠️ Two things learned after these were submitted, neither worth killing them for — see the note below.** |
 | 3859682 | 2026-07-15 | teacher generation, aya+oeg subset | Qwen3.5-122B-A10B-GPTQ-Int4 via vLLM, `teacher_gen_vllm.sbatch --source aya,oeg`, 2× a100_80 | 4,126 | ✅ 17m10s, all rows written, no failures → `runs/teacher122b-aya-oeg.jsonl` (gitignored). vLLM's batched-throughput edge (~250×/row vs the 35B transformers loop) holds at scale. |
 | 3860144 | 2026-07-15 | filter calibration report on the 122B output | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl --report`, a40 | 4,126 | ✅ 1m16s. See distributions below. |
+
+> **Note on 3859277-79 (35B shards) — two post-hoc findings, deliberately NOT acted on:**
+>
+> 1. **~4,577 of the 11,915 rows are belebele, and their teacher answers should never be used.**
+>    They pass the filter 33.3% of the time (job 3861614) and every pass swaps a `2: <option>`
+>    gold for prose — wrecking the format gold-SFT learned best (85.82) and buying nothing,
+>    since the test set has no multiple choice. Handled at *filter* time with
+>    `--gold-only belebele` (free) rather than by regenerating. The generation itself is
+>    ~38% wasted compute; that is now sunk.
+> 2. **The 35B-vs-122B split rests on a premise that turned out false.** IMPLEMENTATION_NOTES
+>    §5.1 assigned the 35B to belebele/tydiqa/MCIF because "teacher choice barely matters
+>    there (see §5.2)" — §5.2 claimed those rows always fail the filter. Measured: tydiqa
+>    31.5%, MCIF 62.6% pass. So teacher choice *does* matter on the two sources that reach
+>    the test set as `qa-context`, and they got the weaker, more hallucination-prone teacher
+>    while the 122B spent 91% of its output on aya, which reaches neither test task.
+>
+> **Why not kill and redo with the 122B:** the 122B via vLLM does the whole 11,915-row split
+> in well under 1h (3859682: 4,126 rows in 17m10s, ~13min of it one-time engine startup)
+> versus ~50 GPU-hours for these three, so the redo is cheap *whenever* we do it. The 35B
+> output is a resumable file on disk and stays useful as a comparison point. Killing 10h of
+> running work to save 4h, on the untested assumption that the 122B is also better at
+> *extraction* (§5.1's probes were knowledge questions), is the worse trade. Let them finish;
+> regenerate `--source tydiqa,mcif` with the 122B afterwards and compare.
 
 Filter calibration so far (from 3860144; final thresholds after the 35B shards land):
 
