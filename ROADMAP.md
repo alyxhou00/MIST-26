@@ -20,27 +20,34 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 3. **`task` 欄位在測試時直接給你**（qa-context / qa-oeg / sum-sum）— 按任務路由合法，一個 9B
    底座掛多個 LoRA adapter 依任務切換完全在 10B 限制內（實測帳：9.44B + 0.029B/adapter，
    IMPLEMENTATION_NOTES §2）。
-4. **我們的 dev set 有 71% 是雜訊 —— 別再看整體分數做決定**（2026-07-15 對官方檔案實測）。
-   dev 有 5 個 source，但**只有 3 個跟測試集是同一種東西**。白話說：dev 是我們的「模擬考」，
-   但這張模擬考有七成的題目跟真正的考試無關，所以模擬考的**總分是假的**。
+4. **別再看 dev 的整體分數做決定 —— 但也別過度修剪 dev**（2026-07-16 修訂）。
+   dev 是我們的「模擬考」，但題型分佈跟真正的考試不同，所以**總分是假的**。要**分 sub-task 看**，
+   而且每個 sub-task 用對的指標。
 
-   | source | dev 列數 | 能不能代表測試集？ |
+   | source | dev 列數 | 代表什麼 |
    |---|---|---|
-   | `facebook/belebele` | 1,123 | ❌ **選擇題。測試集一題選擇題都沒有。** |
-   | `CohereLabs/aya_dataset` | 978 | ❌ **答案太短。** aya 的標準答案中位 **24 詞**，測試的 qa-oeg 要求 **120-180 詞**（差 7 倍）。而且 aya 沒有 passage，所以也不是 qa-context。**它兩邊都不像。** |
-   | `copenlu/answerable_tydiqa` | 615 | ✅ **qa-context 的代表**（passage + 抽取式短答案） |
-   | `FBK-MT/MCIF` | 165 | ✅ qa-context（同上） |
-   | `wmt25-mist-oeg-gpt-4.1` | 97 | ✅ **qa-oeg 的代表**（標準答案中位 175 詞，與測試要求吻合） |
+   | `facebook/belebele` | 1,123 | ❌ **選擇題。測試集一題都沒有。38% 的 dev，零預測力。** |
+   | `copenlu/answerable_tydiqa` | 615 | ✅ **qa-context** —— 且要用 **EM/F1** 看，不是 chrF |
+   | `FBK-MT/MCIF` | 165 | ✅ qa-context |
+   | `wmt25-mist-oeg-gpt-4.1` | 97 | ✅ **qa-oeg 的長篇端**（gold 中位 175 詞）≈ 87% 的 qa-oeg prompt |
+   | `CohereLabs/aya_dataset` | 978 | ✅ **qa-oeg 的短答端**（gold 中位 24 詞）≈ 13% 的 qa-oeg prompt |
 
-   **有預測力的只有 877/2,978 列（29%）。** 實務規則：
-   - **看 tydiqa** 決定 qa-context 的配置，**看 oeg** 決定 qa-oeg 的配置。
-   - **belebele 和 aya 的分數一律不列入決策**（可以看，但不能當依據）。
-   - **「overall chrF」永遠不要拿來比較系統** —— 它有七成成分與測試無關。
-     （例：3859645 整體只掉 1.67 看似輕微，但那 1.67 幾乎全是 belebele 崩了 20 分造成的，
-     而 belebele 根本不重要；真正相關的 source 幾乎沒掉。反過來也會發生。）
-   - ⚠️ **這是踩過的坑**：README 的 sub-task 對應表把 aya 和 oeg 一起歸為「開放式生成」。
-     那是**任務分類**，不是「兩者行為相似」的保證 —— 別把它當代打者名單用（細節見
-     TEST_SET_ANALYSIS §5b）。
+   實務規則：
+   - **qa-context 看 tydiqa + MCIF 的 EM/F1**；**qa-oeg 把 oeg 和 aya 當兩個獨立欄位看**
+     （它們量的是同一任務的兩端，**絕不可平均**）；**belebele 不計分**。
+   - ⚠️ **dev 的權重是反的**：aya 有 978 列卻只對應 ~13% 的 qa-oeg；oeg 只有 97 列卻對應 ~87%。
+   - **「overall chrF」永遠不要拿來比較系統**（例：3859645 整體只掉 1.67 看似輕微，但那 1.67
+     幾乎全是 belebele 崩 20 分造成的，而 belebele 根本不重要；反過來也會發生）。
+
+   ⚠️ **這一條本身就是踩過的坑，而且踩了兩次**：
+   - 第一次：把 README 的 sub-task 分類表當成 proxy 對應表用。
+   - 第二次（更糟）：**先前這裡寫「aya 不代表任何測試任務、71% 是雜訊」——那是錯的，已撤回。**
+     理由是「qa-oeg 要 120-180 詞、aya 只有 24 詞」，但**只有 ~20% 的 qa-oeg 帶字數預算**；
+     整個任務是光譜，100 個 unique prompt 裡約 13% 是短答／清單／機智問答（「說出一個名字裡
+     沒有母音字母的國家」、「首都五大景點」）——**正是 aya 的形態**。錯在用 20% 的特徵定義
+     100% 的任務。
+   - **教訓：qa-oeg 只有 100 個 unique prompt**（平行語料翻 24 語）——要下關於它的結論，
+     就把 100 個全部讀完，別抽樣外推。細節見 TEST_SET_ANALYSIS §5b。
 5. **驚喜語言 bho（Bhojpuri）** — 訓練資料零筆；fra/swh/tel/tha 從測試集消失（別再為它們優化）。
    每隊可交 3 份輸出（primary + 2 variants），可以對沖。
    （07-15 更新：最終測試集確認只有這一個驚喜語言。）

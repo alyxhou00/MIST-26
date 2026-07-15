@@ -91,33 +91,45 @@ win (chrF 52.70 → 85.82) **does not appear at test time**. Free-form extractio
 (tydiqa-like) is the closest dev proxy for `qa-context` — and that is exactly where the
 adapter collapsed (38.94 → 19.53). Dev overall chrF is **not** a faithful test predictor.
 
-## 5b. aya is not a proxy for `qa-oeg` either (verified 2026-07-15 against the official file)
+## 5b. What each dev source proxies (rewritten 2026-07-16 — the first version was wrong)
 
-An earlier version of this doc said to "weight tydiqa + aya/OEG". **That was wrong about
-aya.** README's sub-task table groups `CohereLabs/aya_dataset` with `wmt25-mist-oeg-gpt-4.1`
-under "open-ended generation" — a fair *task* grouping, but not a statement that the two
-behave alike, and they do not. Measured gold length (dev split, whitespace word count):
+**Retracted:** an earlier version of this section claimed aya "resembles neither test task"
+and that 71% of dev is noise. **That was wrong, and wrong by exactly the method this document
+keeps warning about.** The reasoning was: ~20% of qa-oeg prompts carry a 120–180 word budget →
+OEG's 175-word golds match it → aya's 24-word golds are 7× too short → aya proxies nothing.
+Every step is true *of the budgeted 20%*, and it was generalised to all of qa-oeg without
+reading the rest.
 
-| dev source | gold words p25/p50/p75 | test task it supposedly proxies |
-|---|---|---|
-| `wmt25-mist-oeg-gpt-4.1` (n=97) | 30 / **175** / 227 | `qa-oeg` — asks for **120–180 words**: exact match |
-| `CohereLabs/aya_dataset` (n=978) | 6 / **24** / 60 | `qa-oeg` — **7× too short**, wrong output regime |
-| `copenlu/answerable_tydiqa` (n=615) | 1 / **2** / 3 | `qa-context` — extraction: match |
+`qa-oeg` is only **100 unique prompts** (a parallel corpus, translated 24 ways) — small enough
+to enumerate, which is what should have happened first. Reading all 100 (Spanish rendering,
+`data/tests.jsonl`), the task is a **spectrum**, not one regime:
 
-aya rows are short questions with short answers ("Fortnite mobilde var mı?", gold 152 chars)
-and carry **no passage**, so they are neither `qa-context` (which is passage+question) nor
-`qa-oeg` (which is 120–180-word composition). Consequence: **the faithful dev proxy is only
-tydiqa (615) + MCIF (165) for `qa-context` and OEG (97) for `qa-oeg` — ~877 of 2,978 rows
-(29%).** belebele (1,123, no MC at test) and aya (978, wrong length regime) are the other
-71% and should not drive system choice.
+| kind | count | example | answer length |
+|---|---|---|---|
+| explicit word budget | ~20 | #1 "Write a 150-word description of a technological development…"; #48 "a 200–300 word essay" | 120–300 words |
+| open-ended creative / explanatory | ~65 | #5 "Explain quantum entanglement using only kitchen metaphors"; #22 "Invent a new holiday"; #37 "Write a poem using only words starting with S" | medium, unbounded |
+| **short answer / list / trivia** | **~13** | **#90 "Can you name a country whose name has no a, e, i, o, u?"; #100 "Name the top 5 landmarks in the capital"; #92 "…give a single line for dress, gifts, socialising"; #94 "one sentence of explanation, then exactly two examples"** | **short — this is aya's shape** |
 
-⚠️ Scope of this claim: aya's unsuitability as an *evaluation proxy* is measured. Whether
-aya rows are harmful as *training* data is a separate, untested question — a `qa-oeg`
-adapter trained mostly on 24-word targets would plausibly learn the wrong length, but that
-has not been run.
+So **aya does proxy `qa-oeg`'s short-answer tail** (~13% of the prompts ≈ 307 test rows), and
+OEG proxies the long-form end. They are proxies for *different slices of the same task*, which
+is what README's grouping said all along.
 
-⚠️ This makes `qa-oeg` the thin part of the whole plan: 2,359 test rows backed by 97 dev
-rows and 363 train rows (see §5c).
+| dev source | n | gold words p50 | proxies |
+|---|---|---|---|
+| `copenlu/answerable_tydiqa` | 615 | 2 | `qa-context` |
+| `FBK-MT/MCIF` (QA) | 165 | — | `qa-context` |
+| `wmt25-mist-oeg-gpt-4.1` | 97 | 175 | `qa-oeg`, long-form end (~87% of prompts) |
+| `CohereLabs/aya_dataset` | 978 | 24 | `qa-oeg`, short-answer end (~13% of prompts) |
+| `facebook/belebele` | 1,123 | — | **nothing** — multiple choice, and the test set has none (§5) |
+
+**What survives:** belebele (1,123 rows, 38% of dev) really does predict nothing — that rests
+on "zero qa prompts match MC patterns", which is a property of the whole file, not a subset.
+**What does not:** the "71% noise" figure and aya's exclusion.
+
+⚠️ **The real distortion is weighting, not validity.** dev gives aya 978 rows for ~13% of
+qa-oeg and OEG 97 rows for ~87% — inverted. So aya's numbers are over-weighted for the test
+mix and OEG's are badly under-powered, but both are measuring something real. Do not average
+them; read them as two separate columns.
 
 ## 5c. What each teacher run actually covers
 

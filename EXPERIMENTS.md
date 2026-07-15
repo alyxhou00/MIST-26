@@ -18,29 +18,36 @@ ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 > ## ⚠️ READ THIS BEFORE COMPARING ANY TWO NUMBERS IN THIS FILE
 >
 > **The `chrF` / `BERTScore` / `ROUGE-L` columns are dev *overall* scores, and dev overall is
-> NOT a faithful predictor of test performance. 71% of the dev set is noise for our purposes.**
-> Never pick a system by the overall column. Verified against the official test file
-> 2026-07-15 (TEST_SET_ANALYSIS §5b):
+> NOT a faithful predictor of test performance.** Never pick a system by the overall column —
+> use the decision table below it. Checked against the official test file (TEST_SET_ANALYSIS
+> §5b):
 >
 > | dev source | rows | represents the test set? |
 > |---|---|---|
-> | `facebook/belebele` | 1,123 | ❌ **multiple choice — the test set has none at all** |
-> | `CohereLabs/aya_dataset` | 978 | ❌ **golds are 24 words (p50); test `qa-oeg` asks for 120–180. No passage either, so it isn't `qa-context`. It resembles neither test task.** |
-> | `copenlu/answerable_tydiqa` | 615 | ✅ the proxy for **`qa-context`** |
+> | `facebook/belebele` | 1,123 | ❌ **multiple choice — the test set has none at all.** 38% of dev, predicts nothing. |
+> | `copenlu/answerable_tydiqa` | 615 | ✅ **`qa-context`** — and score it with EM/F1, not chrF |
 > | `FBK-MT/MCIF` | 165 | ✅ `qa-context` |
-> | `wmt25-mist-oeg-gpt-4.1` | 97 | ✅ the proxy for **`qa-oeg`** (golds 175 words p50 — matches) |
+> | `wmt25-mist-oeg-gpt-4.1` | 97 | ✅ **`qa-oeg`, long-form end** (golds 175 words p50) — ~87% of qa-oeg prompts |
+> | `CohereLabs/aya_dataset` | 978 | ✅ **`qa-oeg`, short-answer end** (golds 24 words p50) — ~13% of qa-oeg prompts |
 >
-> **Rules:** judge `qa-context` on **tydiqa**, judge `qa-oeg` on **OEG**, and treat belebele and
-> aya as unscored. Only ~877/2,978 rows (29%) carry signal.
+> **Rules:** judge `qa-context` on **tydiqa + MCIF**, judge `qa-oeg` on **OEG and aya as two
+> separate columns** (they measure opposite ends of one spectrum — never average them), and
+> treat **belebele** as unscored. ⚠️ dev's weighting is inverted against the test mix: aya gets
+> 978 rows for ~13% of qa-oeg while OEG gets 97 for ~87%.
 >
 > Why this matters concretely — job 3859645 lost only 1.67 overall chrF, which reads as a mild
 > regression, but the entire loss was belebele collapsing 20 points while every source that
 > matters barely moved. The overall column hid the shape completely. It cuts the other way too:
 > a system can win the overall column purely on belebele and be worse where it counts.
 >
-> ⚠️ The trap that produced this warning: README's sub-task table groups aya with OEG under
-> "open-ended generation". That is a *task taxonomy*, not a claim that the two behave alike —
-> do not read it as a dev→test proxy mapping.
+> **Correction, 2026-07-16.** This box previously said "71% of dev is noise" and excluded aya
+> on the grounds that qa-oeg "asks for 120-180 words" while aya's golds are 24. That was wrong.
+> Only ~20% of qa-oeg prompts carry a word budget; the task is a spectrum, and ~13% of its 100
+> unique prompts are short-answer trivia and lists ("name a country with no vowels in its
+> name", "list the top 5 landmarks") — exactly aya's shape. The error was generalising from the
+> budgeted 20% to the whole task without reading the other 80%, when the whole task is only 100
+> unique prompts and could have been enumerated in one pass. The belebele half of the warning
+> stands (it rests on a property of the entire file); the aya half is retracted.
 
 ## System comparison — read this one to choose a system
 

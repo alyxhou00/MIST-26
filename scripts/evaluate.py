@@ -1,17 +1,21 @@
 """Summarise a predictions CSV from benchmark.py: per-task metrics first, then the legacy
 overall/per-source/per-language chrF/BERTScore/ROUGE-L breakdowns.
 
-**Read the per-task block, not the overall line.** The dev split is 71% noise for our
-purposes (TEST_SET_ANALYSIS 5b): belebele is multiple choice and the test set has none, and
-aya's golds are 24 words against a test task that asks for 120-180. Only tydiqa+MCIF (proxy
-for `qa-context`) and OEG (proxy for `qa-oeg`) predict anything, so this script groups them
-that way and applies the metric each task actually deserves:
+**Read the per-task block, not the overall line.** Dev overall mixes sources that predict
+opposite things, and one (belebele, 38% of the rows) that predicts nothing at all -- the test
+set has no multiple choice. This script groups the rest by the test sub-task they proxy and
+applies the metric each one deserves (TEST_SET_ANALYSIS 5b):
 
-  qa-context  Exact Match + token F1 (SQuAD-style). The golds are 2-word extractions; chrF
-              on two words has almost no resolution -- "1650" vs "around 1650" moves it about
-              as much as right-vs-wrong does. EM/F1 is what tydiqa is normally scored with.
-  qa-oeg      chrF/BERTScore (long-form, 175-word golds) + word-budget compliance, which is
-              scored directly at test time and which no other metric here can see.
+  qa-context             Exact Match + token F1 (SQuAD-style). The golds are 2-word
+                         extractions; chrF on two words has almost no resolution -- "1650" vs
+                         "around 1650" moves it about as much as right-vs-wrong does. EM/F1 is
+                         what tydiqa is normally scored with.
+  qa-oeg (long-form)     OEG: chrF/BERTScore against 175-word golds, + word-budget compliance,
+                         which is scored at test time and which nothing else here can see.
+  qa-oeg (short-answer)  aya: the same test task's short tail -- ~13 of qa-oeg's 100 unique
+                         prompts are trivia and lists. Reported separately from long-form on
+                         purpose: they are opposite ends of one spectrum and averaging them
+                         describes neither.
 
 chrF is cheap (CPU, seconds). BERTScore additionally needs a transformer forward pass over
 every row (a GPU helps but CPU works for dev-set sizes); it's loaded once and reused for the
@@ -38,15 +42,18 @@ from rouge_score import rouge_scorer
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from constraint_bank import BUDGET, measure, parse_budget  # noqa: E402
 
-# Which dev sources stand in for which test task (README's sub-task table, corrected against
-# the official file -- see TEST_SET_ANALYSIS 5b). aya maps to NEITHER: no passage, so it is
-# not qa-context; 24-word golds, so it is not qa-oeg.
+# Which dev sources stand in for which test task (TEST_SET_ANALYSIS 5b). qa-oeg is a spectrum,
+# not one regime: of its 100 unique prompts ~20 carry a 120-300 word budget, ~65 are unbounded
+# open-ended, and ~13 are short-answer trivia/lists ("name a country with no vowels in its
+# name"). OEG proxies the long end, aya the short end -- they are reported as SEPARATE columns
+# and must never be averaged, because dev's weighting is inverted against the test mix (aya has
+# 978 rows for ~13% of the task, OEG 97 for ~87%).
 TASK_PROXY = {
     "qa-context": ["copenlu/answerable_tydiqa", "FBK-MT/MCIF"],
-    "qa-oeg": ["wmt25-mist-oeg-gpt-4.1"],
+    "qa-oeg (long-form)": ["wmt25-mist-oeg-gpt-4.1"],
+    "qa-oeg (short-answer)": ["CohereLabs/aya_dataset"],
 }
-UNSCORED = {"facebook/belebele": "multiple choice; test set has none",
-            "CohereLabs/aya_dataset": "24-word golds vs a 120-180 word task"}
+UNSCORED = {"facebook/belebele": "multiple choice; the test set has none at all"}
 
 
 def chrf(preds, refs) -> float:
@@ -169,7 +176,7 @@ def main() -> None:
             print(f"\n{task}: no proxy rows in this file")
             continue
         print(f"\n{task}  (proxy: {', '.join(s.split('/')[-1] for s in sources)}; n={len(g)})")
-        if task == "qa-context":
+        if task.startswith("qa-context"):
             print(f"  Exact Match = {exact_match(g['prediction'], g['gold']):6.2f}"
                   f"   token F1 = {token_f1(g['prediction'], g['gold']):6.2f}   <- judge on these")
             print(f"  (chrF = {chrf(g['prediction'], g['gold']):.2f}, BERTScore = "
