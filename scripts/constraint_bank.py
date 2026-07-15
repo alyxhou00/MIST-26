@@ -246,6 +246,80 @@ def budget_bounds(n: int, slack: float = 0.15) -> tuple[int, int]:
     return lo, hi
 
 
+_ASCII_TO_LATIN = {d: str(i) for fam in DIGITS.values() for i, d in enumerate(fam)}
+
+
+def _to_int(token: str) -> int:
+    """'۱۵۰' / '১৫০' / '150' -> 150. Any digit family in DIGITS."""
+    return int("".join(_ASCII_TO_LATIN.get(c, c) for c in token))
+
+
+def parse_budget(text: str, lang: str) -> tuple[int, int] | None:
+    """Read a length budget out of a prompt, or None if it carries no numeric one.
+
+    The inverse of `word_budget`: finds a number (in any digit family) adjacent to this
+    language's unit word, and returns the [lo, hi] band it licenses -- a range prompt
+    ("130-150 words") gives its own bounds, an exact one ("150 words") gets `budget_bounds`'
+    slack band around it, since "about 150" cannot mean exactly 150.
+
+    Only ~20% of the test's qa-oeg prompts carry a budget, and the dev split has essentially
+    none (5/97 OEG rows contain any 2-3 digit number, and not all of those are budgets) -- so
+    on dev this returns None almost everywhere. That is expected: the metric it feeds is for
+    test outputs and for C-augmented training data, not dev.
+
+    Accuracy, measured against data/tests.jsonl 2026-07-15: qa-oeg is a **parallel corpus**
+    (the same 100 prompts translated per language), so every language must yield the *same*
+    budget count -- that invariant is what this parser is checked against, and it is a much
+    sharper test than a round-trip. 19 of the 23 non-empty languages land exactly on 20/100.
+    Known residuals: bho and rus find 21 (one over-match each), jpn 19 and zho 16 (misses),
+    yor 8/59 where ~12 is expected. Total 445/2,259 = 19.7%. Round-trip against `word_budget`
+    is clean for all 24 languages. Treat compliance figures as ±5% until those are chased.
+    """
+    # `attest` is ONE inflected form of the unit word, but prompts inflect it: mar's attest is
+    # शब्दांत while real prompts say शब्दांचे, deu's is Wörtern vs Wörter. Matching the attest
+    # verbatim finds 5/100 mar budgets where the true answer is 20/100 (qa-oeg is a parallel
+    # corpus, so every language must have the same count -- see selftest). So match a stem:
+    # the longest prefix of the attest that still requires a real word, shortest tried last.
+    full = BUDGET[lang].attest.strip()
+    # Short unit words (hat ' mo', vie ' từ', kor '단어') are already stems -- do not let the
+    # floor exceed their length or they yield no candidate at all.
+    floor = 1 if BUDGET[lang].unit == "char" else min(3, len(full))
+    stems = [full[:k] for k in range(len(full), floor - 1, -1)]
+    digits = "".join(re.escape(d) for fam in DIGITS.values() for d in fam) + "0-9"
+    num = f"[{digits}]{{1,4}}"
+    for stem in stems:
+        hit = _parse_with_unit(text, re.escape(stem), num)
+        if hit:
+            return hit
+    return None
+
+
+def _parse_with_unit(text: str, unit: str, num: str) -> tuple[int, int] | None:
+    """One (number, unit) matching attempt; see parse_budget for the contract."""
+    # Range form first (it is a superset of the exact form). The separator is NOT always a
+    # dash: Arabic and Kurdish spell it ("120 إلى 150"), Japanese uses a wave dash
+    # ("120〜150"). So allow any short non-digit run, but keep it short and free of sentence
+    # punctuation so "in 2020, write 150 words" cannot parse as the range 2020-150.
+    # Range form first (superset of the exact form). The separator is NOT always a dash:
+    # Arabic and Kurdish spell it ("120 إلى 150"), Japanese uses a wave dash ("120〜150").
+    # Allow any short non-digit run, but keep it short and free of sentence punctuation so
+    # "in 2020, write 150 words" cannot parse as the range 2020-150. The gap to the unit
+    # allows word characters: CJK writes "150个字", where 个 sits between number and unit.
+    for pat in (rf"({num})[^\d،,.。؟?!]{{1,6}}?({num}).{{0,4}}?{unit}",   # 120-150 words
+                rf"{unit}.{{0,4}}?({num})[^\d،,.。؟?!]{{1,6}}?({num})"):  # ọ̀rọ̀ 120-150
+        m = re.search(pat, text)
+        if m:
+            lo, hi = sorted((_to_int(m.group(1)), _to_int(m.group(2))))
+            if lo != hi and hi <= lo * 3:
+                return lo, hi
+    # Exact form: "in 150 words" / "150 शब्दन में" / "150字" -- either order.
+    m = re.search(rf"({num}).{{0,4}}?{unit}", text) or \
+        re.search(rf"{unit}.{{0,4}}?({num})", text)
+    if m:
+        return budget_bounds(_to_int(m.group(1)))
+    return None
+
+
 def word_budget(lang: str, lo: int, hi: int | None = None) -> str:
     """A budget sentence in `lang`: exact if `hi` is None, otherwise a range."""
     b = BUDGET[lang]
