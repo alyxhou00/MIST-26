@@ -68,11 +68,29 @@ per row batched) for the aya+oeg subset — the only teacher that got both knowl
 right, and knowledge-grounded open-ended rows are exactly where a better teacher raises the
 filter pass rate. Teacher weights live on `$HPCVAULT` (README "Temporary layout").
 
+### Pipeline runs (data production — no dev metrics by design)
+
+| Job ID | Date | Step | Config | Rows | Outcome |
+|---|---|---|---|---|---|
+| 3859277-79 | 2026-07-15 | teacher generation, whole corpus (3 shards) | Qwen3.5-35B-A3B bf16, `teacher_gen.sbatch --shard {1,2,3}/3`, lang-hint ON | 11,915 | _running_, ~16h/shard projected. Stable `--out runs/teacher-s{i}of3.jsonl` names → resumable on resubmit. |
+| 3859682 | 2026-07-15 | teacher generation, aya+oeg subset | Qwen3.5-122B-A10B-GPTQ-Int4 via vLLM, `teacher_gen_vllm.sbatch --source aya,oeg`, 2× a100_80 | 4,126 | ✅ 17m10s, all rows written, no failures → `runs/teacher122b-aya-oeg.jsonl` (gitignored). vLLM's batched-throughput edge (~250×/row vs the 35B transformers loop) holds at scale. |
+| 3860144 | 2026-07-15 | filter calibration report on the 122B output | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl --report`, a40 | 4,126 | ✅ 1m16s. See distributions below. |
+
+Filter calibration so far (from 3860144; final thresholds after the 35B shards land):
+
+- Per-source score distributions vs gold — aya (n=3,763): chrF p25/p50/p75 = 11.4/22.1/33.4,
+  BERTScore p50 = 66.9; **oeg (n=363): chrF p50 = 34.5, BERTScore p50 = 72.2**, much higher —
+  plausibly because the oeg golds are themselves GPT-4.1 outputs, so a strong teacher
+  style-matches them.
+- Threshold grid (keep = chrF ≥ C **or** BERTScore ≥ B): 30/70 → 44.3% kept,
+  20/70 → 60.9%, 30/75 → 36.3%. Candidate default **30/70**; consider a deliberately looser
+  OEG-only threshold per the human-eval argument (IMPLEMENTATION_NOTES §5.3).
+
+### Dev-set evals (standard metrics — comparable to the gold-SFT rows above)
+
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 3859277-79 | 2026-07-15 | full teacher generation, 3 shards | Qwen3.5-35B-A3B bf16, `--shard {1,2,3}/3`, lang-hint ON | 11,915 | _running_ | | | `teacher_gen.sbatch --shard i/3 --out runs/teacher-s{i}of3.jsonl` (stable names → resumable on resubmit). ~16h/shard projected from observed rate. |
-| 3859682 | 2026-07-15 | full teacher generation: aya+oeg via 122B/vLLM | Qwen3.5-122B-A10B-GPTQ-Int4, `teacher_gen_vllm.sbatch --source aya,oeg`, 2× a100_80 | 4,126 | n/a (generation only) | | | **COMPLETED in 17m10s** (vs ~16h/shard for the 35B transformers loop) — vLLM's batched throughput advantage holds at scale. All 4,126 rows written, no generation failures. Output: `runs/teacher122b-aya-oeg.jsonl` (gitignored, feeds `filter_teacher.py`). |
-| 3860144 | 2026-07-15 | filter report on 122B aya+oeg output | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl --report` (a40) | 4,126 | n/a (report) | | | 1m16s. Distributions: aya (n=3763) chrF p25/p50/p75 = 11.4/22.1/33.4, BERT p50 = 66.9; **oeg (n=363) scores much higher — chrF p50 = 34.5, BERT p50 = 72.2** (plausible: the oeg golds are themselves GPT-4.1 outputs, so a strong teacher style-matches them). Threshold grid (keep = chrF≥C OR BERT≥B): 30/70 → 44.3%, 20/70 → 60.9%, 30/75 → 36.3%. Candidate default 30/70; consider a deliberately looser OEG-only threshold per the human-eval argument (IMPLEMENTATION_NOTES §5.3). Final choice after the 35B full-corpus shards land. |
+| — | | distilled-adapter dev eval | Qwen3.5-9B + fresh LoRA on filtered teacher+gold mix, shots=0 | 2978 | _pending_ | | | The headline comparison: same recipe as 3822375/3857589, one variable (training targets). Waiting on the 35B shards → merged filter → `train_lora.py --data` → `lora_eval.sbatch`. |
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a
