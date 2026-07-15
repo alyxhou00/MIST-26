@@ -29,6 +29,20 @@ BERTScore rescues those; BERTScore alone is too lenient on fluent hallucinations
 on-topic -- the OR of two calibrated thresholds is a better trade-off than either metric
 alone, and `--report` prints the per-source grid to calibrate them on real data.
 
+**One global threshold is not defensible** -- it does something different, and something
+wrong, on each source. Measured pass rates at 30/70 (job 3861614, real 35B rows): OEG 94.4%,
+MCIF 62.6%, aya 44.6%, belebele 33.3%, tydiqa 31.5%. So:
+
+    --gold-only belebele        # never take a teacher answer for this source
+    --source-min oeg=20,65      # looser threshold for this source
+
+belebele in particular MUST be `--gold-only`: a passing row replaces a "2: <option>" gold
+with prose, which wrecks the one format gold-SFT nailed (85.82 chrF) and buys nothing --
+belebele does not reach the test set (no multiple choice there). The old claim that belebele
+"always fails the filter anyway" was false; it only held for the chrF half of the OR. See
+IMPLEMENTATION_NOTES 5.2/5.5. The per-source pass table is printed on every run so a bad
+policy is visible rather than silent.
+
 Mix policy (--mix):
     replace  (default) one example per train row: the teacher's answer where it passed,
              the gold otherwise. Keeps the dataset the same size/rows as the gold-SFT run
@@ -125,6 +139,15 @@ def main() -> None:
     ap.add_argument("--bertscore-min", type=float, default=70.0)
     ap.add_argument("--require-both", action="store_true",
                     help="keep only rows passing BOTH thresholds (default: either)")
+    ap.add_argument("--gold-only", metavar="SUBSTR[,SUBSTR]",
+                    help="sources whose name contains any of these substrings NEVER take a "
+                         "teacher answer, whatever it scores (e.g. 'belebele'). See "
+                         "IMPLEMENTATION_NOTES 5.5: belebele teacher rows pass 33%% of the "
+                         "time and every pass replaces a '2: <option>' gold with prose.")
+    ap.add_argument("--source-min", action="append", default=[], metavar="SUBSTR=CHRF,BERT",
+                    help="per-source threshold override, repeatable "
+                         "(e.g. --source-min oeg=20,65). Sources not named use the global "
+                         "--chrf-min/--bertscore-min.")
     ap.add_argument("--mix", choices=["replace", "both", "teacher"], default="replace",
                     help="see module docstring (default: replace)")
     ap.add_argument("--bertscore-model", default="bert-base-multilingual-cased",
@@ -164,15 +187,47 @@ def main() -> None:
             print(f"  {c:<6.0f}" + "".join(cells))
         return
 
-    passed = ((df["chrf"] >= args.chrf_min) & (df["bertscore"] >= args.bertscore_min)
-              if args.require_both else
-              (df["chrf"] >= args.chrf_min) | (df["bertscore"] >= args.bertscore_min))
+    def gate(frame, chrf_min, bert_min):
+        if args.require_both:
+            return (frame["chrf"] >= chrf_min) & (frame["bertscore"] >= bert_min)
+        return (frame["chrf"] >= chrf_min) | (frame["bertscore"] >= bert_min)
+
+    def match(substr):
+        m = df["source"].str.contains(substr.strip(), case=False, regex=False)
+        if not m.any():
+            sys.exit(f"error: no source matches {substr.strip()!r}. Sources present:\n"
+                     + "".join(f"    {s}\n" for s in sorted(df["source"].unique())))
+        return m
+
+    # Per-source policy. Default is the global threshold; --source-min overrides it for the
+    # named sources; --gold-only vetoes them outright. Applied in that order so a source
+    # named in both ends up gold-only.
+    passed = gate(df, args.chrf_min, args.bertscore_min)
+    policy = pd.Series(f"{args.chrf_min:g}/{args.bertscore_min:g}", index=df.index)
+    for spec in args.source_min:
+        substr, sep, thr = spec.partition("=")
+        if not sep or thr.count(",") != 1:
+            sys.exit(f"error: --source-min wants SUBSTR=CHRF,BERT (got {spec!r})")
+        try:
+            c, b = (float(x) for x in thr.split(","))
+        except ValueError:
+            sys.exit(f"error: --source-min thresholds must be numbers (got {thr!r})")
+        m = match(substr)
+        passed.loc[m] = gate(df[m], c, b).to_numpy()
+        policy.loc[m] = f"{c:g}/{b:g}"
+    for substr in (args.gold_only.split(",") if args.gold_only else []):
+        m = match(substr)
+        passed.loc[m] = False
+        policy.loc[m] = "GOLD-ONLY"
+
     passed &= df["teacher"].str.strip() != ""
-    print(f"\npass rate ({'AND' if args.require_both else 'OR'}, "
-          f"chrF>={args.chrf_min}, BERTScore>={args.bertscore_min}): "
+    print(f"\npass rate ({'AND' if args.require_both else 'OR'}; default "
+          f"chrF>={args.chrf_min:g} / BERTScore>={args.bertscore_min:g}): "
           f"{passed.mean():.1%} overall")
+    print(f"  {'source':35s} {'policy':>11s} {'pass':>7s}   n")
     for source, g in df.groupby("source"):
-        print(f"  {source:35s} {passed[g.index].mean():6.1%} of n={len(g)}")
+        pol = policy[g.index].unique()
+        print(f"  {source:35s} {'|'.join(pol):>11s} {passed[g.index].mean():6.1%}  {len(g)}")
 
     def rows(frame, col, origin):
         for r in frame.itertuples(index=False):
