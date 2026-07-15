@@ -14,6 +14,14 @@ training targets.
     python scripts/filter_teacher.py runs/teacher-s*of3.jsonl \
         --chrf-min 30 --bertscore-min 70 --out data/sft-distilled.jsonl
 
+Combining teachers: the 122B run covers aya+OEG and the 35B shards cover the whole corpus,
+so those qa_idx arrive twice. --prefer names the winner and is REQUIRED once inputs overlap
+(the rows carry no model field, so the file path is the only signal, and argument order is
+too easy to get backwards to be allowed to decide):
+
+    python scripts/filter_teacher.py runs/teacher122b-aya-oeg.jsonl runs/teacher-s*of3.jsonl \
+        --prefer 122b --report
+
 A teacher answer is KEPT when `chrF >= --chrf-min` **or** `BERTScore >= --bertscore-min`
 (pass `--require-both` for AND). Rationale: chrF alone punishes answers that are verbose
 but semantically right (common for open-ended aya/OEG rows scored against short golds) --
@@ -43,17 +51,58 @@ import sacrebleu
 from evaluate import bertscore_f1  # scripts/evaluate.py, not the HF `evaluate` package
 
 
-def load_shards(paths: list[str]) -> pd.DataFrame:
+def load_shards(paths: list[str], prefer: str | None = None) -> pd.DataFrame:
+    """Concatenate teacher JSONL files, resolving qa_idx collisions explicitly.
+
+    Different teachers overlap: the 35B shards cover the whole corpus, the 122B run covers
+    aya+OEG, so every aya/OEG qa_idx arrives twice. The rows carry no model field (both
+    generators write the same schema), so the *file* is the only thing that says which
+    teacher produced an answer -- and picking by argument order alone is a silent trap: both
+    orders run fine and quietly train on a different teacher. So when files collide, --prefer
+    must name the winner; otherwise we refuse rather than guess.
+    """
     rows = []
     for p in paths:
         with open(p, encoding="utf-8") as f:
-            rows.extend(json.loads(line) for line in f)
+            for line in f:
+                r = json.loads(line)
+                r["src_file"] = p
+                rows.append(r)
     df = pd.DataFrame(rows)
-    dupes = df["qa_idx"].duplicated()
-    if dupes.any():
-        print(f"WARNING: dropping {dupes.sum()} duplicate qa_idx rows "
-              f"(overlapping shards?)", file=sys.stderr)
-        df = df[~dupes]
+
+    collided = df["qa_idx"].duplicated(keep=False)
+    if not collided.any():
+        return df.reset_index(drop=True)
+
+    files = sorted(df.loc[collided, "src_file"].unique())
+    n_idx = df.loc[collided, "qa_idx"].nunique()
+    if prefer is None:
+        sys.exit(
+            f"error: {n_idx} qa_idx appear in more than one input file, so these files "
+            f"disagree about the teacher answer:\n"
+            + "".join(f"    {f}\n" for f in files)
+            + "Pass --prefer SUBSTRING to say which file's answers win (e.g. --prefer 122b).\n"
+              "Refusing to pick by argument order: it would silently change the training "
+              "targets depending on how the files were typed."
+        )
+
+    match = df["src_file"].str.contains(prefer, regex=False)
+    if not match.any():
+        sys.exit(f"error: --prefer {prefer!r} matched none of the input files:\n"
+                 + "".join(f"    {f}\n" for f in sorted(df['src_file'].unique())))
+    ambiguous = sorted(df.loc[match & collided, "src_file"].unique())
+    if len(ambiguous) > 1:
+        sys.exit(f"error: --prefer {prefer!r} matched several colliding files, so it still "
+                 f"does not say which wins:\n" + "".join(f"    {f}\n" for f in ambiguous)
+                 + "Use a substring unique to one file.")
+
+    # Stable sort puts preferred rows first within each qa_idx; keep-first then resolves
+    # every collision the same way regardless of the order the files were passed in.
+    df = df.assign(_rank=(~match).astype(int)).sort_values("_rank", kind="stable")
+    df = df[~df["qa_idx"].duplicated()].drop(columns="_rank").sort_index()
+    n_won = df["src_file"].str.contains(prefer, regex=False).sum()
+    print(f"resolved {n_idx} overlapping qa_idx in favour of --prefer {prefer!r} "
+          f"({n_won} of {len(df)} kept rows come from the preferred file)", file=sys.stderr)
     return df.reset_index(drop=True)
 
 
@@ -67,6 +116,11 @@ def main() -> None:
                     help="teacher JSONL file(s) from scripts/teacher_generate.py")
     ap.add_argument("--report", action="store_true",
                     help="print score distributions and a threshold grid, write nothing")
+    ap.add_argument("--prefer", metavar="SUBSTRING",
+                    help="when the same qa_idx appears in several inputs (e.g. the 122B "
+                         "aya+oeg run vs the 35B whole-corpus shards), keep the answer from "
+                         "the file whose path contains SUBSTRING. Required whenever inputs "
+                         "overlap; argument order never decides.")
     ap.add_argument("--chrf-min", type=float, default=30.0)
     ap.add_argument("--bertscore-min", type=float, default=70.0)
     ap.add_argument("--require-both", action="store_true",
@@ -79,7 +133,7 @@ def main() -> None:
                     help="SFT-ready JSONL for `train_lora.py --data`")
     args = ap.parse_args()
 
-    df = load_shards(args.shards)
+    df = load_shards(args.shards, args.prefer)
     n_empty = (df["teacher"].str.strip() == "").sum()
     print(f"loaded {len(df)} teacher rows from {len(args.shards)} file(s)"
           + (f" ({n_empty} with empty teacher answer -> auto-fail)" if n_empty else ""))
