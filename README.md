@@ -337,6 +337,14 @@ Until then, the working setup is a **hybrid**:
       /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375
   ```
 
+- **Big model weights (the distillation teachers) live on `$HPCVAULT`**
+  (`/home/vault/b279bb/b279bb31/hf_cache_teacher`, per-user 1TB/200K files): `$HOME` is no
+  option — its filesystem **double-counts usage against the 100G soft quota** (the ~77GB
+  Qwen3.5-35B-A3B download showed up as ~140G and tripped the `!!!` overquota flag), so even
+  one big model blows it. Vault is slower storage, which is fine for weights read once at
+  job start. `$HPCVAULT` (like `$WORK`) is **unset in non-interactive ssh** — use the
+  absolute path. Teacher sbatch files point `HF_HOME` there.
+
 Once the quota is fixed: the old `$WORK/MIST-26` checkout is stale and dirty (everything it
 had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, and drop the
 `HF_DATASETS_CACHE` override.

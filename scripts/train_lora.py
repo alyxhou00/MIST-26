@@ -11,12 +11,16 @@ fine-tuning help" and "did few-shot help" stay isolated, independently comparabl
     python scripts/train_lora.py                          # full train split, Qwen3.5-9B
     python scripts/train_lora.py --limit 200 --epochs 1    # quick smoke test
     python scripts/train_lora.py --model Qwen/Qwen3.5-2B   # a smaller base
+    python scripts/train_lora.py --data data/sft-distilled.jsonl   # distilled targets
+                                       # (from scripts/filter_teacher.py; rows built from the
+                                       # same train split, so the dev 20% stays held out)
 
 Then evaluate the same way as every other experiment:
     python scripts/benchmark.py --lora <--out dir> --out runs/predictions-lora.csv
     python scripts/evaluate.py runs/predictions-lora.csv
 
-Flags: --model · --limit (0 = whole train split) · --epochs · --lr · --batch-size (per-device)
+Flags: --model · --data (training rows as JSONL with input/lang_code/output columns instead
+of the HF train split) · --limit (0 = whole train split) · --epochs · --lr · --batch-size (per-device)
 · --grad-accum · --max-length (tokens; longer rows are left-truncated, see
 QAExampleDataset) · --r/--alpha/--dropout (LoRA hyperparameters) · --target-modules (regex,
 see DEFAULT_TARGET_MODULES) · --seed · --out (adapter output dir) ·
@@ -132,6 +136,11 @@ def collate(features, pad_token_id: int) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="Qwen/Qwen3.5-9B")
+    ap.add_argument("--data", default=None,
+                    help="JSONL of training rows (columns: input, lang_code, output -- e.g. "
+                         "from scripts/filter_teacher.py) used INSTEAD of the HF train split. "
+                         "The file must be built from train-split rows only; nothing here "
+                         "re-checks the 80/20 boundary.")
     ap.add_argument("--limit", type=int, default=0, help="0 = whole train split")
     ap.add_argument("--epochs", type=float, default=2.0)
     ap.add_argument("--lr", type=float, default=2e-4)
@@ -163,12 +172,18 @@ def main() -> None:
 
     # --- data: qa subset, 80/20 split -- identical to benchmark.py's, so LoRA only ever trains
     # on the train 80% and is evaluated on the same held-out dev 20% as every other experiment.
-    df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
-    qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
-    train = qa.iloc[int(len(qa) * 0.2):]
+    # With --data, the rows come from a prepared JSONL instead (same column names; built from
+    # train-split rows upstream, e.g. by scripts/filter_teacher.py).
+    if args.data:
+        import pandas as pd
+        train = pd.read_json(args.data, lines=True)
+    else:
+        df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
+        qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
+        train = qa.iloc[int(len(qa) * 0.2):]
     if args.limit:
         train = train.head(args.limit)
-    print(f"train examples: {len(train)}  model={args.model}")
+    print(f"train examples: {len(train)}  model={args.model}  data={args.data or 'HF train split'}")
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:

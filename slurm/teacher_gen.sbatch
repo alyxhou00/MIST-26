@@ -21,10 +21,11 @@
 # anyway, resubmit with the same --out (rows already generated are skipped) or split with
 # --shard i/n across two jobs.
 #
-# Teacher weights are cached under $HOME/hf_cache_teacher, NOT $WORK/hf_cache: the atuin
-# group file quota is exceeded (README "Temporary layout"), so new downloads can only land
-# in $HOME. Populate on the login node first (internet):
-#     HF_HOME=$HOME/hf_cache_teacher hf download Qwen/Qwen3.5-35B-A3B
+# Teacher weights are cached on $HPCVAULT, NOT $WORK/hf_cache (atuin group file quota
+# exceeded) and NOT $HOME (its 100GB soft quota is blown by double-counted NFS accounting
+# with even one big model cached) -- README "Temporary layout". Populate on the login node
+# first (internet):
+#     HF_HOME=/home/vault/b279bb/b279bb31/hf_cache_teacher hf download Qwen/Qwen3.5-35B-A3B
 # The prepared datasets cache must also be the $HOME copy (offline `datasets` will not
 # re-prepare from the hub cache -- job 3857583's failure mode).
 
@@ -32,7 +33,7 @@ module load python/3.12-base cuda/12.8.1
 source "$WORK/mist-venv/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node (see header).
-export HF_HOME="$HOME/hf_cache_teacher"
+export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"
 export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
