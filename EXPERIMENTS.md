@@ -61,13 +61,18 @@ the stored predictions CSVs with the current `evaluate.py` (no regeneration).
 BERTScore (175-word golds) and adds **word-budget compliance**, which is scored at test time
 and which nothing else here can see.
 
-| System | job | qa-context **EM** | qa-context **F1** | (qa-ctx chrF) | qa-oeg chrF | qa-oeg BERT | qa-oeg budget | (legacy overall) |
-|---|---|---|---|---|---|---|---|---|
-| 9B 3-shot | 3822329 | 6.54 | **32.12** | 37.52 | 25.55 | 69.38 | 0% of 4 (−53%) | 27.64 |
-| **9B + gold-LoRA, 0-shot** | 3857589 | **16.92** | 31.09 | 23.31 | 29.06 | 72.89 | 0% of 4 (−56%) | 26.56 |
-| 9B + gold-LoRA + 3-shot | 3858987 | 4.74 | 13.87 | 16.00 | **29.62** | **73.98** | 25% of 4 (−55%) | 21.64 |
-| 9B 3-shot, no lang-hint | 3859645 | 4.36 | 26.90 | 34.12 | 25.64 | 69.27 | 0% of 4 (−53%) | 25.97 |
-| 9B + distilled LoRA, 0-shot | — | _not built_ | | | | | | |
+|  | | **qa-context** (8,640 rows) | | | **qa-oeg long-form** (~87%) | | **qa-oeg short-answer** (~13%) | | |
+| System | job | **EM** | **F1** | (chrF) | chrF | BERT | chrF | BERT | (legacy overall) |
+|---|---|---|---|---|---|---|---|---|---|
+| 9B 3-shot | 3822329 | 6.54 | **32.12** | 37.52 | 25.55 | 69.38 | **24.19** | **67.30** | 27.64 |
+| **9B + gold-LoRA, 0-shot** | 3857589 | **16.92** | 31.09 | 23.31 | 29.06 | 72.89 | 21.95 | 66.90 | 26.56 |
+| 9B + gold-LoRA + 3-shot | 3858987 | 4.74 | 13.87 | 16.00 | **29.62** | **73.98** | 19.94 | 61.71 | 21.64 |
+| 9B 3-shot, no lang-hint | 3859645 | 4.36 | 26.90 | 34.12 | 25.64 | 69.27 | 23.85 | 66.59 | 25.97 |
+| 9B + distilled LoRA, 0-shot | — | _not built_ | | | | | | | |
+
+Proxies: `qa-context` = tydiqa + MCIF (n=780). `qa-oeg long-form` = OEG (n=97). `qa-oeg
+short-answer` = aya (n=978). Never average the two qa-oeg columns — they are opposite ends of
+one spectrum, and dev weights them backwards (978 rows for ~13% of the task, 97 for ~87%).
 
 ### ⚠️ The `qa-context` routing decision is NOT settled — chrF and EM disagree
 
@@ -89,13 +94,36 @@ of our 10,999 test rows, and no further experiment of ours can resolve it. It be
 email to the organisers (ROADMAP open item #2) alongside the 100 empty prompts and the
 double-escaping. Until then, treat `qa-context → 3-shot` as **unjustified**, not as decided.
 
-### Budget compliance: every system writes ~half of what it is asked for
+### `qa-oeg` is split too: the adapter wins the long end, 3-shot wins the short end
 
-All four configs undershoot `qa-oeg` budgets by **53–56%** and land in band on 0–1 of 4 rows.
-n=4 (dev has almost no budgeted rows — TEST_SET_ANALYSIS §4) so the magnitude is not
-trustworthy, but the sign is consistent across four independent systems, and it contradicts
-the framing roadmap C was built on: the failure is **under**-writing, not over-writing.
-Worth re-measuring on real test outputs, where ~20% of qa-oeg rows carry a budget.
+The two halves of `qa-oeg` disagree. **Long-form**: adapter 29.06 vs 3-shot 25.55. **Short-
+answer**: 3-shot 24.19 vs adapter 21.95. That is coherent rather than contradictory — gold-SFT
+taught terseness, which helps extraction (see its 16.92 EM) and helps nothing on a 175-word
+composition, while few-shot demos teach a chatty register that suits short trivia. Weighting by
+prompt share (~87/13) the adapter still takes `qa-oeg`, but this is now a split decision on
+n=97 vs n=978 with dev's weighting inverted, not the clean win the plan recorded.
+
+### Budget compliance: the model ignores the budget and writes its own default length
+
+⚠️ **Corrected 2026-07-16.** This section previously read "every system writes ~half of what it
+is asked for" — that was measured on OEG rows only, i.e. the long end. With aya's budgeted rows
+included the picture inverts, and the same error (a subset generalised to the whole) produced it:
+
+| | budgeted rows | mean deviation, 3-shot | adapter 0-shot | adapter+3-shot | no-hint |
+|---|---|---|---|---|---|
+| qa-oeg long-form (OEG) | 4 | **−53%** | −56% | −55% | −53% |
+| qa-oeg short-answer (aya) | 7 | **+502%** | +159% | +418% | +447% |
+
+Asked for a long answer it writes half; asked for a short one it writes five times too much.
+**All four systems land in band on ~0 of 11 budgeted dev rows.** The failure is not
+under-writing or over-writing — it is **regression to a default length regardless of the
+instruction**, which is a stronger and more actionable statement of roadmap C's premise than
+either one-sided version.
+
+n=11 total (dev has almost no budgeted rows — TEST_SET_ANALYSIS §4), so treat the magnitudes as
+indicative only. The direction reverses cleanly across two independent slices and four
+independent systems, which is what makes it worth believing at all. Re-measure on real test
+outputs, where ~20% of qa-oeg rows carry a budget.
 
 (Curiosity, n=1: adapter+3-shot overshoots a budgeted `qa-context` row by **+1133%** — another
 face of the demos-confuse-the-adapter effect that sinks its EM to 4.74.)
