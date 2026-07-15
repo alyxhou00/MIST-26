@@ -342,13 +342,49 @@ both thresholds calibrated per-source via `--report`'s distribution/threshold gr
 - Output feeds `train_lora.py --data` (same columns as the HF split); the distilled
   adapter is trained **fresh** from the base, never continued from the gold adapter.
 
-### 5.3 Known open issue
+### 5.3 Known open issue: the metric-vs-human tradeoff
 
 The teacher's style is verbose markdown (headers/bold/emoji in OEG answers); golds are
 short and dry. Automatic metrics score against golds, but **human eval** (which decides
 the primary submission's ranking) plausibly prefers teacher-style answers. Threshold
 choice is therefore a metric-vs-human tradeoff; we may deliberately keep a looser filter
 for OEG rows. Decide after the filter report on real data (job 3860144).
+
+**Caveat added 2026-07-15 — "golds are short and dry" is true of aya/tydiqa, NOT of OEG.**
+The OEG golds are GPT-4.1 outputs: median **175 words**, with markdown (`**bold**`,
+`<br><br>`) already in them. So on the one source that actually reaches the test set as
+`qa-oeg`, the gold is already a strong model's verbose answer, and the human-eval argument
+for preferring teacher style over gold style largely does not apply there.
+
+### 5.4 The distillation value cross (open strategic question)
+
+Distillation's premise is "the teacher's answer is a better training target than the gold".
+Lining that premise up against where each source actually lands at test time
+(TEST_SET_ANALYSIS §5b/§5c) produces an uncomfortable crossing:
+
+| source | train rows | what the gold is | teacher upside | reaches the test set? |
+|---|---|---|---|---|
+| `aya` | 3,763 | human, 24 words (p50) | **high** — teacher writes fuller answers | **no** (§5b: wrong length regime, resembles neither test task) |
+| `wmt25-mist-oeg-gpt-4.1` | 363 | **GPT-4.1, 175 words, markdown** | **unclear** — gold is already a strong model's output, and the filter specifically keeps the teacher answers most *similar* to it | **yes** — this is `qa-oeg` |
+| `copenlu/answerable_tydiqa` | 2,497 | 2-word extraction | **low** — a prose answer cannot chrF-match a 2-word gold, so it fails the filter and falls back to gold | yes — this is `qa-context` |
+| `facebook/belebele` | 4,577 | `2: <option>` | **none by construction** (§5.2: always fails, always falls back to gold) | **no** (no MC at test) |
+
+**Read the two right-hand columns together: distillation has the most headroom exactly where
+it does not transfer (aya), and the least headroom where it matters (OEG).** Additionally,
+the gold-SFT adapter 3822375 *already* banks the OEG gain (29.06 vs 3-shot's 25.55) — it was
+trained on those same GPT-4.1 golds. The distilled adapter's marginal value on `qa-oeg` is
+therefore "how much better than GPT-4.1 is the 122B", filtered down to the subset that
+resembles GPT-4.1.
+
+This is an argument, not a measurement. It could be wrong: §5.1 found the 122B was the only
+teacher to get both knowledge probes right, so it may genuinely beat GPT-4.1 on some rows,
+and the human-eval channel is not captured by any number we have. But roadmap B's headline
+bet — "distillation is the lever, OEG is the scoring headroom" — rests on thinner evidence
+than the plan records, and the merged filter report (per-source pass rates on real data) is
+the thing that should settle it before we commit training time.
+
+**Corollary for the teacher runs themselves:** if §5.2 holds, the ~4,577 belebele rows in
+the 35B shards are compute spent on answers that are guaranteed to be discarded. See §5.5.
 
 ## 6. Infrastructure record (reproducibility appendix material)
 
