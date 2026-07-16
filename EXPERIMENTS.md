@@ -191,9 +191,11 @@ filter pass rate. Teacher weights live on `$HPCVAULT` (README "Temporary layout"
 
 | Job ID | Date | Step | Config | Rows | Outcome |
 |---|---|---|---|---|---|
-| 3859277-79 | 2026-07-15 | teacher generation, whole corpus (3 shards) | Qwen3.5-35B-A3B bf16, `teacher_gen.sbatch --shard {1,2,3}/3`, lang-hint ON | 11,915 | _running_ (~68% at 23:00, ~270 rows/h → ~4h left; the earlier "ETA next morning" was a large under-estimate). Stable `--out runs/teacher-s{i}of3.jsonl` names → resumable on resubmit. **⚠️ Two things learned after these were submitted, neither worth killing them for — see the note below.** |
+| 3859277-79 | 2026-07-15 | teacher generation, whole corpus (3 shards) | Qwen3.5-35B-A3B bf16, `teacher_gen.sbatch --shard {1,2,3}/3`, lang-hint ON | 11,915 | ✅ all three finished 2026-07-16 (15:54–16:48 each, within the 24h budget); 3,971 + 3,972 + 3,972 rows written to `runs/teacher-s{1,2,3}of3.jsonl`. The trailing `_thread.RLock` AttributeError in each log is `multiprocess`'s ResourceTracker teardown noise, after the rows are flushed — not a failure. **⚠️ Two things learned after these were submitted, neither worth killing them for — see the note below.** |
 | 3859682 | 2026-07-15 | teacher generation, aya+oeg subset | Qwen3.5-122B-A10B-GPTQ-Int4 via vLLM, `teacher_gen_vllm.sbatch --source aya,oeg`, 2× a100_80 | 4,126 | ✅ 17m10s, all rows written, no failures → `runs/teacher122b-aya-oeg.jsonl` (gitignored). vLLM's batched-throughput edge (~250×/row vs the 35B transformers loop) holds at scale. |
 | 3860144 | 2026-07-15 | filter calibration report on the 122B output | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl --report`, a40 | 4,126 | ✅ 1m16s. See distributions below. |
+| 3864927 | 2026-07-16 | filter calibration report, **both teachers merged** | `filter_teacher.sbatch runs/teacher122b-aya-oeg.jsonl runs/teacher-s{1,2,3}of3.jsonl --prefer 122b --report`, a40 | 11,915 | ✅ `resolved 4126 overlapping qa_idx in favour of '122b'` — the expected count, and aya/oeg reproduce 3860144's distributions exactly (oeg p50 = 34.5/72.2), confirming those two sources really are the 122B's answers. Merged shape: 122B aya 3,763 + oeg 363; 35B belebele 4,577 + tydiqa 2,497 + MCIF 715. |
+| 3864941 | 2026-07-16 | **filter → `data/sft-distilled.jsonl`** | same inputs, `--prefer 122b --chrf-min 30 --bertscore-min 70 --gold-only belebele` | 11,915 | ✅ wrote 11,915 rows (**3,048 teacher / 8,867 gold**), `--mix replace` default → same rows as the gold-SFT run 3822375, so training targets stay the one intended difference. Pass rates below. |
 
 > **Note on 3859277-79 (35B shards) — two post-hoc findings, deliberately NOT acted on:**
 >
@@ -218,7 +220,28 @@ filter pass rate. Teacher weights live on `$HPCVAULT` (README "Temporary layout"
 > *extraction* (§5.1's probes were knowledge questions), is the worse trade. Let them finish;
 > regenerate `--source tydiqa,mcif` with the 122B afterwards and compare.
 
-Filter calibration so far (from 3860144; final thresholds after the 35B shards land):
+**Final filter policy (decided 2026-07-16 on 3864927's merged report): `--chrf-min 30
+--bertscore-min 70 --gold-only belebele`, one threshold everywhere else.** Measured per-source
+pass rates at that policy (job 3864941, printed on every write run — the `--report` mode prints
+distributions and the global C\B grid instead):
+
+| source | policy | pass | n |
+|---|---|---|---|
+| `wmt25-mist-oeg-gpt-4.1` | 30/70 | **87.6%** | 363 |
+| `FBK-MT/MCIF` | 30/70 | 64.1% | 715 |
+| `CohereLabs/aya_dataset` | 30/70 | 40.2% | 3,763 |
+| `copenlu/answerable_tydiqa` | 30/70 | 30.5% | 2,497 |
+| `facebook/belebele` | **GOLD-ONLY** | 0.0% | 4,577 |
+
+A deliberately looser OEG threshold (`--source-min oeg=20,65`) was considered and **not**
+taken: OEG already passes 87.6%, so it would buy ~40 more rows at the cost of a second
+policy to reason about. ⚠️ **qa-oeg is still the thinnest link and distillation did not
+change that** — 87.6% of 363 is ~318 teacher rows backing 2,359 test rows. The 30/70
+per-source rates in job 3861614 are superseded for aya/oeg (those were the 35B's answers;
+`--prefer 122b` replaces them).
+
+Earlier calibration (from 3860144, the 122B alone — kept because the aya/oeg distributions
+below are the ones that survived into the merge):
 
 - Per-source score distributions vs gold — aya (n=3,763): chrF p25/p50/p75 = 11.4/22.1/33.4,
   BERTScore p50 = 66.9; **oeg (n=363): chrF p50 = 34.5, BERTScore p50 = 72.2**, much higher —
@@ -232,7 +255,28 @@ Filter calibration so far (from 3860144; final thresholds after the 35B shards l
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| — | | distilled-adapter dev eval | Qwen3.5-9B + fresh LoRA on filtered teacher+gold mix, shots=0 | 2978 | _pending_ | | | The headline comparison: same recipe as 3822375/3857589, one variable (training targets). Waiting on the 35B shards → merged filter → `train_lora.py --data` → `lora_eval.sbatch`. |
+| 3864945 | 2026-07-16 | distilled-adapter **SFT** | Qwen3.5-9B, `lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint` | 11,915 train rows | _running_ | | | Log confirms `format=test (no lang-hint)`, 20 rows truncated at 2,048 tok. ~6.5h expected (cf. 3822375). |
+| — | | distilled-adapter dev eval | Qwen3.5-9B + LoRA from 3864945, shots=0, **`--no-lang-hint`** | 2978 | _pending_ | | | Eval must use `--no-lang-hint` too — it has to match how 3864945 was trained. |
+
+> **⚠️ This row is NOT the one-variable A/B it was originally planned as.** It used to read
+> "same recipe as 3822375/3857589, one variable (training targets)". That is no longer true:
+> 3864945 also changes the *training format* (`--no-lang-hint`, added 2026-07-16 in commit
+> `6fd2a2e`), so it differs from 3822375 in **two** ways — targets *and* format. This was a
+> deliberate trade (user's call, 2026-07-16): the test format is what `run_test.py` actually
+> feeds, and ROADMAP row E's reading of 3858987 is that train/infer format agreement matters
+> more than a clean ablation. **Consequence: if this beats 3857589, we will not know which
+> change earned it.**
+>
+> **The missing baseline is `9B + gold-LoRA, 0-shot, --no-lang-hint`** — an eval-only run
+> (~6.9h, no retraining; the 3822375 adapter still exists at
+> `/home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375`, in the **$WORK**
+> clone, not the $HOME one jobs now run from). It would restore the one-variable comparison
+> *and* answer a question the whole routing table currently rests on: **every gold-LoRA number
+> in the decision table above was measured with the lang-hint ON, but `run_test.py` feeds no
+> hint.** Deploying that adapter as-is puts it in an unmeasured train/infer gap — the same
+> shape of mismatch that cost 3858987 five chrF. 3859645 does *not* cover this: it showed
+> dropping the hint is near-free for the **base** model at 3-shot, which is not an adapter
+> trained with the hint. Deferred, not resolved.
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a
