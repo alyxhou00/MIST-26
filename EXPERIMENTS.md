@@ -62,46 +62,61 @@ used to be reported as one pooled column (tydiqa + MCIF, n=780). That pooling wa
 the *monolingual* source, worth ~4% of a test sub-task that is 96% cross-lingual. Split apart,
 the metric disagreement that blocked this decision for days **evaporates**.
 
+**Selection score = `COMBINED` = mean(chrF, BERTScore, ROUGE-L)**, one rule for every sub-task
+(user's call, 2026-07-16; jobs 3865022-25). It replaces `sqrt(EM × chrF)`, which went blind
+exactly where it mattered — EM only resolves where golds are short enough to hit exactly, i.e.
+on tydiqa (63% of golds are 1-2 words), the proxy that does *not* resemble the test set, and
+not on MCIF (19%) or qa-oeg (EM ~0). **The switch preserved every routing decision below**, so
+it changed the rule, not the conclusions. ⚠️ It is a compromise, not a neutral one — see
+`evaluate.py:combined()`; the components are listed here precisely so a close call can be
+audited rather than taken on the mean's word.
+
 **`qa-context` — ✅ MCIF, the FAITHFUL proxy (cross-lingual, n=165). Route on this column.**
 
-| System | job | **EM** | **F1** | **chrF** | **BERT** | √(EM·chrF) |
+| System | job | **COMBINED** | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
 |---|---|---|---|---|---|---|
-| **9B + gold-LoRA, 0-shot** | 3857589 | **21.82** | **57.92** | **49.26** | **86.41** | **32.78** |
-| 9B + gold-LoRA + 3-shot | 3858987 | 12.12 | 29.70 | 20.98 | 69.89 | 15.95 |
-| 9B 3-shot | 3822329 | 0.61 | 28.15 | 34.61 | 74.38 | 4.58 |
-| 9B 3-shot, no lang-hint | 3859645 | 0.61 | 27.16 | 33.80 | 73.55 | 4.53 |
+| **9B + gold-LoRA, 0-shot** | 3857589 | **62.55** | **49.26** | **86.41** | **51.98** | *21.82 / 57.92* |
+| 9B 3-shot | 3822329 | 45.73 | 34.61 | 74.38 | 28.19 | *0.61 / 28.15* |
+| 9B 3-shot, no lang-hint | 3859645 | 44.66 | 33.80 | 73.55 | 26.63 | *0.61 / 27.16* |
+| 9B + gold-LoRA + 3-shot | 3858987 | 40.16 | 20.98 | 69.89 | 29.61 | *12.12 / 29.70* |
 
-**The adapter sweeps every metric — EM 36×, F1 2×, chrF +14.6, BERTScore +12.0.** No metric
-dissents, so no tie-break is needed and `sqrt(EM × chrF)` is not load-bearing here. (EM is
-*capped* on MCIF — only 19% of golds are 1-2 words — but capped is not dead: it still separates
-21.82 from 0.61.)
+**The adapter sweeps every component — chrF +14.6, BERTScore +12.0, ROUGE-L +23.8, and EM 36×.**
+Nothing dissents, so the choice of rule is irrelevant here: any of them picks the adapter.
 
 **`qa-context` — ❌ tydiqa, the UNFAITHFUL proxy (monolingual, n=615). Do not route on this.**
 
-| System | job | EM | F1 | chrF | BERT | √(EM·chrF) |
+| System | job | COMBINED | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
 |---|---|---|---|---|---|---|
-| 9B 3-shot | 3822329 | 8.13 | 33.18 | 38.94 | 70.67 | **17.79** |
-| 9B + gold-LoRA, 0-shot | 3857589 | 15.61 | 23.90 | 19.53 | 63.01 | 17.46 |
-| 9B 3-shot, no lang-hint | 3859645 | 5.37 | 26.83 | 34.39 | 67.91 | 13.58 |
-| 9B + gold-LoRA + 3-shot | 3858987 | 2.76 | 9.62 | 14.46 | 56.20 | 6.32 |
+| 9B 3-shot | 3822329 | **47.87** | 38.94 | 70.67 | 34.00 | *8.13 / 33.18* |
+| 9B 3-shot, no lang-hint | 3859645 | 44.02 | 34.39 | 67.91 | 29.76 | *5.37 / 26.83* |
+| 9B + gold-LoRA, 0-shot | 3857589 | 33.36 | 19.53 | 63.01 | 17.53 | *15.61 / 23.90* |
+| 9B + gold-LoRA + 3-shot | 3858987 | 26.73 | 14.46 | 56.20 | 9.52 | *2.76 / 9.62* |
 
-**This column is where the whole chrF-vs-EM argument lived** — and note that even here the
-hedge is a near-tie (17.79 vs 17.46), so it was never evidence for 3-shot either. The old
-pooled numbers reconcile exactly: gold-LoRA's famous "EM 16.92" = (615×15.61 + 165×21.82)/780,
-i.e. **the pooled EM was 79% a proxy for the wrong task.**
+**This column is where the whole chrF-vs-EM argument lived**, and it inverts the faithful one —
+which is the point: it is a different task. The old pooled numbers reconcile exactly: gold-LoRA's
+famous "EM 16.92" = (615×15.61 + 165×21.82)/780, i.e. **the pooled EM was 79% the wrong task.**
 
-**`qa-oeg`** (2,359 test rows) keeps chrF / BERTScore (175-word golds; EM is ~0 for everything
-and `sqrt(EM × chrF)` must not be used) and adds **word-budget compliance**, scored at test time
-and invisible here.
+**`qa-oeg`** (2,359 test rows) also adds **word-budget compliance**, scored at test time and
+invisible here. EM is ~0 for every system on 175-word golds and is not reported.
 
-|  | | **qa-oeg long-form** (~87%) | | **qa-oeg short-answer** (~13%) | | |
-| System | job | chrF | BERT | chrF | BERT | (legacy overall) |
-|---|---|---|---|---|---|---|
-| 9B 3-shot | 3822329 | 25.55 | 69.38 | **24.19** | **67.30** | 27.64 |
-| **9B + gold-LoRA, 0-shot** | 3857589 | 29.06 | 72.89 | 21.95 | 66.90 | 26.56 |
-| 9B + gold-LoRA + 3-shot | 3858987 | **29.62** | **73.98** | 19.94 | 61.71 | 21.64 |
-| 9B 3-shot, no lang-hint | 3859645 | 25.64 | 69.27 | 23.85 | 66.59 | 25.97 |
-| 9B + distilled LoRA, 0-shot | 3864945 | _pending_ | | | | |
+|  | | **qa-oeg long-form** (~87%) | | | | **qa-oeg short-answer** (~13%) | |
+| System | job | **COMBINED** | chrF | BERT | ROUGE-L | **COMBINED** | (legacy overall) |
+|---|---|---|---|---|---|---|---|
+| 9B + gold-LoRA + 3-shot | 3858987 | **48.46** | **29.62** | **73.98** | **41.77** | 30.55 | 21.64 |
+| **9B + gold-LoRA, 0-shot** | 3857589 | 46.44 | 29.06 | 72.89 | 37.38 | 34.62 | 26.56 |
+| 9B 3-shot, no lang-hint | 3859645 | 35.33 | 25.64 | 69.27 | 11.07 | **34.64** | 25.97 |
+| 9B 3-shot | 3822329 | 35.30 | 25.55 | 69.38 | 10.96 | 35.30 | 27.64 |
+| 9B + distilled LoRA, 0-shot | 3864945 | _pending_ | | | | | |
+
+> ⚠️ **Open, surfaced by the new rule:** on the long-form end `adapter+3-shot` now scores
+> *highest* (48.46 vs the adapter's 46.44) — it always led OEG on chrF, and ROUGE-L widens it.
+> Routing by `task` is legal, so "qa-oeg → adapter+3-shot" is technically on the table, and even
+> the 87/13 blend keeps it marginally ahead (46.13 vs 44.90). **Not adopted, and not on the
+> strength of the overall 21.64** (that number is mostly belebele, which doesn't transfer): the
+> real objection is that 3858987 is an adapter fed a format it never trained on (ROADMAP row E),
+> so its OEG lead is a lucky OOD result on n=97, and the distilled adapter is trained 0-shot in
+> test format, which would make demos OOD for *it* too. Revisit only with the distilled adapter's
+> numbers in hand, and only if n=97 is judged enough to move 2,051 test rows.
 
 Proxies: `qa-context` = **MCIF only** (n=165; tydiqa is reported above but does not proxy the
 test task). `qa-oeg long-form` = OEG (n=97). `qa-oeg short-answer` = aya (n=978). Never average
@@ -167,11 +182,11 @@ passages**: French passages are in the test set; we just never answer in French.
 ### ✅ RESOLVED 2026-07-16: `qa-context` → adapter. The disagreement was a proxy artifact.
 
 **Resolution: the metrics never actually disagreed — we were pooling two different tasks.** On
-MCIF (the only cross-lingual proxy, matching 96% of the test sub-task) the adapter wins EM, F1,
-chrF *and* BERTScore. The "chrF says 3-shot, EM says adapter" deadlock existed only in the
-pooled column, which was 79% monolingual tydiqa. **`qa-context` (8,640 rows) → gold/distilled
-adapter, 0-shot.** It did not take the organisers' metric to decide, and it did not take the
-`sqrt(EM × chrF)` hedge either — just the right proxy.
+MCIF (the only cross-lingual proxy, matching 96% of the test sub-task) the adapter wins chrF,
+BERTScore, ROUGE-L, EM *and* F1. The "chrF says 3-shot, EM says adapter" deadlock existed only
+in the pooled column, which was 79% monolingual tydiqa. **`qa-context` (8,640 rows) →
+gold/distilled adapter, 0-shot.** It did not take the organisers' metric to decide, and it did
+not take any tie-break rule either — just the right proxy.
 
 The history below is kept because the reasoning was wrong in an instructive way.
 
@@ -192,31 +207,28 @@ The two numbers describe different failure shapes, and both are real:
 it is.** It flips the routing for 8,640 of our 10,999 test rows, and no further experiment of
 ours can resolve it.
 
-> **Decision 2026-07-16 (user's call): we are NOT emailing the organisers about the metric,
-> and we hedge with the geometric mean `sqrt(EM × chrF)` as our own selection rule.**
-> The open item is closed as *decided under uncertainty*, not as answered — the organisers'
-> metric remains unknown, and this is our tie-break, not a discovery about theirs.
+> **Decision 2026-07-16 (user's call): we are NOT emailing the organisers about the metric.**
+> The open item is closed as *decided under uncertainty*, not as answered — their metric remains
+> unknown, and what follows is our own selection rule, not a discovery about theirs.
 > (The double-escaping and the 8 `{country}`/`{language}` placeholder rows were the other two
 > items in that draft email; the 100 empty English prompts came off the list on 2026-07-16 when
 > the organisers fixed them unprompted — TEST_SET_ANALYSIS §6.)
 >
-> Applied to the pooled `qa-context` proxy, the rule ranks: **gold-LoRA 19.86** (√(16.92×23.31))
-> > 3-shot 15.66 (√(6.54×37.52)) > 3-shot no-hint 12.20 > adapter+3-shot 8.71 — i.e. **it picks
-> the adapter.**
+> **The rule is `COMBINED` = mean(chrF, BERTScore, ROUGE-L), for every sub-task.** See the
+> decision tables above.
 >
-> ⚠️ **But do not record that as the routing decision yet, for two independent reasons:**
-> 1. **The inputs are from the wrong task.** Those EM values are pooled tydiqa+MCIF, i.e. 79%
->    monolingual (see the section above). The rule is sound; the pool it was fed is not.
->    Re-score EM/F1 per source and re-apply it to MCIF before acting.
-> 2. **The rule only means something where EM does.** `sqrt(EM × chrF)` is a `qa-context` rule
->    only. On `qa-oeg` (175-word compositions) EM is ~0 for every system, and a geometric mean
->    with a near-zero factor is ~0 regardless of chrF — it would rank noise. Keep qa-oeg on
->    chrF/BERTScore.
->
-> Property worth knowing: the geometric mean hands the decision to **EM**, because EM varies
-> more across our systems in *relative* terms (3.9× spread, 4.36→16.92) than chrF does (2.3×,
-> 16.00→37.52), and a geometric mean is a mean of logs. That is a defensible hedge — it refuses
-> to reward a system that never lands the span — but it is a choice, not a neutral compromise.
+> **Superseded the same day: `sqrt(EM × chrF)`.** Worth recording why, because the failure is
+> reusable. The geometric mean hands the decision to **EM** (EM's relative spread across our
+> systems is 3.9× against chrF's 2.3×, and a geometric mean is a mean of logs) — and EM is
+> precisely the metric that only resolves on **tydiqa**, the proxy that does not resemble the
+> test set. On the proxies that decide anything (MCIF, and all of qa-oeg) the golds are too long
+> to hit exactly, so EM is floored and the rule is either near-blind or, on qa-oeg, ranking a
+> ~0 factor. **A rule that works only where the measurement is wrong is not a rule.** The
+> replacement is not neutral either — an unweighted mean of raw values weights each metric by
+> its variance, so BERTScore (1.24× spread against chrF's 2.35×) sets the level and mostly
+> abstains from the ordering, and chrF+ROUGE-L are two votes for the same thing (surface
+> overlap) against one quiet vote for semantics. It is a defensible compromise with its thumb
+> on surface overlap; `evaluate.py:combined()` says so in the code rather than in a doc.
 
 > **Update 2026-07-16** — *this note is now answered; see "the dev proxy is 79% the WRONG TASK"
 > above.* The original note read: "This part is also partially not true. The test set is really

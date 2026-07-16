@@ -75,14 +75,18 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 
 1. **`--unescape` 要不要進 primary**（見 A 列）。無 dev proxy，只能靠 qualitative smoke 判斷。
 2. ~~**寄信給主辦方**（schmidtova@ufal.mff.cuni.cz）~~ → **關閉（使用者決定，2026-07-16）：不寄信。**
-   官方指標改用自訂的對沖規則 **`sqrt(EM × chrF)`** 決定 —— 這是「在未知下做決定」，**不是**把未知
-   解掉了。**僅適用 qa-context**：qa-oeg 的 EM 對每個系統都 ≈0，幾何平均乘上一個 ≈0 的因子只會排出
-   雜訊，qa-oeg continues 用 chrF/BERTScore。套在現有（**池子是錯的**，見下）proxy 上會選 adapter：
-   gold-LoRA 19.86 > 3-shot 15.66 > 3-shot 無 hint 12.20 > adapter+3-shot 8.71。
+   官方指標仍然未知 —— 這是「在未知下做決定」，**不是**把未知解掉了。
    （原本要問的另兩件事 —— 雙重跳脫、8 筆 `{country}`/`{language}` placeholder —— 也隨之不問；
    100 筆空 prompt 主辦方已於 07-16 自行修掉。）
-   ⚠️ **但先別把它當成路由定案**：那些 EM 是 tydiqa+MCIF **混池**算的，而其中 79% 是單語的 tydiqa
-   —— 見下面第 6 條。規則沒問題，餵給它的池子有問題。
+   **選型規則：`COMBINED` = mean(chrF, BERTScore, ROUGE-L)，所有 sub-task 一致**（jobs 3865022-25）。
+   **當天即被取代的前一版是 `sqrt(EM × chrF)`**，理由值得記住：幾何平均實際上把決定權交給 **EM**
+   （EM 的相對跨度 3.9× vs chrF 的 2.3×），而 EM 偏偏**只在 tydiqa 上有解析度** —— 也就是那個
+   *不像*測試集的 proxy。在真正能決定事情的 proxy 上（MCIF、以及整個 qa-oeg），gold 太長、EM 被壓在
+   地板，規則不是半盲就是在乘一個 ≈0 的因子。**一條「只在量錯的地方才有效」的規則不是規則。**
+   ⚠️ 新規則也**不是中立的**：原始值的算術平均會依變異量隱性加權 —— BERTScore 跨度僅 1.24×
+   （chrF 2.35×），它決定水位、幾乎不決定名次；而 chrF 與 ROUGE-L 都在量表面重疊，等於「2 票表面、
+   1 票語意」。這是個把拇指壓在表面重疊上的可辯護折衷，細節寫在 `evaluate.py:combined()`。
+   **換規則沒有改變任何已做的路由決定。**
 
 6. 🔴 **`qa-context` 的 dev proxy 有 79% 是錯的任務（2026-07-16 實測，EXPERIMENTS.md 有完整表格）**
    —— 使用者留在 EXPERIMENTS.md 的那則「test set 跟 dev 很不一樣，去讀 qa-context」註記已查證，**是對的**：
