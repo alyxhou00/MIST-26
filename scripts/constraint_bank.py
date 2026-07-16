@@ -267,13 +267,20 @@ def parse_budget(text: str, lang: str) -> tuple[int, int] | None:
     on dev this returns None almost everywhere. That is expected: the metric it feeds is for
     test outputs and for C-augmented training data, not dev.
 
-    Accuracy, measured against data/tests.jsonl 2026-07-15: qa-oeg is a **parallel corpus**
-    (the same 100 prompts translated per language), so every language must yield the *same*
-    budget count -- that invariant is what this parser is checked against, and it is a much
-    sharper test than a round-trip. 19 of the 23 non-empty languages land exactly on 20/100.
-    Known residuals: bho and rus find 21 (one over-match each), jpn 19 and zho 16 (misses),
-    yor 8/59 where ~12 is expected. Total 445/2,259 = 19.7%. Round-trip against `word_budget`
-    is clean for all 24 languages. Treat compliance figures as ±5% until those are chased.
+    Accuracy, re-measured against data/tests.jsonl revision `5950311` (2026-07-16): qa-oeg is
+    a **parallel corpus** (the same 100 prompts translated per language), so every language
+    must yield the *same* budget count -- that invariant is what this parser is checked
+    against, and it is a much sharper test than a round-trip. 20 of the 24 languages land
+    exactly on 20/100. Known residuals: bho and rus find 21 (one over-match each -- both catch
+    prompt #13's "(5-7-5 syllables)", a format constraint, not a budget), jpn 19 and zho 16
+    (misses), yor 8/59 where ~12 is expected. Total 465/2,359 = 19.7%. Round-trip against
+    `word_budget` is clean for all 24 languages. Treat compliance figures as ±5% until those
+    are chased.
+
+    The restored English block (previously empty, hence the old "19 of 23") is what confirms
+    20/100 is the *true* count rather than this parser's floor: English is the source language
+    and yields 20/100 on exactly the same prompt indices as Spanish. TEST_SET_ANALYSIS 4 said
+    21/100 by counting #13; it has been corrected to agree with this parser.
     """
     # `attest` is ONE inflected form of the unit word, but prompts inflect it: mar's attest is
     # शब्दांत while real prompts say शब्दांचे, deu's is Wörtern vs Wörter. Matching the attest
@@ -360,10 +367,10 @@ def selftest(test_file: str) -> int:
               f"{ {k: v for k, v in counts.items() if v} }")
 
     # 2. unit word: the `attest` fragment must really occur in that language's prompts.
-    # eng is unattestable by construction: all 100 English qa-oeg rows have an empty prompt
-    # (the known test-set bug, TEST_SET_ANALYSIS.md section 6), so there is no English oeg
-    # text to match against. Its budget template is plain English, written directly rather
-    # than modelled on a translation, so this is a gap in evidence, not in confidence.
+    # eng used to be unattestable by construction (all 100 English qa-oeg rows had an empty
+    # prompt). The organizers filled them in data revision `5950311`, so eng is now checked
+    # like every other language and passes on 'words' -- the one former gap in evidence is
+    # closed. The `if not text` branch below is kept for a language that is ever shipped empty.
     print("\nattestation of the unit fragment in qa-oeg prompts:")
     for lang in langs:
         text = "".join(r["prompt"] for r in oeg if r["question_lang"] == lang)

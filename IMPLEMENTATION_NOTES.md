@@ -291,8 +291,11 @@ Full analysis in TEST_SET_ANALYSIS.md; the three findings that reshaped the arch
    outputs came out as standard Hindi (most rows), Nepali (one), Maithili (one). A
    fastText LID gate catches exactly this failure class.
 
-Also: 100 test rows (`qa-oeg_1..100_eng_eng`, the whole English OEG block) have empty
-prompts — a data bug worth reporting to the organizers; `run_test.py` guards them.
+Also: the 100 empty English OEG prompts (`qa-oeg_1..100_eng_eng`) were **fixed upstream**
+on 15 July (HF `5950311`, re-downloaded 2026-07-16 — only those 100 rows changed). What
+remains is narrower: 8 of them (`qa-oeg_93..100_eng_eng`) ship unsubstituted
+`{country}`/`{language}` placeholders. `run_test.py` passes those through verbatim and warns.
+See TEST_SET_ANALYSIS §6.
 
 ## 5. Distillation pipeline (roadmap B)
 

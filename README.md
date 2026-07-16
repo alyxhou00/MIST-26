@@ -80,13 +80,18 @@ with strategic implications in [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md)):
   extraction is the closest dev proxy for `qa-context`.
 - **Embedded format instructions are the norm**, not the exception: every English
   `qa-context` prompt carries one ("answer in one sentence, using only what the passage
-  says", "List …"), and `qa-oeg` prompts routinely specify word budgets ("in 120–150
-  words") — in every language, including Bhojpuri.
-- Prompts are single-line prose (only 2 rows contain a real newline; 2 contain a literal
-  `\n`); qa prompt length ≤ 2,607 chars, median 654.
-- **Known data bug: the 100 English `qa-oeg` rows (`qa-oeg_1..100_eng_eng`) have an empty
-  `prompt`.** `run_test.py` emits `output: ""` for them and warns; worth reporting to the
-  organizers.
+  says", "List …"). `qa-oeg` word budgets ("in 120–150 words") appear in every language
+  including Bhojpuri, but on **20 of its 100 unique prompts**, not all of them — qa-oeg is a
+  parallel corpus, the same 100 prompts translated 24 ways (TEST_SET_ANALYSIS §4).
+- Prompts are single-line prose (only 2 rows contain a real newline), but **all 8,640
+  `qa-context` prompts carry a *literal* backslash-`n`** at their section boundaries — the
+  file is double-escaped, so the model reads `\n\n` as text unless `run_test.py --unescape`
+  is passed (TEST_SET_ANALYSIS §2). qa prompt length ≤ 2,607 chars, median 654.
+- **Known data bug (`5950311`): 8 English `qa-oeg` rows (`qa-oeg_93..100_eng_eng`) ship
+  unsubstituted `{country}`/`{language}` placeholders** where every other language has a real
+  value. `run_test.py` passes them through verbatim and warns; reportable to the organizers
+  (TEST_SET_ANALYSIS §6). The earlier bug — all 100 English `qa-oeg` prompts empty — was
+  **fixed upstream on 15 July**; re-download if your `tests.jsonl` predates that.
 
 ## Layout
 

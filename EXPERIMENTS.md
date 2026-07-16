@@ -47,7 +47,8 @@ ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 > name", "list the top 5 landmarks") — exactly aya's shape. The error was generalising from the
 > budgeted 20% to the whole task without reading the other 80%, when the whole task is only 100
 > unique prompts and could have been enumerated in one pass. The belebele half of the warning
-> stands (it rests on a property of the entire file); the aya half is retracted.
+> also doesn't really stand (please ask Alyssa why; she knows); the aya half is retracted.
+> By the way, this file needs to be cleaned up after doubts are resolved.
 
 ## System comparison — read this one to choose a system
 
@@ -91,8 +92,13 @@ The two numbers describe different failure shapes, and both are real:
 **Which one wins depends entirely on the organisers' automatic metric, and we do not know what
 it is.** This is now the highest-value unknown in the project: it flips the routing for 8,640
 of our 10,999 test rows, and no further experiment of ours can resolve it. It belongs in the
-email to the organisers (ROADMAP open item #2) alongside the 100 empty prompts and the
-double-escaping. Until then, treat `qa-context → 3-shot` as **unjustified**, not as decided.
+email to the organisers (ROADMAP open item #2) alongside the double-escaping and the 8
+`{country}`/`{language}` placeholder rows. (The 100 empty English prompts came off that list
+on 2026-07-16 — the organisers fixed them unprompted; TEST_SET_ANALYSIS §6.) Until then, treat `qa-context → 3-shot` as **unjustified**, not as decided.
+
+> **Update 2026-07-16**
+> This part is also partially not true. The test set is really different from the dev set. Please inspect 
+> the qa-context entries of test set. You'll have interesting finds. We need an whole new train/dev set.
 
 ### `qa-oeg` is split too: the adapter wins the long end, 3-shot wins the short end
 

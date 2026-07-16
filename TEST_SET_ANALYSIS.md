@@ -1,8 +1,16 @@
 # Official test set — analysis and strategic implications
 
-Source: `pinzhenchen/wmt26-mist-test`, "Final version - 14 July 2026" (single `tests.jsonl`,
-47MB), analyzed 2026-07-15 together with the first qualitative smoke run (job 3859059,
-`slurm/smoke-run-test.sbatch`; outputs kept in `predictions/smoke-test-*-3859059.jsonl`).
+Source: `pinzhenchen/wmt26-mist-test` (single `tests.jsonl`, 47MB), analyzed 2026-07-15
+together with the first qualitative smoke run (job 3859059, `slurm/smoke-run-test.sbatch`;
+outputs kept in `predictions/smoke-test-*-3859059.jsonl`).
+
+**Revision — re-downloaded 2026-07-16, HF commit `5950311` "include eng prompts"
+(2026-07-15T15:03Z).** The copy this file was originally written against was `2dcf223`
+(14 July + yoruba). The organizers fixed the 100 empty English `qa-oeg` prompts on their own;
+no report from us was needed. Diffed old vs new: **exactly the 100 `qa-oeg_*_eng_eng` rows
+changed, `prompt` field only — no rows added or removed, and no other row touched anywhere in
+the file.** So every count below that does not involve English `qa-oeg` still stands as
+measured; the ones that did are re-derived and marked in place.
 Data-level facts are summarized in the README's "The official test set" section; this file
 is the full analysis and what it means for the plan. Submission deadline: **1 Aug 2026 AoE**.
 
@@ -39,7 +47,8 @@ is the full analysis and what it means for the plan. Submission deadline: **1 Au
   - *This corrects an earlier claim here* ("only 2 rows contain a literal `\n` escape; no
     unescaping needed"), which came from testing `'\n' in prompt` — that finds real
     newlines, not the escape. Verified by counting `chr(92)+'n'`: 8,640/8,640 qa-context,
-    0/2,259 qa-oeg.
+    0/2,359 qa-oeg (re-checked on `5950311`; the 100 restored English prompts carry neither
+    a literal escape nor a real newline, so the qa-oeg denominator is now the full 2,359).
   - `qa-context` layout is `<lead-in>:\n\n<passage>\n\nThe question is: <q>\n\n<instructions>`,
     so the literal escapes sit at exactly the structural boundaries — the passage/question
     separators. Feeding the prompt verbatim (what `run_test.py` does by default) shows the
@@ -69,12 +78,23 @@ Every inspected qa prompt carries explicit instructions **inside the prompt text
   passage, write only 'no answer'"* — so unanswerable detection is scored, tydiqa-style),
   and a closing **"Answer in \<language\>."**
 - `qa-oeg`: word budgets ("in 120–150 words", "150 शब्दन में") appear in every language
-  **including Bhojpuri** — but they are **not** on every prompt. Measured 2026-07-15:
-  exactly **21 of the 100 unique qa-oeg prompts per language** carry a numeric budget
-  (471/2,359 rows; identical 21/100 in all 23 non-empty languages, because qa-oeg is a
-  **parallel corpus** — the same 100 prompts translated 24 ways, yoruba 59). An earlier
+  **including Bhojpuri** — but they are **not** on every prompt: exactly **20 of the 100
+  unique qa-oeg prompts per language** carry a numeric budget, because qa-oeg is a
+  **parallel corpus** (the same 100 prompts translated 24 ways, yoruba 59). An earlier
   version of this doc called budgets "routine", which reads as "on every prompt"; the real
   scale is ~1/5 of qa-oeg. Roadmap C still stands, just at that scale.
+  - *Corrected 2026-07-16 (was "21 of 100 … 471/2,359 rows; identical in all 23 non-empty
+    languages").* The 21st was prompt **#13**, *"Explain the theory of relativity using only
+    haiku format (5-7-5 syllables)"* — digits next to a unit word, but a **format** constraint,
+    not a length budget. The restored English block settles it: English is the source language
+    and yields **20/100**, on exactly the same prompt indices as Spanish
+    (`1,2,3,4,8,9,46,47,48,71–74,76–80,84,98`). This also squares the doc with
+    `constraint_bank.parse_budget`, whose own accuracy note said 20/100 all along.
+  - Counting *rows* is the wrong unit anyway and is why the old figure looked authoritative:
+    per-language parser residuals (bho/rus over-match #13, jpn 19, zho 16, yor 8/59 — see
+    `parse_budget`'s docstring) make the row total an artifact of parser accuracy, not of the
+    data. The data-level fact is **20/100 prompts**; the parser now finds 465/2,359 rows
+    (= the pre-fix 445/2,259 plus English's 20), still ±5% until those residuals are chased.
 
 Implications: (a) the test prompt already tells the model the output language, so our
 lang-hint system turn is redundant-at-best there — **measured (job 3859645): dropping it
@@ -101,8 +121,14 @@ Every step is true *of the budgeted 20%*, and it was generalised to all of qa-oe
 reading the rest.
 
 `qa-oeg` is only **100 unique prompts** (a parallel corpus, translated 24 ways) — small enough
-to enumerate, which is what should have happened first. Reading all 100 (Spanish rendering,
-`data/tests.jsonl`), the task is a **spectrum**, not one regime:
+to enumerate, which is what should have happened first. Reading all 100, the task is a
+**spectrum**, not one regime:
+
+> Enumerated from the **Spanish** rendering, because English was empty at the time (the old §6
+> bug). Since `5950311` the **English source text is available** and is what the examples below
+> now quote. The re-download did not move the shape of this table: English is index-aligned
+> with Spanish (verified on the budget set, §4), so the Spanish reading was sound — but English
+> is the original, so prefer it for any further enumeration.
 
 | kind | count | example | answer length |
 |---|---|---|---|
@@ -148,12 +174,37 @@ Total 11,915. Note the shape: the 122B run is **91% aya**, so it does *not* amou
 ready-made `qa-oeg` training set; and 4,577 of the 35B shards' 7,789 unique rows are
 belebele, whose format does not transfer.
 
-## 6. Data bug: 100 empty prompts
+## 6. Data bug: the English qa-oeg block
 
-`qa-oeg_1..100_eng_eng` — the entire English qa-oeg block — have `prompt == ""`.
-`run_test.py` guards these (emits `output: ""` + a warning). **Action: report to the
-organizers** (schmidtova@ufal.mff.cuni.cz); if fixed data ships, re-run just
-`--task qa-oeg --lang eng`.
+**Empty prompts — FIXED upstream 2026-07-16.** `qa-oeg_1..100_eng_eng` (the entire English
+qa-oeg block) had `prompt == ""` in `2dcf223`. HF commit `5950311` ("include eng prompts")
+fills all 100; nothing else in the file changed (see the header). We never had to report it.
+`run_test.py`'s empty-prompt guard is kept as a safety net but is now dead code on this
+revision — 0/12,775 rows have an empty prompt.
+
+**Still broken, narrower: 8 rows ship unsubstituted template placeholders.** Found by reading
+the restored block rather than assuming the fix was complete:
+
+| row | placeholder |
+|---|---|
+| `qa-oeg_93_eng_eng`, `qa-oeg_94_eng_eng`, `qa-oeg_99_eng_eng` | `{language}` (99 has it twice) |
+| `qa-oeg_95..98_eng_eng`, `qa-oeg_100_eng_eng` | `{country}` |
+
+e.g. #95 English: *"What is considered the national sport in {country}?"* — where every other
+language localizes the slot (spa "España", deu "Deutschland", zho "中国", bho "भारत"). English
+alone was left as the raw template, plausibly because these prompts key off the language's
+country and English has no single one. As-is those 8 rows are unanswerable: the model is asked
+about a literal `{country}`.
+
+Scope: **English `qa-oeg` only** — 0/8,640 qa-context rows and 0 rows in the other 23 languages
+carry a placeholder. (`sum-sum` has 192 such rows, but that is the teammate's subtask and
+predates this commit — worth passing on.)
+
+**Actions:** (a) report to the organizers (schmidtova@ufal.mff.cuni.cz) — this is now the only
+open data bug on our side; (b) do **not** silently substitute a value in `run_test.py`: picking
+"the United States" or "the United Kingdom" invents an input the graders did not write, and the
+gold was presumably produced against whatever they intend. `run_test.py` warns on these rows and
+otherwise passes them through verbatim. 8 rows of 10,999 — not worth a hack; worth an email.
 
 ## 7. Qualitative smoke findings (job 3859059, base 9B, verbatim prompts)
 
