@@ -12,6 +12,14 @@ prompt, so it's opt-in pending a dev A/B).
     python scripts/run_test.py                                  # all qa rows, base model
     python scripts/run_test.py --task qa-oeg --lang bho --limit 10   # smoke: surprise language
     python scripts/run_test.py --lora adapters/... --shard 2/3      # middle third, SFT'd model
+    python scripts/run_test.py --task qa-context --shots 3          # the routed qa-context arm
+
+--shots N prepends N demonstrations from the sample data as completed user/assistant turns,
+matched to the row on task->source and question_lang (see make_shot_picker). The demos are in
+the *sample* format while the test prompt is self-contained prose, so they demonstrate answer
+shape and language, not prompt format. Per TEST_SET_ANALYSIS 8/E this is the qa-context arm of
+the routed submission (dev tydiqa, the faithful proxy: 3-shot 38.94 vs adapter 19.53), while
+qa-oeg wants --lora at 0 shots -- demos and the adapter do not stack (dev 21.64 vs 27.64).
 
 Output is one {"id": ..., "output": ...} JSON object per line (the submission format).
 Rows already present in --out are skipped on restart, so a run that hits the wall clock
@@ -19,20 +27,91 @@ can be resubmitted with the same --out and it resumes where it stopped. --shard 
 the (filtered) rows into n contiguous chunks for parallel jobs over multiple nodes; give
 each shard its own --out and concatenate afterwards.
 
-Known test-set quirks (v. 14 July 2026), both reportable to the organizers:
-  * the 100 qa-oeg English rows (qa-oeg_1..100_eng_eng) have an EMPTY prompt string.
-    Generating from an empty prompt would produce unrelated text, so those rows get output ""
-    and a warning; re-run once the organizers fix the data.
+Known test-set quirks (data revision `5950311`, re-downloaded 2026-07-16):
+  * 8 English qa-oeg rows (qa-oeg_93..100_eng_eng) ship UNSUBSTITUTED template placeholders --
+    "the national sport in {country}", "diminutives in {language}" -- where every other
+    language has a real value filled in. Passed through verbatim with a warning: substituting
+    a guess would invent an input the organizers did not write. TEST_SET_ANALYSIS.md section 6.
   * every qa-context prompt is double-escaped and carries LITERAL backslash-n at its section
     boundaries -- see --unescape and TEST_SET_ANALYSIS.md section 2.
+  * the 100 empty English qa-oeg prompts are FIXED upstream as of `5950311`. The empty-prompt
+    guard below is kept as a safety net (it costs nothing and a future revision could regress),
+    but it is dead code on this revision.
 """
 
 import argparse
 import json
+import re
 import sys
+import zlib
 from pathlib import Path
 
-from prompt_template import TEST_LANG_NAMES, system_turn
+from prompt_template import TEST_LANG_NAMES, TEST_TASK_SOURCES, system_turn
+
+# Unsubstituted template slots in the official prompts -- `{country}`, `{language}`. Only the
+# 8 English qa-oeg rows qa-oeg_93..100 have them (TEST_SET_ANALYSIS 6); detected rather than
+# repaired, so a run reports the damage instead of inventing an input.
+_PLACEHOLDER = re.compile(r"\{(?:country|language)\}")
+
+
+def make_shot_picker(pool, k: int, seed: int):
+    """Return a function picking k few-shot demonstrations from the sample data for a test row.
+
+    The test set has no golds, so demonstrations can only come from the sample data
+    (`pinzhenchen/wmt26-mist-sample`, qa split) -- a different distribution from the test
+    prompts (templated `context + question` vs self-contained conversational prose). That
+    mismatch is inherent to few-shot here and is the main caveat on this flag: the demos
+    teach answer *shape and language*, not prompt format. See the module docstring.
+
+    Unlike benchmark.py's picker there is no dev/train split to respect -- the official test
+    rows are disjoint from the sample data, so the whole qa split is drawn from.
+
+    Matching, per TEST_SET_ANALYSIS 5b:
+      * `task` -> `source` via TEST_TASK_SOURCES (belebele excluded: multiple choice, absent
+        from the test set, and the wrong format to demonstrate);
+      * `question_lang` (bare 'hin') -> `lang_code` ('hin_Deva') by comparing the prefix.
+        Both name the *output* language on their own side, so this is a like-for-like match.
+
+    Tiers: (task-sources, same language) -> (task-sources, any language) -> whole pool. The
+    language fallback is reported, not silent: it is reached only by a test language with no
+    sample rows -- in the final file that means **bho** -- and demonstrating an answer in the
+    wrong language to a model already documented to drift bho->hin (TEST_SET_ANALYSIS 7.2) is
+    a real risk, not a neutral default. Use --shots-require-lang to force zero-shot instead.
+
+    Seeded per row from a hash of its `id` (not a shared RNG consumed in iteration order), so
+    a row gets the same shots regardless of --shard/--limit/--lang or row order -- the same
+    property benchmark.py gets by hashing the input text. `id` rather than the prompt because
+    it is stable under --unescape, which rewrites the prompt but must not move the shots.
+    """
+    pool = pool.assign(lang=pool["lang_code"].str.split("_").str[0])
+    fell_back: set[str] = set()
+
+    def pick(task: str, question_lang: str, row_id: str,
+             require_lang: bool = False) -> list[tuple[str, str]]:
+        sources = TEST_TASK_SOURCES.get(task)
+        cand = pool[pool["source"].isin(sources)] if sources else pool
+        same_lang = cand[cand["lang"] == question_lang]
+        if len(same_lang) >= k:
+            chosen = same_lang
+        else:
+            if require_lang:
+                return []
+            if question_lang not in fell_back:
+                fell_back.add(question_lang)
+                print(f"WARNING: only {len(same_lang)} sample rows in {question_lang!r} for "
+                      f"task {task!r} (need {k}); falling back to demonstrations in OTHER "
+                      f"languages. They may pull the output language away from "
+                      f"{question_lang!r} -- see TEST_SET_ANALYSIS 7.2 (bho->hin drift). "
+                      f"--shots-require-lang runs these rows zero-shot instead.",
+                      file=sys.stderr, flush=True)
+            chosen = cand if len(cand) >= k else pool
+        picked = chosen.sample(
+            n=min(k, len(chosen)),
+            random_state=zlib.crc32(f"{seed}:{row_id}".encode("utf-8")),
+        )
+        return list(zip(picked["input"], picked["output"]))
+
+    return pick
 
 
 def main() -> None:
@@ -60,6 +139,23 @@ def main() -> None:
                          "text in 79%% of qa rows. Off by default because it edits the "
                          "official input and there is no dev proxy to A/B it on -- see "
                          "TEST_SET_ANALYSIS.md section 2")
+    ap.add_argument("--shots", type=int, default=0,
+                    help="few-shot demonstrations per row, drawn from the sample data "
+                         "(--shots-file) and matched on task->source + question_lang. "
+                         "Inserted as completed user/assistant turns before the prompt. "
+                         "Default 0 = zero-shot. NOTE the demos are sample-format while the "
+                         "test prompt is self-contained prose -- they teach answer shape and "
+                         "language, not prompt format. Per TEST_SET_ANALYSIS 8/E this is the "
+                         "intended setting for qa-context (dev tydiqa: 3-shot 38.94 vs "
+                         "adapter 19.53); qa-oeg prefers --lora with 0 shots.")
+    ap.add_argument("--shots-file", default=None,
+                    help="local qa sample data for --shots (CSV/JSONL with source, lang_code, "
+                         "input, output). Default: load pinzhenchen/wmt26-mist-sample from the "
+                         "Hub, as benchmark.py does.")
+    ap.add_argument("--shots-require-lang", action="store_true",
+                    help="with --shots, run a row zero-shot rather than demonstrate in a "
+                         "language other than its question_lang (affects bho, which has no "
+                         "sample rows at all -- see make_shot_picker)")
     ap.add_argument("--lang-hint", action=argparse.BooleanOptionalAction, default=False,
                     help="prepend the shared 'Respond in <language>.' system turn derived from "
                          "question_lang (default: OFF -- the test prompt is self-contained)")
@@ -105,6 +201,31 @@ def main() -> None:
         print("nothing to do.")
         return
 
+    # --- few-shot pool (only loaded when asked; keeps the zero-shot path dependency-free) ---
+    pick_shots = None
+    if args.shots:
+        if args.lora:
+            print("WARNING: --shots with --lora. Measured on dev, demonstrations and the SFT "
+                  "adapter do NOT stack (21.64 vs 27.64 for 3-shot base): the adapter was "
+                  "trained on zero-shot-formatted inputs, so demos put it off-distribution. "
+                  "Route instead -- adapter for qa-oeg, 3-shot base for qa-context "
+                  "(TEST_SET_ANALYSIS 8/E).", file=sys.stderr, flush=True)
+        if args.shots_file:
+            import pandas as pd
+            sample = (pd.read_json(args.shots_file, lines=True)
+                      if args.shots_file.endswith(".jsonl")
+                      else pd.read_csv(args.shots_file))
+        else:
+            from datasets import load_dataset
+            sample = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
+        sample = sample[sample["task"] == "qa"] if "task" in sample.columns else sample
+        missing = {"source", "lang_code", "input", "output"} - set(sample.columns)
+        if missing:
+            sys.exit(f"--shots pool is missing column(s) {sorted(missing)}")
+        pick_shots = make_shot_picker(sample, args.shots, args.seed)
+        print(f"few-shot: {args.shots} demos/row from {len(sample)} qa sample rows "
+              f"(sources used: {sorted(set().union(*TEST_TASK_SOURCES.values()))})")
+
     # --- model: identical stack to benchmark.py (Qwen3.5 is multimodal; text-only use) ---
     import torch
     from transformers import AutoModelForImageTextToText, AutoTokenizer, set_seed
@@ -122,9 +243,12 @@ def main() -> None:
     set_seed(args.seed)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     n_empty = 0
+    n_placeholder = 0
     with open(out_path, "a", encoding="utf-8") as f:
         for i, row in enumerate(todo, 1):
-            if not row["prompt"].strip():  # the 100 empty eng qa-oeg rows (see module docstring)
+            if _PLACEHOLDER.search(row["prompt"]):  # 8 eng qa-oeg rows (see module docstring)
+                n_placeholder += 1
+            if not row["prompt"].strip():  # fixed upstream in `5950311`; guard kept as a net
                 n_empty += 1
                 f.write(json.dumps({"id": row["id"], "output": ""}, ensure_ascii=False) + "\n")
                 f.flush()
@@ -137,6 +261,13 @@ def main() -> None:
                 if args.lang_hint:
                     name = TEST_LANG_NAMES.get(row["question_lang"], row["question_lang"])
                     messages.append(system_turn(name))
+                if pick_shots:
+                    for ex_input, ex_output in pick_shots(
+                        row["task"], row["question_lang"], row["id"],
+                        require_lang=args.shots_require_lang,
+                    ):
+                        messages.append({"role": "user", "content": ex_input})
+                        messages.append({"role": "assistant", "content": ex_output})
                 messages.append({"role": "user", "content": prompt_text})
                 prompt = tok.apply_chat_template(
                     messages, tokenize=False, add_generation_prompt=True,
@@ -162,8 +293,15 @@ def main() -> None:
             f.flush()
             print(f"  [{i}/{len(todo)}] {row['id']}", flush=True)
     if n_empty:
-        print(f"WARNING: {n_empty} rows had an empty prompt -> wrote empty outputs "
-              f"(known test-set issue, see docstring)", file=sys.stderr)
+        print(f"WARNING: {n_empty} rows had an empty prompt -> wrote empty outputs. This was "
+              f"fixed upstream in `5950311`; seeing it again means --test-file is a stale "
+              f"revision (re-download per the README) or the organizers regressed the data.",
+              file=sys.stderr)
+    if n_placeholder:
+        print(f"WARNING: {n_placeholder} rows contain an unsubstituted template placeholder "
+              f"({{country}}/{{language}}) and were sent to the model verbatim -- their outputs "
+              f"will be about a literal '{{country}}'. Known upstream bug in the English qa-oeg "
+              f"block, TEST_SET_ANALYSIS.md section 6.", file=sys.stderr)
     print(f"appended {len(todo)} rows -> {args.out}")
 
 

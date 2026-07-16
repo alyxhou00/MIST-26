@@ -36,6 +36,19 @@ LANG_NAMES = {
 TEST_LANG_NAMES = {code.split("_")[0]: name for code, name in LANG_NAMES.items()}
 TEST_LANG_NAMES["bho"] = "Bhojpuri"
 
+# Which sample-data `source` values stand in for which test `task` (TEST_SET_ANALYSIS 5b).
+# A test row's only task signal is `task`, so this is what few-shot selection at test time
+# (run_test.py --shots) matches on. `facebook/belebele` is deliberately absent from both
+# lists: it is multiple-choice, the test set contains none (TEST_SET_ANALYSIS 5), and its
+# "answer with a letter" format is exactly the wrong thing to demonstrate.
+# NOTE: the same partition is spelled out in augment_constraints.py (OPEN_ENDED_SOURCES /
+# CONTEXT_SOURCES) and evaluate.py (TASK_PROXY, split into two qa-oeg columns for reporting).
+# Those two predate this one; if the mapping ever changes, all three must change together.
+TEST_TASK_SOURCES = {
+    "qa-context": ["copenlu/answerable_tydiqa", "FBK-MT/MCIF"],
+    "qa-oeg": ["wmt25-mist-oeg-gpt-4.1", "CohereLabs/aya_dataset"],
+}
+
 
 def system_turn(lang_name: str) -> dict:
     """The target-language system turn, shared verbatim by training (SFT), dev benchmarking
