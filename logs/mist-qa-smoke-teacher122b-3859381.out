@@ -1,0 +1,122 @@
+### Starting TaskPrologue of job 3859381 on a0534 at Wed Jul 15 13:34:49 CEST 2026
+Running on cores 32-63 with governor performance
+Wed Jul 15 13:34:49 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:49:00.0 Off |                    0 |
+| N/A   35C    P0             67W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-80GB          On  |   00000000:4F:00.0 Off |                    0 |
+| N/A   37C    P0             67W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/hpc/b279bb/b279bb31/hf_datasets_cache/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Tue Jul 14 23:54:09 2026).
+W0715 13:35:08.301000 1157956 torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+W0715 13:35:08.366000 1157956 torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+train rows: 15 after shard=None, limit=15; 15 to generate
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+f0b3f8e
+Transformers : 5.14.0.dev0
+Torch        : 2.13.0+cu130
+Triton       : 3.7.1
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+INFO  Kernel: Auto-selection: adding candidate `MarlinLinear`                  
+INFO  Kernel: selected -> `MarlinLinear`.                                      
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/teacher_generate.py", line 138, in <module>
+    main()
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/teacher_generate.py", line 97, in main
+    model = AutoModelForImageTextToText.from_pretrained(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/models/auto/auto_factory.py", line 402, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/modeling_utils.py", line 4410, in from_pretrained
+    hf_quantizer.preprocess_model(
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/quantizers/base.py", line 171, in preprocess_model
+    self._process_model_before_weight_loading(model, **kwargs)
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/__init__.py", line 53, in _process_model_before_weight_loading_with_device_map
+    return original_process(self, model, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/quantizers/quantizer_gptq.py", line 94, in _process_model_before_weight_loading
+    model = self.optimum_quantizer.convert_model(model, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/quantizer.py", line 277, in convert_model
+    self._replace_by_quant_layers(model, layers_to_be_replaced)
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/quantizer.py", line 357, in _replace_by_quant_layers
+    self._replace_by_quant_layers(child, names, name + "." + name1 if name != "" else name1)
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/quantizer.py", line 357, in _replace_by_quant_layers
+    self._replace_by_quant_layers(child, names, name + "." + name1 if name != "" else name1)
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/quantizer.py", line 357, in _replace_by_quant_layers
+    self._replace_by_quant_layers(child, names, name + "." + name1 if name != "" else name1)
+  [Previous line repeated 2 more times]
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/quantizer.py", line 324, in _replace_by_quant_layers
+    new_layer = self.quant_linear(
+                ^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/nn_modules/qlinear/marlin.py", line 116, in __init__
+    super().__init__(
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/nn_modules/qlinear/__init__.py", line 689, in __init__
+    super().__init__(
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/nn_modules/qlinear/__init__.py", line 610, in __init__
+    super().__init__(*args, pack_dtype=pack_dtype, **kwargs)
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/nn_modules/qlinear/__init__.py", line 513, in __init__
+    super().__init__(
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/nn_modules/qlinear/__init__.py", line 135, in __init__
+    raise err
+NotImplementedError: <class 'gptqmodel.nn_modules.qlinear.marlin.MarlinLinear'>: `out_features`: 1 must be divisible by [64].
+Exception ignored in: <function ResourceTracker.__del__ at 0x145b95fc28e0>
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 13:35:15 CEST 2026
+= Job-ID             : 3859381 on alex
+= Job-Name           : mist-qa-smoke-teacher122b
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/smoke-teacher-122b.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a100
+= Slurm account      : b279bb with QOS=normal
+= Features           : a100_80
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:00:53
+= Total RAM usage    : 1.7 GiB of assigned  GiB (%)
+= Node list          : a0534
+= Subm/Elig/Start/End: 2026-07-15T13:33:41 / 2026-07-15T13:33:41 / 2026-07-15T13:34:22 / 2026-07-15T13:35:15
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              26.8G   104.9G   209.7G        N/A      50K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

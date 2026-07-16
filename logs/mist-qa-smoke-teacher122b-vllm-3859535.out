@@ -1,0 +1,55 @@
+### Starting TaskPrologue of job 3859535 on a0537 at Wed Jul 15 14:29:10 CEST 2026
+Running on cores 56-63,96-111,120-127 with governor performance
+Wed Jul 15 14:29:10 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:CC:00.0 Off |                    0 |
+| N/A   35C    P0             61W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-80GB          On  |   00000000:D1:00.0 Off |                    0 |
+| N/A   36C    P0             60W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/teacher_generate_vllm.py", line 23, in <module>
+    from datasets import load_dataset
+ModuleNotFoundError: No module named 'datasets'
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 14:29:11 CEST 2026
+= Job-ID             : 3859535 on alex
+= Job-Name           : mist-qa-smoke-teacher122b-vllm
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/smoke-teacher-122b-vllm.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a100
+= Slurm account      : b279bb with QOS=normal
+= Features           : a100_80
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:01:49
+= Total RAM usage    : 0.0 GiB of assigned  GiB (%)
+= Node list          : a0537
+= Subm/Elig/Start/End: 2026-07-15T14:24:39 / 2026-07-15T14:24:39 / 2026-07-15T14:27:22 / 2026-07-15T14:29:11
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              53.3G   104.9G   209.7G        N/A     146K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

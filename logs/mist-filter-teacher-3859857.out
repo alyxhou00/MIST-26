@@ -1,0 +1,80 @@
+### Starting TaskPrologue of job 3859857 on a0229 at Wed Jul 15 15:40:16 CEST 2026
+Running on cores 64-79 with governor performance
+Wed Jul 15 15:40:16 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:81:00.0 Off |                  Off |
+|  0%   38C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+loaded 4126 teacher rows from 1 file(s)
+scoring: per-row sentence chrF + BERTScore F1 ...
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  65%|██████▌   | 130/199 [00:00<00:00, 1107.38it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 762.15it/s] 
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+
+score distributions (per source):
+  ALL                                 n=  4126  chrF p5/p25/p50/p75/p95 = [2.9, 12.2, 23.4, 34.6, 48.6]
+                                                 BERT p5/p25/p50/p75/p95 = [55.7, 63.6, 67.4, 71.2, 78.0]
+  CohereLabs/aya_dataset              n=  3763  chrF p5/p25/p50/p75/p95 = [2.7, 11.4, 22.1, 33.4, 48.3]
+                                                 BERT p5/p25/p50/p75/p95 = [55.3, 63.2, 66.9, 70.4, 78.2]
+  wmt25-mist-oeg-gpt-4.1              n=   363  chrF p5/p25/p50/p75/p95 = [13.1, 26.4, 34.5, 41.5, 48.6]
+                                                 BERT p5/p25/p50/p75/p95 = [66.6, 69.9, 72.2, 74.6, 77.3]
+
+kept fraction (chrF >= C or BERTScore >= B):
+  C\B         60      65      70      75      80
+  20       87.8%   73.5%   60.9%   58.1%   57.7%
+  30       87.6%   68.5%   44.3%   36.3%   34.8%
+  40       87.6%   67.6%   34.6%   19.0%   15.4%
+  50       87.6%   67.5%   31.8%   11.2%    5.6%
+  60       87.6%   67.5%   31.7%   10.6%    3.9%
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 15:41:35 CEST 2026
+= Job-ID             : 3859857 on alex
+= Job-Name           : mist-filter-teacher
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/filter_teacher.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:01:29
+= Total RAM usage    : 14.2 GiB of assigned  GiB (%)
+= Node list          : a0229
+= Subm/Elig/Start/End: 2026-07-15T15:40:03 / 2026-07-15T15:40:03 / 2026-07-15T15:40:06 / 2026-07-15T15:41:35
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              55.7G   104.9G   209.7G        N/A     156K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:81:00.0, 38532, 77 %, 37 %, 2606 MiB, 53244 ms

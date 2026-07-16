@@ -1,0 +1,267 @@
+### Starting TaskPrologue of job 3859398 on a0534 at Wed Jul 15 13:37:29 CEST 2026
+Running on cores 32-63 with governor performance
+Wed Jul 15 13:37:29 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:49:00.0 Off |                    0 |
+| N/A   35C    P0             67W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-80GB          On  |   00000000:4F:00.0 Off |                    0 |
+| N/A   38C    P0             67W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/hpc/b279bb/b279bb31/hf_datasets_cache/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Tue Jul 14 23:54:09 2026).
+W0715 13:37:45.790000 1158521 torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+W0715 13:37:45.866000 1158521 torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/quantizers/auto.py:271: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend', 'max_input_length']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
+  warnings.warn(warning_msg)
+train rows: 15 after shard=None, limit=15; 15 to generate
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+63d8252
+Transformers : 5.14.0.dev0
+Torch        : 2.13.0+cu130
+Triton       : 3.7.1
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+INFO  Kernel: selected: `TorchLinear`                                          
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+Loading weights:   0%|          | 0/648 [00:00<?, ?it/s]Loading weights:   0%|          | 2/648 [00:01<09:50,  1.09it/s]Loading weights:   3%|▎         | 19/648 [00:02<00:51, 12.15it/s]Loading weights:   5%|▍         | 32/648 [00:02<00:27, 22.15it/s]Loading weights:   7%|▋         | 48/648 [00:02<00:16, 37.10it/s]Loading weights:  12%|█▏        | 75/648 [00:02<00:09, 59.21it/s]Loading weights:  23%|██▎       | 148/648 [00:02<00:03, 147.28it/s]Loading weights:  27%|██▋       | 174/648 [00:02<00:03, 145.47it/s]Loading weights:  30%|███       | 196/648 [00:03<00:03, 125.24it/s]Loading weights:  39%|███▉      | 252/648 [00:03<00:02, 189.29it/s]Loading weights:  49%|████▉     | 319/648 [00:03<00:01, 258.25it/s]Loading weights:  54%|█████▍    | 353/648 [00:03<00:01, 166.04it/s]Loading weights:  59%|█████▉    | 381/648 [00:03<00:01, 181.35it/s]Loading weights:  63%|██████▎   | 407/648 [00:03<00:01, 192.71it/s]Loading weights:  67%|██████▋   | 433/648 [00:04<00:01, 205.57it/s]Loading weights:  71%|███████   | 459/648 [00:04<00:00, 190.87it/s]Loading weights:  75%|███████▌  | 489/648 [00:04<00:00, 211.51it/s]Loading weights:  79%|███████▉  | 514/648 [00:04<00:00, 211.97it/s]Loading weights:  83%|████████▎ | 538/648 [00:04<00:00, 208.64it/s]Loading weights:  87%|████████▋ | 563/648 [00:04<00:00, 216.07it/s]Loading weights:  90%|█████████ | 586/648 [00:04<00:00, 184.72it/s]Loading weights:  96%|█████████▌| 621/648 [00:04<00:00, 223.67it/s]Loading weights: 100%|█████████▉| 646/648 [00:05<00:00, 181.59it/s]Loading weights: 100%|██████████| 648/648 [00:05<00:00, 125.32it/s]
+[transformers] [1mQwen3_5MoeForConditionalGeneration LOAD REPORT[0m from: Qwen/Qwen3.5-122B-A10B-GPTQ-Int4
+Key                                                                          | Status     | 
+-----------------------------------------------------------------------------+------------+-
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.up_proj.g_idx     | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.down_proj.scales  | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.gate_proj.scales  | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.up_proj.qweight   | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.up_proj.qzeros    | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.down_proj.qweight | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.gate_proj.qzeros  | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.up_proj.scales    | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.gate_proj.g_idx   | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.down_proj.g_idx   | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.gate_proj.qweight | UNEXPECTED | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_a.weight            | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.experts.{0...255}.down_proj.qzeros  | UNEXPECTED | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_qkv.weight          | UNEXPECTED | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_z.weight            | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.shared_expert.down_proj.weight      | UNEXPECTED | 
+model.language_model.layers.{3...47}.self_attn.k_proj.weight                 | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.shared_expert.gate_proj.weight      | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.shared_expert_gate.weight           | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.shared_expert.up_proj.weight        | UNEXPECTED | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_b.weight            | UNEXPECTED | 
+model.language_model.layers.{3...47}.self_attn.v_proj.weight                 | UNEXPECTED | 
+model.language_model.layers.{3...47}.self_attn.q_proj.weight                 | UNEXPECTED | 
+model.language_model.layers.{0...46}.linear_attn.out_proj.weight             | UNEXPECTED | 
+model.language_model.layers.{3...47}.self_attn.o_proj.weight                 | UNEXPECTED | 
+model.language_model.layers.{0...47}.mlp.shared_expert.gate_proj.scales      | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert_gate.qweight          | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.down_proj.scales      | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_a.g_idx             | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.gate_proj.g_idx       | MISSING    | 
+model.language_model.layers.{0...47}.mlp.experts.down_proj                   | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.up_proj.qweight       | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.k_proj.qweight                | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_b.qweight           | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_b.g_idx             | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.out_proj.scales             | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.up_proj.scales        | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.out_proj.g_idx              | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_z.scales            | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.up_proj.qzeros        | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.k_proj.g_idx                  | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert_gate.g_idx            | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_a.scales            | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.down_proj.g_idx       | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.k_proj.qzeros                 | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.gate_proj.qweight     | MISSING    | 
+model.language_model.layers.{0...47}.mlp.experts.gate_up_proj                | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_b.scales            | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.up_proj.g_idx         | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_b.qzeros            | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.q_proj.scales                 | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_qkv.scales          | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.q_proj.g_idx                  | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.o_proj.scales                 | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_a.qzeros            | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert_gate.qzeros           | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_z.qzeros            | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.v_proj.qzeros                 | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.gate_proj.qzeros      | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.out_proj.qweight            | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.o_proj.qzeros                 | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.down_proj.qweight     | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert_gate.scales           | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_a.qweight           | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_z.g_idx             | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.out_proj.qzeros             | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_qkv.qzeros          | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.k_proj.scales                 | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_qkv.qweight         | MISSING    | 
+model.language_model.layers.{0...47}.mlp.shared_expert.down_proj.qzeros      | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_qkv.g_idx           | MISSING    | 
+model.language_model.layers.{0...46}.linear_attn.in_proj_z.qweight           | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.o_proj.qweight                | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.o_proj.g_idx                  | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.q_proj.qzeros                 | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.v_proj.g_idx                  | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.v_proj.scales                 | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.q_proj.qweight                | MISSING    | 
+model.language_model.layers.{3...47}.self_attn.v_proj.qweight                | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+WARNING:accelerate.big_modeling:Some parameters are on the meta device because they were offloaded to the cpu.
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/tmp/3859398.alex/gptqmodel_9cg0yac0`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TorchLinear` compilation triggered.                           
+INFO  gc.collect() reclaimed 82 objects in 0.277s                              
+  [1] qa_idx=2978 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [1/15] qa_idx=2978
+  [2] qa_idx=2979 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [2/15] qa_idx=2979
+  [3] qa_idx=2980 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [3/15] qa_idx=2980
+  [4] qa_idx=2981 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [4/15] qa_idx=2981
+  [5] qa_idx=2982 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [5/15] qa_idx=2982
+  [6] qa_idx=2983 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [6/15] qa_idx=2983
+  [7] qa_idx=2984 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [7/15] qa_idx=2984
+  [8] qa_idx=2985 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [8/15] qa_idx=2985
+  [9] qa_idx=2986 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [9/15] qa_idx=2986
+  [10] qa_idx=2987 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [10/15] qa_idx=2987
+  [11] qa_idx=2988 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [11/15] qa_idx=2988
+  [12] qa_idx=2989 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [12/15] qa_idx=2989
+  [13] qa_idx=2990 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [13/15] qa_idx=2990
+  [14] qa_idx=2991 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [14/15] qa_idx=2991
+  [15] qa_idx=2992 FAILED: AcceleratorError: CUDA error: an illegal memory access was encountered
+Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+
+  [15/15] qa_idx=2992
+appended 15 rows -> runs/smoke-teacher122b-3859398.jsonl
+Exception ignored in: <function ResourceTracker.__del__ at 0x14f67fb9e8e0>
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 13:41:51 CEST 2026
+= Job-ID             : 3859398 on alex
+= Job-Name           : mist-qa-smoke-teacher122b
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/smoke-teacher-122b.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a100
+= Slurm account      : b279bb with QOS=normal
+= Features           : a100_80
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:04:29
+= Total RAM usage    : 78.4 GiB of assigned  GiB (%)
+= Node list          : a0534
+= Subm/Elig/Start/End: 2026-07-15T13:37:19 / 2026-07-15T13:37:19 / 2026-07-15T13:37:22 / 2026-07-15T13:41:51
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              26.8G   104.9G   209.7G        N/A      50K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A100-SXM4-80GB, 00000000:49:00.0, 1158521, 0 %, 0 %, 73670 MiB, 246448 ms
+NVIDIA A100-SXM4-80GB, 00000000:4F:00.0, 1158521, 0 %, 0 %, 79700 MiB, 246434 ms

@@ -1,0 +1,103 @@
+### Starting TaskPrologue of job 3859345 on a0932 at Wed Jul 15 13:28:36 CEST 2026
+Running on cores 32-63 with governor performance
+Wed Jul 15 13:28:36 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:49:00.0 Off |                    0 |
+| N/A   32C    P0             63W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-80GB          On  |   00000000:4F:00.0 Off |                    0 |
+| N/A   35C    P0             65W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/hpc/b279bb/b279bb31/hf_datasets_cache/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Tue Jul 14 23:54:09 2026).
+W0715 13:29:44.984000 731310 torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+W0715 13:29:45.426000 731310 torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+train rows: 15 after shard=None, limit=15; 15 to generate
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/teacher_generate.py", line 138, in <module>
+    main()
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/teacher_generate.py", line 97, in main
+    model = AutoModelForImageTextToText.from_pretrained(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/models/auto/auto_factory.py", line 402, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/modeling_utils.py", line 4326, in from_pretrained
+    hf_quantizer, config, device_map = get_hf_quantizer(
+                                       ^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/quantizers/auto.py", line 346, in get_hf_quantizer
+    hf_quantizer = AutoHfQuantizer.from_config(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/quantizers/auto.py", line 220, in from_config
+    return target_cls(quantization_config, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/transformers/quantizers/quantizer_gptq.py", line 54, in __init__
+    from optimum.gptq import GPTQQuantizer
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/__init__.py", line 15, in <module>
+    from .quantizer import GPTQQuantizer, load_quantized_model
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/optimum/gptq/quantizer.py", line 50, in <module>
+    from gptqmodel import BACKEND, QuantizeConfig
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/__init__.py", line 277, in <module>
+    from .models import GPTQModel, get_best_device
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/models/__init__.py", line 7, in <module>
+    from .auto import MODEL_MAP, GPTQModel
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/models/auto.py", line 73, in <module>
+    from .definitions.afmoe import AfMoeQModel  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/models/definitions/__init__.py", line 51, in <module>
+    from .internvl_chat import InternVLChatQModel
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/gptqmodel/models/definitions/internvl_chat.py", line 12, in <module>
+    import torchvision.transforms as T
+ModuleNotFoundError: No module named 'torchvision'
+Exception ignored in: <function ResourceTracker.__del__ at 0x1529b5c8e8e0>
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/hpc/b279bb/b279bb31/mist-venv2/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 13:30:09 CEST 2026
+= Job-ID             : 3859345 on alex
+= Job-Name           : mist-qa-smoke-teacher122b
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/smoke-teacher-122b.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a100
+= Slurm account      : b279bb with QOS=normal
+= Features           : a100_80
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:01:37
+= Total RAM usage    : 1.6 GiB of assigned  GiB (%)
+= Node list          : a0932
+= Subm/Elig/Start/End: 2026-07-15T13:28:16 / 2026-07-15T13:28:16 / 2026-07-15T13:28:32 / 2026-07-15T13:30:09
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              26.8G   104.9G   209.7G        N/A      50K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

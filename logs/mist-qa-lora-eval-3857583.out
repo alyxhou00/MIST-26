@@ -1,0 +1,91 @@
+### Starting TaskPrologue of job 3857583 on a0129 at Tue Jul 14 23:52:24 CEST 2026
+Running on cores 32-47 with governor performance
+Tue Jul 14 23:52:24 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:25:00.0 Off |                  Off |
+|  0%   36C    P8             21W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/benchmark.py", line 197, in <module>
+    main()
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/benchmark.py", line 112, in main
+    df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/load.py", line 1698, in load_dataset
+    builder_instance = load_dataset_builder(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/load.py", line 1325, in load_dataset_builder
+    dataset_module = dataset_module_factory(
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/load.py", line 1217, in dataset_module_factory
+    raise e1 from None
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/load.py", line 1159, in dataset_module_factory
+    raise ConnectionError(f"Couldn't reach '{path}' on the Hub ({e.__class__.__name__})") from e
+ConnectionError: Couldn't reach 'pinzhenchen/wmt26-mist-sample' on the Hub (OfflineModeIsEnabled)
+Exception ignored in: <function ResourceTracker.__del__ at 0x1478dc567ce0>
+Traceback (most recent call last):
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/evaluate.py", line 87, in <module>
+    main()
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/evaluate.py", line 56, in main
+    df = pd.read_csv(args.pred_csv, encoding="utf-8-sig")  # strip the BOM benchmark.py writes
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 873, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 300, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 1645, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 1904, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/common.py", line 930, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'runs/predictions-lora-3857583.csv'
+=== JOB_STATISTICS ===
+=== current date     : Tue Jul 14 23:53:01 CEST 2026
+= Job-ID             : 3857583 on alex
+= Job-Name           : mist-qa-lora-eval
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/lora_eval.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 10:00:00
+= Elapsed runtime    : 00:00:38
+= Total RAM usage    : 1.2 GiB of assigned  GiB (%)
+= Node list          : a0129
+= Subm/Elig/Start/End: 2026-07-14T23:52:22 / 2026-07-14T23:52:22 / 2026-07-14T23:52:23 / 2026-07-14T23:53:01
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc               5.9G   104.9G   209.7G        N/A   1,890      500K   1,000K        N/A    
+    /home/vault             0.0K  1048.6G  2097.2G        N/A       1      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

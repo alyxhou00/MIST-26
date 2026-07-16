@@ -1,0 +1,102 @@
+### Starting TaskPrologue of job 3859591 on a0129 at Wed Jul 15 14:36:12 CEST 2026
+Running on cores 32-47 with governor performance
+Wed Jul 15 14:36:12 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:25:00.0 Off |                  Off |
+|  0%   36C    P8             21W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Using the latest cached version of the dataset since pinzhenchen/wmt26-mist-sample couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /home/atuin/b279bb/b279bb31/hf_cache/datasets/pinzhenchen___wmt26-mist-sample/default/0.0.0/907fcb57c15dcce0478d4bf8b59b437d5aebd88d (last modified on Fri Jun 26 19:41:21 2026).
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/benchmark.py", line 197, in <module>
+    main()
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/benchmark.py", line 112, in main
+    df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/load.py", line 1698, in load_dataset
+    builder_instance = load_dataset_builder(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/load.py", line 1363, in load_dataset_builder
+    builder_instance: DatasetBuilder = builder_cls(
+                                       ^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/packaged_modules/cache/cache.py", line 134, in __init__
+    super().__init__(
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/datasets/builder.py", line 397, in __init__
+    with FileLock(lock_path):
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/filelock/_api.py", line 581, in __enter__
+    self.acquire()
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/filelock/_api.py", line 506, in acquire
+    self._poll_until_acquired(
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/filelock/_api.py", line 537, in _poll_until_acquired
+    self._acquire()
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/filelock/_unix.py", line 55, in _acquire
+    fd = os.open(self.lock_file, open_flags, open_mode)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 122] Disk quota exceeded: '/home/atuin/b279bb/b279bb31/hf_cache/datasets/_home_atuin_b279bb_b279bb31_hf_cache_datasets_pinzhenchen___wmt26-mist-sample_default_0.0.0_907fcb57c15dcce0478d4bf8b59b437d5aebd88d.lock'
+Exception ignored in: <function ResourceTracker.__del__ at 0x14b9b2f4fce0>
+Traceback (most recent call last):
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/evaluate.py", line 87, in <module>
+    main()
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/evaluate.py", line 56, in main
+    df = pd.read_csv(args.pred_csv, encoding="utf-8-sig")  # strip the BOM benchmark.py writes
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 873, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 300, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 1645, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/parsers/readers.py", line 1904, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/home/atuin/b279bb/b279bb31/mist-venv/lib/python3.12/site-packages/pandas/io/common.py", line 930, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'runs/predictions-fewshot3-9b-3859591.csv'
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 15 14:36:41 CEST 2026
+= Job-ID             : 3859591 on alex
+= Job-Name           : mist-qa-fewshot-9b
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/fewshot-9b.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 08:00:00
+= Elapsed runtime    : 00:00:37
+= Total RAM usage    : 1.2 GiB of assigned  GiB (%)
+= Node list          : a0129
+= Subm/Elig/Start/End: 2026-07-15T14:36:02 / 2026-07-15T14:36:02 / 2026-07-15T14:36:03 / 2026-07-15T14:36:40
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              53.8G   104.9G   209.7G        N/A     151K     500K   1,000K        N/A    
+    /home/vault           403.2G  1048.6G  2097.2G        N/A     243      200K     400K        N/A    
+    /home/atuin            47.8G     0.0K     0.0K        N/A      84K                          N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
