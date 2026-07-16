@@ -1,0 +1,75 @@
+### Starting TaskPrologue of job 3864941 on a0424 at Thu Jul 16 19:37:51 CEST 2026
+Running on cores 80-95 with governor performance
+Thu Jul 16 19:37:51 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:A1:00.0 Off |                  Off |
+|  0%   34C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+resolved 4126 overlapping qa_idx in favour of --prefer '122b' (4126 of 11915 kept rows come from the preferred file)
+loaded 11915 teacher rows from 4 file(s)
+scoring: per-row sentence chrF + BERTScore F1 ...
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  60%|██████    | 120/199 [00:00<00:00, 1153.95it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 853.29it/s] 
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+
+pass rate (OR; default chrF>=30 / BERTScore>=70): 25.6% overall
+  source                                   policy    pass   n
+  CohereLabs/aya_dataset                    30/70  40.2%  3763
+  FBK-MT/MCIF                               30/70  64.1%  715
+  copenlu/answerable_tydiqa                 30/70  30.5%  2497
+  facebook/belebele                     GOLD-ONLY   0.0%  4577
+  wmt25-mist-oeg-gpt-4.1                    30/70  87.6%  363
+wrote 11915 rows (3048 teacher / 8867 gold) -> data/sft-distilled.jsonl
+train with:  python scripts/train_lora.py --data data/sft-distilled.jsonl
+=== JOB_STATISTICS ===
+=== current date     : Thu Jul 16 19:40:56 CEST 2026
+= Job-ID             : 3864941 on alex
+= Job-Name           : mist-filter-teacher
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/filter_teacher.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:03:22
+= Total RAM usage    : 30.4 GiB of assigned  GiB (%)
+= Node list          : a0424
+= Subm/Elig/Start/End: 2026-07-16T19:37:01 / 2026-07-16T19:37:01 / 2026-07-16T19:37:34 / 2026-07-16T19:40:56
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              42.6G   104.9G   209.7G        N/A     179K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin            36.8G     0.0K     0.0K        N/A     969                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:A1:00.0, 1910032, 82 %, 40 %, 2612 MiB, 115657 ms

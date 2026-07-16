@@ -1,0 +1,51 @@
+### Starting TaskPrologue of job 3864906 on a0127 at Thu Jul 16 19:17:41 CEST 2026
+Running on cores 48-63 with governor performance
+Thu Jul 16 19:17:41 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:61:00.0 Off |                  Off |
+|  0%   38C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+/var/tmp/slurmd_spool/job3864906/slurm_script: line 39: /home/hpc/b279bb/b279bb31/mist-venv/bin/activate: No such file or directory
+Traceback (most recent call last):
+  File "/home/hpc/b279bb/b279bb31/MIST-26/scripts/filter_teacher.py", line 62, in <module>
+    import pandas as pd
+ModuleNotFoundError: No module named 'pandas'
+=== JOB_STATISTICS ===
+=== current date     : Thu Jul 16 19:17:44 CEST 2026
+= Job-ID             : 3864906 on alex
+= Job-Name           : mist-filter-teacher
+= Job-Command        : /home/hpc/b279bb/b279bb31/MIST-26/slurm/filter_teacher.sbatch
+= Initial workdir    : /home/hpc/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 01:00:00
+= Elapsed runtime    : 00:00:12
+= Total RAM usage    : 0.1 GiB of assigned  GiB (%)
+= Node list          : a0127
+= Subm/Elig/Start/End: 2026-07-16T19:17:01 / 2026-07-16T19:17:01 / 2026-07-16T19:17:32 / 2026-07-16T19:17:44
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              32.0G   104.9G   209.7G        N/A     147K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin            36.8G     0.0K     0.0K        N/A     969                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
