@@ -57,23 +57,56 @@ This one is the decision view: each candidate on the metric its test sub-task ac
 deserves, with the 71% of dev that predicts nothing already excluded. Produced by re-scoring
 the stored predictions CSVs with the current `evaluate.py` (no regeneration).
 
-`qa-context` (8,640 test rows) is scored with **Exact Match + token F1** — the golds are
-2-word extractions and chrF cannot resolve them. `qa-oeg` (2,359 test rows) keeps chrF /
-BERTScore (175-word golds) and adds **word-budget compliance**, which is scored at test time
-and which nothing else here can see.
+**Rescored per source 2026-07-16 (jobs 3864996-99), and it settles the routing.** `qa-context`
+used to be reported as one pooled column (tydiqa + MCIF, n=780). That pooling was 79% tydiqa —
+the *monolingual* source, worth ~4% of a test sub-task that is 96% cross-lingual. Split apart,
+the metric disagreement that blocked this decision for days **evaporates**.
 
-|  | | **qa-context** (8,640 rows) | | | **qa-oeg long-form** (~87%) | | **qa-oeg short-answer** (~13%) | | |
-| System | job | **EM** | **F1** | (chrF) | chrF | BERT | chrF | BERT | (legacy overall) |
-|---|---|---|---|---|---|---|---|---|---|
-| 9B 3-shot | 3822329 | 6.54 | **32.12** | 37.52 | 25.55 | 69.38 | **24.19** | **67.30** | 27.64 |
-| **9B + gold-LoRA, 0-shot** | 3857589 | **16.92** | 31.09 | 23.31 | 29.06 | 72.89 | 21.95 | 66.90 | 26.56 |
-| 9B + gold-LoRA + 3-shot | 3858987 | 4.74 | 13.87 | 16.00 | **29.62** | **73.98** | 19.94 | 61.71 | 21.64 |
-| 9B 3-shot, no lang-hint | 3859645 | 4.36 | 26.90 | 34.12 | 25.64 | 69.27 | 23.85 | 66.59 | 25.97 |
-| 9B + distilled LoRA, 0-shot | — | _not built_ | | | | | | | |
+**`qa-context` — ✅ MCIF, the FAITHFUL proxy (cross-lingual, n=165). Route on this column.**
 
-Proxies: `qa-context` = tydiqa + MCIF (n=780). `qa-oeg long-form` = OEG (n=97). `qa-oeg
-short-answer` = aya (n=978). Never average the two qa-oeg columns — they are opposite ends of
-one spectrum, and dev weights them backwards (978 rows for ~13% of the task, 97 for ~87%).
+| System | job | **EM** | **F1** | **chrF** | **BERT** | √(EM·chrF) |
+|---|---|---|---|---|---|---|
+| **9B + gold-LoRA, 0-shot** | 3857589 | **21.82** | **57.92** | **49.26** | **86.41** | **32.78** |
+| 9B + gold-LoRA + 3-shot | 3858987 | 12.12 | 29.70 | 20.98 | 69.89 | 15.95 |
+| 9B 3-shot | 3822329 | 0.61 | 28.15 | 34.61 | 74.38 | 4.58 |
+| 9B 3-shot, no lang-hint | 3859645 | 0.61 | 27.16 | 33.80 | 73.55 | 4.53 |
+
+**The adapter sweeps every metric — EM 36×, F1 2×, chrF +14.6, BERTScore +12.0.** No metric
+dissents, so no tie-break is needed and `sqrt(EM × chrF)` is not load-bearing here. (EM is
+*capped* on MCIF — only 19% of golds are 1-2 words — but capped is not dead: it still separates
+21.82 from 0.61.)
+
+**`qa-context` — ❌ tydiqa, the UNFAITHFUL proxy (monolingual, n=615). Do not route on this.**
+
+| System | job | EM | F1 | chrF | BERT | √(EM·chrF) |
+|---|---|---|---|---|---|---|
+| 9B 3-shot | 3822329 | 8.13 | 33.18 | 38.94 | 70.67 | **17.79** |
+| 9B + gold-LoRA, 0-shot | 3857589 | 15.61 | 23.90 | 19.53 | 63.01 | 17.46 |
+| 9B 3-shot, no lang-hint | 3859645 | 5.37 | 26.83 | 34.39 | 67.91 | 13.58 |
+| 9B + gold-LoRA + 3-shot | 3858987 | 2.76 | 9.62 | 14.46 | 56.20 | 6.32 |
+
+**This column is where the whole chrF-vs-EM argument lived** — and note that even here the
+hedge is a near-tie (17.79 vs 17.46), so it was never evidence for 3-shot either. The old
+pooled numbers reconcile exactly: gold-LoRA's famous "EM 16.92" = (615×15.61 + 165×21.82)/780,
+i.e. **the pooled EM was 79% a proxy for the wrong task.**
+
+**`qa-oeg`** (2,359 test rows) keeps chrF / BERTScore (175-word golds; EM is ~0 for everything
+and `sqrt(EM × chrF)` must not be used) and adds **word-budget compliance**, scored at test time
+and invisible here.
+
+|  | | **qa-oeg long-form** (~87%) | | **qa-oeg short-answer** (~13%) | | |
+| System | job | chrF | BERT | chrF | BERT | (legacy overall) |
+|---|---|---|---|---|---|---|
+| 9B 3-shot | 3822329 | 25.55 | 69.38 | **24.19** | **67.30** | 27.64 |
+| **9B + gold-LoRA, 0-shot** | 3857589 | 29.06 | 72.89 | 21.95 | 66.90 | 26.56 |
+| 9B + gold-LoRA + 3-shot | 3858987 | **29.62** | **73.98** | 19.94 | 61.71 | 21.64 |
+| 9B 3-shot, no lang-hint | 3859645 | 25.64 | 69.27 | 23.85 | 66.59 | 25.97 |
+| 9B + distilled LoRA, 0-shot | 3864945 | _pending_ | | | | |
+
+Proxies: `qa-context` = **MCIF only** (n=165; tydiqa is reported above but does not proxy the
+test task). `qa-oeg long-form` = OEG (n=97). `qa-oeg short-answer` = aya (n=978). Never average
+the two qa-oeg columns — they are opposite ends of one spectrum, and dev weights them backwards
+(978 rows for ~13% of the task, 97 for ~87%).
 
 ### ⚠️⚠️ `qa-context`: the dev proxy is 79% the WRONG TASK — measured 2026-07-16
 
@@ -131,12 +164,22 @@ passages**: French passages are in the test set; we just never answer in French.
 > transcripts with sentence-length answers — not the 2-word extraction that `evaluate.py`'s
 > header assumes the golds are. (We have no test golds; that assumption came from tydiqa.)
 
-### ⚠️ The `qa-context` routing decision is NOT settled — chrF and EM disagree
+### ✅ RESOLVED 2026-07-16: `qa-context` → adapter. The disagreement was a proxy artifact.
+
+**Resolution: the metrics never actually disagreed — we were pooling two different tasks.** On
+MCIF (the only cross-lingual proxy, matching 96% of the test sub-task) the adapter wins EM, F1,
+chrF *and* BERTScore. The "chrF says 3-shot, EM says adapter" deadlock existed only in the
+pooled column, which was 79% monolingual tydiqa. **`qa-context` (8,640 rows) → gold/distilled
+adapter, 0-shot.** It did not take the organisers' metric to decide, and it did not take the
+`sqrt(EM × chrF)` hedge either — just the right proxy.
+
+The history below is kept because the reasoning was wrong in an instructive way.
 
 Every earlier version of the plan routed `qa-context` to plain 3-shot, because the adapter
 "collapsed" on tydiqa (chrF 38.94 → 19.53). **That collapse is at least partly a chrF
 artifact.** On the metric the task is normally scored with, the adapter is **2.6× better at
 returning the gold span** (16.92 vs 6.54 EM) while token F1 is a near-tie (31.09 vs 32.12).
+⚠️ Both those numbers are the superseded *pooled* ones — see the split tables above.
 
 The two numbers describe different failure shapes, and both are real:
 
