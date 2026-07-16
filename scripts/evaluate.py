@@ -15,9 +15,10 @@ applies the metric each one deserves (TEST_SET_ANALYSIS 5b):
                          golds are short enough to hit exactly. Measured: tydiqa's golds are 63%
                          1-2 words (EM works, chrF has almost no resolution -- "1650" vs "around
                          1650" moves it about as much as right-vs-wrong does), but **MCIF's are
-                         median 6 words, 42% are 8+ (EM ~0 -- judge it on chrF/BERTScore)**.
-                         So EM is only informative on the proxy that doesn't resemble the test
-                         set. The script prints the gold-length evidence next to EM either way.
+                         median 6 words, 42% are 8+, so EM there is capped low** -- it reads only
+                         the short-gold slice. Capped is not dead: on MCIF it still separates the
+                         adapter from 3-shot 21.82 vs 0.61. The script prints the gold-length
+                         share next to EM so the number is read with its ceiling in view.
   qa-oeg (long-form)     OEG: chrF/BERTScore against 175-word golds, + word-budget compliance,
                          which is scored at test time and which nothing else here can see.
   qa-oeg (short-answer)  aya: the same test task's short tail -- ~13 of qa-oeg's 100 unique
@@ -202,23 +203,22 @@ def main() -> None:
             em = exact_match(g["prediction"], g["gold"])
             f1 = token_f1(g["prediction"], g["gold"])
             c = chrf(g["prediction"], g["gold"])
-            # EM only means something where the golds are short enough to hit exactly. That is
-            # true of tydiqa (63% of golds are 1-2 words) and NOT of MCIF (19%; median 6 words,
-            # 42% are 8+) -- so print the evidence next to the number instead of letting the
-            # reader assume the docstring's "2-word extractions" holds for both.
+            # An exact match can only be earned on rows whose gold is short enough to hit, so
+            # print that share next to EM rather than letting the reader carry the docstring's
+            # "2-word extractions" across both proxies -- it holds for tydiqa (63% are 1-2
+            # words) and not for MCIF (19%; median 6, 42% are 8+).
             short = (g["gold"].astype(str).str.split().str.len() <= 2).mean() * 100
             print(f"  Exact Match = {em:6.2f}   token F1 = {f1:6.2f}   chrF = {c:6.2f}   "
                   f"BERTScore = {g['bertscore_f1'].mean():6.2f}")
-            print(f"  golds that are 1-2 words: {short:.0f}%  -> EM is "
-                  f"{'meaningful here' if short >= 50 else 'NEARLY USELESS here (golds are too long to hit exactly)'}")
-            # sqrt(EM x chrF): the team's hedge for the unknown official metric (user, 2026-07-16
-            # -- we are not asking the organisers). Only honest where EM is; a geometric mean
-            # with a ~0 factor is ~0 no matter what chrF says.
-            if short >= 50:
-                print(f"  sqrt(EM x chrF) = {(em * c) ** 0.5:6.2f}   <- the selection rule")
-            else:
-                print("  sqrt(EM x chrF): NOT REPORTED -- EM is ~0 here, so the geometric mean "
-                      "would rank noise. Judge this proxy on chrF/BERTScore.")
+            # sqrt(EM x chrF): the team's hedge for the unknown official metric (user,
+            # 2026-07-16 -- we are not asking the organisers).
+            print(f"  sqrt(EM x chrF) = {(em * c) ** 0.5:6.2f}   <- the selection rule")
+            if short < 50:
+                # NB: low EM here is a ceiling, not necessarily a tie -- on MCIF the adapter
+                # still separates from 3-shot 21.82 vs 0.61 by hitting the short-gold slice.
+                # So this is a partial signal to read alongside chrF/BERTScore, not a dead one.
+                print(f"  ⚠️ only {short:.0f}% of golds are 1-2 words, so EM is capped low here and "
+                      "reads just that slice -- weigh it with chrF/BERTScore, not alone")
         else:
             print(f"  chrF = {chrf(g['prediction'], g['gold']):6.2f}   BERTScore = "
                   f"{g['bertscore_f1'].mean():6.2f}   ROUGE-L = {g['rouge_l_f1'].mean():6.2f}")
