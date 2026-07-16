@@ -75,6 +75,62 @@ Proxies: `qa-context` = tydiqa + MCIF (n=780). `qa-oeg long-form` = OEG (n=97). 
 short-answer` = aya (n=978). Never average the two qa-oeg columns — they are opposite ends of
 one spectrum, and dev weights them backwards (978 rows for ~13% of the task, 97 for ~87%).
 
+### ⚠️⚠️ `qa-context`: the dev proxy is 79% the WRONG TASK — measured 2026-07-16
+
+**Read this before the two sections below it; it undercuts both.** The user's note said "the
+test set is really different from the dev set — inspect the qa-context entries." It is, and
+here is what `data/tests.jsonl` actually contains (enumerated, not sampled — per the
+qa-oeg lesson):
+
+**1. `qa-context` is 100 unique items, not 8,640 questions.** Same shape as qa-oeg: a parallel
+corpus. The id is `qa-context_{n}_{question_lang}_{context_lang}` (⚠️ **question lang comes
+first** — the reverse reading makes `fra` look like an answer language). Each item is asked in
+all **24 question languages**; what varies is how many languages its **passage** was
+translated into:
+
+| items | fan-out | rows | share |
+|---|---|---|---|
+| 5 (items 1–5) | 24 q-langs × **25** ctx-langs = 600 each | **3,000** | **35%** |
+| 5 | 24 × 16 = 384 each | 1,920 | 22% |
+| 10 | 24 × 6 = 144 each | 1,440 | 17% |
+| 5 | 24 × 4 = 96 each | 480 | 6% |
+| 75 | 24 × **1** = 24 each | 1,800 | 21% |
+
+**Five items carry 35% of the sub-task.** Any per-row average over `qa-context` is really a
+weighted vote over ~100 items with a 25:1 weight spread.
+
+**2. 96% of `qa-context` is CROSS-LINGUAL** (8,300/8,640: passage in one language, question in
+another). **3. There are 25 context languages but only 24 question languages** — `fra` appears
+*only* as a passage language. So "fra/swh/tel/tha vanished from the test set" is true for
+**answer** languages (the `question_lang` field has 0 fra/swh/tel/tha rows) but **false for
+passages**: French passages are in the test set; we just never answer in French.
+
+**4. …and the dev proxy is mostly the wrong task.** Inspecting the actual sample rows:
+
+| dev source | n (dev) | shape | faithful to the test task? |
+|---|---|---|---|
+| `copenlu/answerable_tydiqa` | 615 (79%) | Arabic passage + Arabic question + Arabic answer — **monolingual** | ❌ ~4% of the test sub-task |
+| `FBK-MT/MCIF` | 165 (21%) | German question + **English** content + German answer — **cross-lingual** | ✅ the only faithful one |
+
+> **Consequence: the entire "chrF vs EM" fight below was fought on tydiqa** — the monolingual
+> source, which stands in for ~4% of what the test set actually asks. The faithful proxy is
+> MCIF, and it is 21% of the proxy pool and n=165. **On MCIF the adapter is not ambiguous at
+> all: chrF 49.26 vs 3-shot's 34.61.** The dev weighting for `qa-context` is inverted in the
+> same way it is for `qa-oeg` (978 aya rows for ~13% of the task) — that mistake now appears
+> in *both* sub-tasks, and both times it was found by reading the data rather than the README.
+>
+> **What this does NOT settle:** `evaluate.py` computes EM/token-F1 for the `qa-context`
+> *group* (`TASK_PROXY` = tydiqa + MCIF pooled), so **every EM/F1 number in the table below is
+> 79% tydiqa** and none of them is per-source. The cheap fix is to split EM/F1 by source the
+> way chrF already is — the prediction CSVs for all four systems still exist, so this is a
+> re-score, not a re-run. Until then, treat the `qa-context` EM/F1 column as *measuring the
+> wrong task*, not as evidence.
+>
+> **This is why the user's note says "we need a whole new train/dev set."** MCIF is the only
+> cross-lingual QA source we have, at n=165 for an 8,640-row sub-task, and it is TED-talk
+> transcripts with sentence-length answers — not the 2-word extraction that `evaluate.py`'s
+> header assumes the golds are. (We have no test golds; that assumption came from tydiqa.)
+
 ### ⚠️ The `qa-context` routing decision is NOT settled — chrF and EM disagree
 
 Every earlier version of the plan routed `qa-context` to plain 3-shot, because the adapter
@@ -90,15 +146,41 @@ The two numbers describe different failure shapes, and both are real:
   match, almost always in the neighbourhood — which is precisely what chrF rewards and EM does not.
 
 **Which one wins depends entirely on the organisers' automatic metric, and we do not know what
-it is.** This is now the highest-value unknown in the project: it flips the routing for 8,640
-of our 10,999 test rows, and no further experiment of ours can resolve it. It belongs in the
-email to the organisers (ROADMAP open item #2) alongside the double-escaping and the 8
-`{country}`/`{language}` placeholder rows. (The 100 empty English prompts came off that list
-on 2026-07-16 — the organisers fixed them unprompted; TEST_SET_ANALYSIS §6.) Until then, treat `qa-context → 3-shot` as **unjustified**, not as decided.
+it is.** It flips the routing for 8,640 of our 10,999 test rows, and no further experiment of
+ours can resolve it.
 
-> **Update 2026-07-16**
-> This part is also partially not true. The test set is really different from the dev set. Please inspect 
-> the qa-context entries of test set. You'll have interesting finds. We need an whole new train/dev set.
+> **Decision 2026-07-16 (user's call): we are NOT emailing the organisers about the metric,
+> and we hedge with the geometric mean `sqrt(EM × chrF)` as our own selection rule.**
+> The open item is closed as *decided under uncertainty*, not as answered — the organisers'
+> metric remains unknown, and this is our tie-break, not a discovery about theirs.
+> (The double-escaping and the 8 `{country}`/`{language}` placeholder rows were the other two
+> items in that draft email; the 100 empty English prompts came off the list on 2026-07-16 when
+> the organisers fixed them unprompted — TEST_SET_ANALYSIS §6.)
+>
+> Applied to the pooled `qa-context` proxy, the rule ranks: **gold-LoRA 19.86** (√(16.92×23.31))
+> > 3-shot 15.66 (√(6.54×37.52)) > 3-shot no-hint 12.20 > adapter+3-shot 8.71 — i.e. **it picks
+> the adapter.**
+>
+> ⚠️ **But do not record that as the routing decision yet, for two independent reasons:**
+> 1. **The inputs are from the wrong task.** Those EM values are pooled tydiqa+MCIF, i.e. 79%
+>    monolingual (see the section above). The rule is sound; the pool it was fed is not.
+>    Re-score EM/F1 per source and re-apply it to MCIF before acting.
+> 2. **The rule only means something where EM does.** `sqrt(EM × chrF)` is a `qa-context` rule
+>    only. On `qa-oeg` (175-word compositions) EM is ~0 for every system, and a geometric mean
+>    with a near-zero factor is ~0 regardless of chrF — it would rank noise. Keep qa-oeg on
+>    chrF/BERTScore.
+>
+> Property worth knowing: the geometric mean hands the decision to **EM**, because EM varies
+> more across our systems in *relative* terms (3.9× spread, 4.36→16.92) than chrF does (2.3×,
+> 16.00→37.52), and a geometric mean is a mean of logs. That is a defensible hedge — it refuses
+> to reward a system that never lands the span — but it is a choice, not a neutral compromise.
+
+> **Update 2026-07-16** — *this note is now answered; see "the dev proxy is 79% the WRONG TASK"
+> above.* The original note read: "This part is also partially not true. The test set is really
+> different from the dev set. Please inspect the qa-context entries of test set. You'll have
+> interesting finds. We need an whole new train/dev set." Inspected: `qa-context` is 100
+> parallel items (5 of them = 35% of rows), 96% cross-lingual, and the dev proxy is 79%
+> monolingual tydiqa. The note was right — hence everything above it is proxy-limited.
 
 ### `qa-oeg` is split too: the adapter wins the long end, 3-shot wins the short end
 
