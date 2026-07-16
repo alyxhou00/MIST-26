@@ -12,6 +12,11 @@
 # first with slurm/smoke-lora.sbatch. Run from the repo root ($WORK/MIST-26):
 #     sbatch slurm/lora_sft.sbatch                              # first submission
 #     sbatch slurm/lora_sft.sbatch adapters/qwen3.5-9b-qa-lora-<first job's ID>   # resume it
+# Args after the adapter dir (or all args, if the first is a flag) go straight to
+# train_lora.py -- that is how the distilled run is submitted:
+#     sbatch slurm/lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint
+# --no-lang-hint trains in run_test.py's test format; it must match how the adapter will be
+# evaluated (see train_lora.py's --no-lang-hint help and EXPERIMENTS.md job 3858987).
 # Assumes slurm/setup.sh has been (re-)run since it now also installs peft (requirements.txt)
 # and caches Qwen3.5-9B -- see README.
 #
@@ -50,7 +55,13 @@ export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
 mkdir -p adapters
-ADAPTER="${1:-adapters/qwen3.5-9b-qa-lora-$SLURM_JOB_ID}"
-python scripts/train_lora.py --out "$ADAPTER"
+# $1 is the adapter dir only when it isn't a flag -- otherwise every arg is passed straight
+# through and the dir keeps its job-ID default (so `sbatch lora_sft.sbatch --data x.jsonl`
+# can't silently train into an adapter directory literally named "--data").
+case "${1:-}" in
+  ""|-*) ADAPTER="adapters/qwen3.5-9b-qa-lora-$SLURM_JOB_ID" ;;
+  *)     ADAPTER="$1"; shift ;;
+esac
+python scripts/train_lora.py --out "$ADAPTER" "$@"
 echo "adapter: $ADAPTER"
 echo "next:  sbatch slurm/lora_eval.sbatch $ADAPTER"
