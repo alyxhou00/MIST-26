@@ -64,8 +64,9 @@ class QAExampleDataset(Dataset):
     """Tokenized (input_ids, labels) pairs, one per training row.
 
     Each row becomes the same chat messages `benchmark.py` builds at inference time
-    (`build_messages(..., lang_hint=True)`, zero-shot -- no demonstrations), plus the gold
-    `output` as the final assistant turn. Labels are `-100` (ignored by the loss) over the
+    (`build_messages(...)`, zero-shot -- no demonstrations), plus the gold `output` as the
+    final assistant turn. `lang_hint` must match what inference will do: the adapter is only
+    ever as good as the format agreement between the two (see --no-lang-hint in main()). Labels are `-100` (ignored by the loss) over the
     prompt span and real token ids over the answer span, so the model is only ever trained to
     predict the answer, not to reproduce the instruction. The boundary is found by tokenizing
     the prompt-only prefix (`add_generation_prompt=True`) and the prompt+answer full text
@@ -81,11 +82,11 @@ class QAExampleDataset(Dataset):
     rows (e.g. FBK-MT/MCIF passages) rather than something engineered around.
     """
 
-    def __init__(self, rows, tok, max_length: int):
+    def __init__(self, rows, tok, max_length: int, lang_hint: bool = True):
         self.examples = []
         n_truncated = 0
         for row in rows:
-            messages = build_messages(row.input, row.lang_code, lang_hint=True)
+            messages = build_messages(row.input, row.lang_code, lang_hint=lang_hint)
             prefix_text = tok.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True, enable_thinking=False,
             )
@@ -156,6 +157,14 @@ def main() -> None:
                     help="regex passed to peft.LoraConfig(target_modules=...); default scopes "
                          "to the text decoder's attention/MLP projections only, see "
                          "DEFAULT_TARGET_MODULES")
+    ap.add_argument("--no-lang-hint", action="store_true",
+                    help="drop the lang-hint system turn from the training prompts, matching "
+                         "run_test.py's test format (self-contained prompt, no hint). Set it "
+                         "when the adapter will be evaluated that way -- 3858987 measured what "
+                         "a train/infer format gap costs: an adapter trained 0-shot and given "
+                         "few-shot demos scored 21.64, below both the adapter alone (26.56) "
+                         "and plain 3-shot (27.64). The hint is near-free to drop at inference "
+                         "(3859645), so it is the training side that has to move.")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="adapters/qwen3.5-9b-qa-lora",
                     help="directory the trained adapter (+tokenizer) is saved to; also where "
@@ -183,13 +192,15 @@ def main() -> None:
         train = qa.iloc[int(len(qa) * 0.2):]
     if args.limit:
         train = train.head(args.limit)
-    print(f"train examples: {len(train)}  model={args.model}  data={args.data or 'HF train split'}")
+    print(f"train examples: {len(train)}  model={args.model}  data={args.data or 'HF train split'}  "
+          f"format={'test (no lang-hint)' if args.no_lang_hint else 'lang-hint'}")
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
-    dataset = QAExampleDataset(list(train.itertuples(index=False)), tok, args.max_length)
+    dataset = QAExampleDataset(list(train.itertuples(index=False)), tok, args.max_length,
+                               lang_hint=not args.no_lang_hint)
 
     set_seed(args.seed)
     model = AutoModelForImageTextToText.from_pretrained(
