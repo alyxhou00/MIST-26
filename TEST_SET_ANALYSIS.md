@@ -107,9 +107,11 @@ non-English length control — is directly scored, validating roadmap C.
 
 Zero qa prompts match MC patterns (`(A)`, `A. … B. …`). The belebele-style format that
 dominates our dev set (1,123/2,978 rows) and where the gold-SFT adapter got its biggest
-win (chrF 52.70 → 85.82) **does not appear at test time**. Free-form extraction
-(tydiqa-like) is the closest dev proxy for `qa-context` — and that is exactly where the
-adapter collapsed (38.94 → 19.53). Dev overall chrF is **not** a faithful test predictor.
+win (chrF 52.70 → 85.82) **does not appear at test time**. Dev overall chrF is **not** a
+faithful test predictor. ⚠️ This section used to continue: *"Free-form extraction (tydiqa-like)
+is the closest dev proxy for `qa-context` — and that is exactly where the adapter collapsed
+(38.94 → 19.53)."* **Retracted 2026-07-16** — tydiqa is monolingual and the test sub-task is 96%
+cross-lingual, so it proxies ~4% of it; the collapse was on the wrong task. See §5b.
 
 ## 5b. What each dev source proxies (rewritten 2026-07-16 — the first version was wrong)
 
@@ -140,13 +142,25 @@ So **aya does proxy `qa-oeg`'s short-answer tail** (~13% of the prompts ≈ 307 
 OEG proxies the long-form end. They are proxies for *different slices of the same task*, which
 is what README's grouping said all along.
 
-| dev source | n | gold words p50 | proxies |
-|---|---|---|---|
-| `copenlu/answerable_tydiqa` | 615 | 2 | `qa-context` |
-| `FBK-MT/MCIF` (QA) | 165 | — | `qa-context` |
-| `wmt25-mist-oeg-gpt-4.1` | 97 | 175 | `qa-oeg`, long-form end (~87% of prompts) |
-| `CohereLabs/aya_dataset` | 978 | 24 | `qa-oeg`, short-answer end (~13% of prompts) |
-| `facebook/belebele` | 1,123 | — | **nothing** — multiple choice, and the test set has none (§5) |
+**Second retraction (2026-07-16): `tydiqa` does not proxy `qa-context` either** — same method,
+same mistake, third time. Test `qa-context` is **96% cross-lingual** (passage in one language,
+question in another; §5c). tydiqa is **monolingual** — Arabic passage, Arabic question, Arabic
+answer — so it stands in for roughly the 4% of the sub-task that isn't cross-lingual, while
+supplying 79% of the pooled proxy rows. **MCIF is the only cross-lingual QA source we have**,
+and it is n=165. Consequence: the "adapter collapses on tydiqa" result that drove routing for
+days was measuring the wrong task, and on MCIF the adapter in fact wins every metric
+(EXPERIMENTS.md). Gold length differs too, which is why EM was misleading: tydiqa's golds are
+63% 1–2 words, MCIF's are median 6 with 42% at 8+.
+
+| dev source | n | gold words p50 | cross-lingual? | proxies |
+|---|---|---|---|---|
+| `FBK-MT/MCIF` (QA) | 165 | 6 | ✅ yes | ✅ **`qa-context` — the only faithful proxy** |
+| `wmt25-mist-oeg-gpt-4.1` | 97 | 175 | — | `qa-oeg`, long-form end (~87% of prompts) |
+| `CohereLabs/aya_dataset` | 978 | 24 | — | `qa-oeg`, short-answer end (~13% of prompts) |
+| `copenlu/answerable_tydiqa` | 615 | 2 | ❌ **no — monolingual** | ❌ **nothing** — ~4% of a sub-task that is 96% cross-lingual (retracted 2026-07-16) |
+| `facebook/belebele` | 1,123 | — | — | **nothing** — multiple choice, and the test set has none (§5) |
+
+**Usable dev is therefore 1,240/2,978 rows (42%)**, and the `qa-context` half of it is 165 rows.
 
 **What survives:** belebele (1,123 rows, 38% of dev) really does predict nothing — that rests
 on "zero qa prompts match MC patterns", which is a property of the whole file, not a subset.
@@ -234,6 +248,6 @@ otherwise passes them through verbatim. 8 rows of 10,999 — not worth a hack; w
 | B (distillation) | Unchanged priority, but see §5c for what each teacher run covers: the 122B run is 91% aya, so it is **not** a ready-made `qa-oeg` training set, and only 363 train rows match the `qa-oeg` regime. OEG is 2,359 test rows of mostly-unfixed headroom on the thinnest data we have. |
 | C (instruction following) | **Upgraded from "nice" to "scored"**: format constraints are on every `qa-context` prompt; numeric word budgets are on **21% of `qa-oeg`** (§4), not all of it. Length control fails today. Augment SFT data with word-budget/format constraints + rewritten targets. |
 | D (Bhojpuri kit) | **Confirmed essential** (drift is real). Only one surprise language — target bho specifically. |
-| E (routing) | Legal and easy (`task` given). Route on the *faithful* proxies only (§5b): `qa-context` → tydiqa says plain 3-shot (38.94 vs adapter 19.53); `qa-oeg` → OEG says adapter (29.06 vs 3-shot 25.55). belebele and aya wins do not transfer and must not drive the choice. |
+| E (routing) | Legal and easy (`task` given). Route on the *faithful* proxies only (§5b) — ⚠️ **and tydiqa is not one of them**, which is the correction that settled this row. **`qa-context` → adapter, 0-shot** (MCIF, the only cross-lingual proxy: adapter wins EM 21.82 vs 0.61, F1 57.92 vs 28.15, chrF 49.26 vs 34.61, BERTScore 86.41 vs 74.38 — nothing dissents). ~~tydiqa says plain 3-shot (38.94 vs adapter 19.53)~~ — retracted 2026-07-16: monolingual, ~4% of the sub-task. **`qa-oeg` → adapter** (OEG: 29.06 vs 3-shot 25.55). belebele wins do not transfer; aya proxies only qa-oeg's short tail and must not drive the qa-oeg choice on its own. |
 | F (LID gate) | Directly addresses observed bho drift; cheap. |
 | G (3 submissions) | Unchanged: primary = distilled+routed, variant = 9B 3-shot safe bet, variant = aggressive. |

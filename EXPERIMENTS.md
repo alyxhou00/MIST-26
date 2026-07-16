@@ -25,15 +25,17 @@ ID, date, model/config, and the `overall chrF/BERTScore/ROUGE-L` line from
 > | dev source | rows | represents the test set? |
 > |---|---|---|
 > | `facebook/belebele` | 1,123 | ❌ **multiple choice — the test set has none at all.** 38% of dev, predicts nothing. |
-> | `copenlu/answerable_tydiqa` | 615 | ✅ **`qa-context`** — and score it with EM/F1, not chrF |
-> | `FBK-MT/MCIF` | 165 | ✅ `qa-context` |
+> | `FBK-MT/MCIF` | 165 | ✅ **`qa-context` — the only faithful proxy** (cross-lingual, like 96% of the test sub-task) |
 > | `wmt25-mist-oeg-gpt-4.1` | 97 | ✅ **`qa-oeg`, long-form end** (golds 175 words p50) — ~87% of qa-oeg prompts |
 > | `CohereLabs/aya_dataset` | 978 | ✅ **`qa-oeg`, short-answer end** (golds 24 words p50) — ~13% of qa-oeg prompts |
+> | `copenlu/answerable_tydiqa` | 615 | ❌ **nothing** — monolingual; ~4% of a sub-task that is 96% cross-lingual (**retracted 2026-07-16**; it used to read "✅ qa-context — score it with EM/F1") |
 >
-> **Rules:** judge `qa-context` on **tydiqa + MCIF**, judge `qa-oeg` on **OEG and aya as two
+> **Rules:** judge `qa-context` on **MCIF alone**, judge `qa-oeg` on **OEG and aya as two
 > separate columns** (they measure opposite ends of one spectrum — never average them), and
-> treat **belebele** as unscored. ⚠️ dev's weighting is inverted against the test mix: aya gets
-> 978 rows for ~13% of qa-oeg while OEG gets 97 for ~87%.
+> treat **belebele and tydiqa** as unscored. Score everything on **`COMBINED` = mean(chrF,
+> BERTScore, ROUGE-L)**. ⚠️ dev's weighting is inverted against the test mix: aya gets 978 rows
+> for ~13% of qa-oeg while OEG gets 97 for ~87% — and `qa-context`, 8,640 test rows, rests on
+> 165. **Usable dev = 1,240/2,978 rows (42%).**
 >
 > Why this matters concretely — job 3859645 lost only 1.67 overall chrF, which reads as a mild
 > regression, but the entire loss was belebele collapsing 20 points while every source that
@@ -57,7 +59,7 @@ This one is the decision view: each candidate on the metric its test sub-task ac
 deserves, with the 71% of dev that predicts nothing already excluded. Produced by re-scoring
 the stored predictions CSVs with the current `evaluate.py` (no regeneration).
 
-**Rescored per source 2026-07-16 (jobs 3864996-99), and it settles the routing.** `qa-context`
+**Rescored per source 2026-07-16 (jobs 3865022-25), and it settles the routing.** `qa-context`
 used to be reported as one pooled column (tydiqa + MCIF, n=780). That pooling was 79% tydiqa —
 the *monolingual* source, worth ~4% of a test sub-task that is 96% cross-lingual. Split apart,
 the metric disagreement that blocked this decision for days **evaporates**.
@@ -239,12 +241,14 @@ ours can resolve it.
 
 ### `qa-oeg` is split too: the adapter wins the long end, 3-shot wins the short end
 
-The two halves of `qa-oeg` disagree. **Long-form**: adapter 29.06 vs 3-shot 25.55. **Short-
-answer**: 3-shot 24.19 vs adapter 21.95. That is coherent rather than contradictory — gold-SFT
-taught terseness, which helps extraction (see its 16.92 EM) and helps nothing on a 175-word
-composition, while few-shot demos teach a chatty register that suits short trivia. Weighting by
-prompt share (~87/13) the adapter still takes `qa-oeg`, but this is now a split decision on
-n=97 vs n=978 with dev's weighting inverted, not the clean win the plan recorded.
+The two halves of `qa-oeg` disagree, on COMBINED as on chrF. **Long-form**: adapter 46.44 vs
+3-shot 35.30. **Short-answer**: 3-shot 35.30 vs adapter 34.62. That is coherent rather than
+contradictory — gold-SFT taught terseness, which helps extraction (see its MCIF EM of 21.82
+against 3-shot's 0.61) and helps nothing on a 175-word composition, while few-shot demos teach a
+chatty register that suits short trivia. Weighting by prompt share (~87/13) the adapter still
+takes `qa-oeg` (44.90 vs 35.30), but this is a split decision on n=97 vs n=978 with dev's
+weighting inverted, not the clean win the plan recorded — and the short end is close enough
+(0.68) to be noise at that n.
 
 ### Budget compliance: the model ignores the budget and writes its own default length
 
@@ -314,8 +318,13 @@ distillation as long as the final model is <10B, so the plan is sequence-level K
 dev untouched), (2) quality-filter against the golds ([scripts/filter_teacher.py](scripts/filter_teacher.py),
 per-row sentence chrF OR BERTScore, thresholds calibrated per source via `--report`),
 (3) LoRA SFT the 9B on the filtered teacher+gold mix (`train_lora.py --data`) as a *fresh*
-adapter (not continued from 3822375) — same recipe, one variable (the data), directly
-comparable to the gold-only adapter above.
+adapter (not continued from 3822375).
+
+⚠️ **The plan's "one variable (the data), directly comparable to the gold-only adapter above"
+did not survive contact.** The run that was actually launched (3864945) also trains in the test
+format (`--no-lang-hint`), so it differs from 3822375 in **two** ways. That was a deliberate
+trade — see the note under the dev-eval table below for what it costs and what would buy the
+comparison back.
 
 **Teacher selection** (full 3-way smoke comparison and the transformers-GPTQ dead end:
 IMPLEMENTATION_NOTES §5.1): Qwen3.5-35B-A3B bf16 (1× a100_80, transformers, ~14 s/row) for
@@ -392,8 +401,8 @@ below are the ones that survived into the merge):
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 3864945 | 2026-07-16 | distilled-adapter **SFT** | Qwen3.5-9B, `lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint` | 11,915 train rows | _running_ | | | Log confirms `format=test (no lang-hint)`, 20 rows truncated at 2,048 tok. ~6.5h expected (cf. 3822375). |
-| — | | distilled-adapter dev eval | Qwen3.5-9B + LoRA from 3864945, shots=0, **`--no-lang-hint`** | 2978 | _pending_ | | | Eval must use `--no-lang-hint` too — it has to match how 3864945 was trained. |
+| 3864945 | 2026-07-16 | distilled-adapter **SFT** | Qwen3.5-9B, `lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint` | 11,915 train rows | _running_ | | | Log confirms `format=test (no lang-hint)`, 20 rows truncated at 2,048 tok. Trainer's own bar: ~15 s/step × 1,490 → **~6h15, ETA 2026-07-17 ~02:00 CEST**. Adapter → `$HOME/MIST-26/adapters/qwen3.5-9b-qa-lora-3864945`. |
+| 3865036 | 2026-07-17 | distilled-adapter **dev eval** | LoRA from 3864945, shots=0, **`--no-lang-hint`** | 2978 | _queued_ | | | Chained: `--dependency=afterok:3864945`, so it starts itself and only if the SFT exits clean. ~6h52 (cf. 3857589) → **ETA ~09:00 CEST**. `--no-lang-hint` is mandatory here: it must match how 3864945 was trained. |
 
 > **⚠️ This row is NOT the one-variable A/B it was originally planned as.** It used to read
 > "same recipe as 3822375/3857589, one variable (training targets)". That is no longer true:
@@ -405,9 +414,10 @@ below are the ones that survived into the merge):
 > change earned it.**
 >
 > **The missing baseline is `9B + gold-LoRA, 0-shot, --no-lang-hint`** — an eval-only run
-> (~6.9h, no retraining; the 3822375 adapter still exists at
-> `/home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375`, in the **$WORK**
-> clone, not the $HOME one jobs now run from). It would restore the one-variable comparison
+> (~6.9h, no retraining; the 3822375 adapter is at
+> `adapters/qwen3.5-9b-qa-lora-3822375` in **both** clones as of 2026-07-16 — atuin has no
+> backup and no snapshots, so its final weights were copied to $HOME). It would restore the
+> one-variable comparison
 > *and* answer a question the whole routing table currently rests on: **every gold-LoRA number
 > in the decision table above was measured with the lang-hint ON, but `run_test.py` feeds no
 > hint.** Deploying that adapter as-is puts it in an unmeasured train/infer gap — the same

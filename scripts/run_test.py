@@ -17,9 +17,16 @@ prompt, so it's opt-in pending a dev A/B).
 --shots N prepends N demonstrations from the sample data as completed user/assistant turns,
 matched to the row on task->source and question_lang (see make_shot_picker). The demos are in
 the *sample* format while the test prompt is self-contained prose, so they demonstrate answer
-shape and language, not prompt format. Per TEST_SET_ANALYSIS 8/E this is the qa-context arm of
-the routed submission (dev tydiqa, the faithful proxy: 3-shot 38.94 vs adapter 19.53), while
-qa-oeg wants --lora at 0 shots -- demos and the adapter do not stack (dev 21.64 vs 27.64).
+shape and language, not prompt format.
+
+⚠️ **--shots is NOT the qa-context arm of the routed submission any more (retracted
+2026-07-16).** This docstring used to say it was, on the strength of "dev tydiqa, the faithful
+proxy: 3-shot 38.94 vs adapter 19.53". tydiqa is *not* a faithful proxy -- it is monolingual,
+and test qa-context is 96% cross-lingual, so it stands in for ~4% of the sub-task. On MCIF, the
+only cross-lingual proxy, the adapter beats 3-shot on every metric (chrF 49.26 vs 34.61,
+BERTScore 86.41 vs 74.38, EM 21.82 vs 0.61). **Both qa-context and qa-oeg route to --lora at 0
+shots** (TEST_SET_ANALYSIS 8/E, EXPERIMENTS.md). Demos and the adapter do not stack, so --shots
+is now for the demo-only variant submission, not for the primary.
 
 Output is one {"id": ..., "output": ...} JSON object per line (the submission format).
 Rows already present in --out are skipped on restart, so a run that hits the wall clock
@@ -145,9 +152,12 @@ def main() -> None:
                          "Inserted as completed user/assistant turns before the prompt. "
                          "Default 0 = zero-shot. NOTE the demos are sample-format while the "
                          "test prompt is self-contained prose -- they teach answer shape and "
-                         "language, not prompt format. Per TEST_SET_ANALYSIS 8/E this is the "
-                         "intended setting for qa-context (dev tydiqa: 3-shot 38.94 vs "
-                         "adapter 19.53); qa-oeg prefers --lora with 0 shots.")
+                         "language, not prompt format. ⚠️ NOT the primary's qa-context setting "
+                         "any more (retracted 2026-07-16: that rested on tydiqa, which is "
+                         "monolingual and proxies ~4% of a 96%-cross-lingual sub-task; on MCIF "
+                         "the adapter wins every metric). Both test tasks route to --lora at 0 "
+                         "shots -- see TEST_SET_ANALYSIS 8/E. Use --shots for the demo-only "
+                         "variant submission.")
     ap.add_argument("--shots-file", default=None,
                     help="local qa sample data for --shots (CSV/JSONL with source, lang_code, "
                          "input, output). Default: load pinzhenchen/wmt26-mist-sample from the "
