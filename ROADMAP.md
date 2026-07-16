@@ -74,12 +74,33 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 ## 待決策 / 待辦（2026-07-15 晚，主線 session 交出）
 
 1. **`--unescape` 要不要進 primary**（見 A 列）。無 dev proxy，只能靠 qualitative smoke 判斷。
-2. **寄信給主辦方**（schmidtova@ufal.mff.cuni.cz）現在有**三件**事，第三件是最重要的：
-   (a) 100 筆空 prompt；(b) qa-context 的雙重跳脫；
-   (c) **⚠️ 官方的自動評分指標是什麼？** 這是目前整個專案價值最高的未知數 —— 它決定
-   8,640/10,999 列（qa-context）該用純 3-shot 還是 adapter，而**我們自己再做任何實驗都答不出來**。
-   chrF 說用 3-shot（37.52 vs 23.31），Exact Match 說用 adapter（16.92 vs 6.54，2.6 倍），
-   token F1 打平。詳見 EXPERIMENTS.md 的決策表。屬對外聯絡 → 使用者自己決定/執行。
+2. ~~**寄信給主辦方**（schmidtova@ufal.mff.cuni.cz）~~ → **關閉（使用者決定，2026-07-16）：不寄信。**
+   官方指標改用自訂的對沖規則 **`sqrt(EM × chrF)`** 決定 —— 這是「在未知下做決定」，**不是**把未知
+   解掉了。**僅適用 qa-context**：qa-oeg 的 EM 對每個系統都 ≈0，幾何平均乘上一個 ≈0 的因子只會排出
+   雜訊，qa-oeg continues 用 chrF/BERTScore。套在現有（**池子是錯的**，見下）proxy 上會選 adapter：
+   gold-LoRA 19.86 > 3-shot 15.66 > 3-shot 無 hint 12.20 > adapter+3-shot 8.71。
+   （原本要問的另兩件事 —— 雙重跳脫、8 筆 `{country}`/`{language}` placeholder —— 也隨之不問；
+   100 筆空 prompt 主辦方已於 07-16 自行修掉。）
+   ⚠️ **但先別把它當成路由定案**：那些 EM 是 tydiqa+MCIF **混池**算的，而其中 79% 是單語的 tydiqa
+   —— 見下面第 6 條。規則沒問題，餵給它的池子有問題。
+
+6. 🔴 **`qa-context` 的 dev proxy 有 79% 是錯的任務（2026-07-16 實測，EXPERIMENTS.md 有完整表格）**
+   —— 使用者留在 EXPERIMENTS.md 的那則「test set 跟 dev 很不一樣，去讀 qa-context」註記已查證，**是對的**：
+   - **qa-context 只有 100 個 unique item**（跟 qa-oeg 一樣是平行語料，不是 8,640 個相異問題）。
+     id 格式 `qa-context_{n}_{問題語}_{文章語}` —— **問題語在前**，讀反會把 `fra` 誤認成答題語言。
+   - 每個 item 用全部 24 種問題語問；變動的是**文章**被翻成幾種語言 → 展開極不平均：
+     **5 個 item 各 24×25 = 600 列，合計佔 35%**；另外 75 個 item 各只有 24 列。
+   - **96% 的列是跨語言的**。**文章語有 25 種、問題語只有 24 種** → `fra` 是**只當文章**的語言。
+     第 5 條的「fra/swh/tel/tha 從測試集消失」對**答題語言**成立（`question_lang` 欄位各 0 列），
+     對**文章語言不成立**。
+   - **tydiqa（615 列、79%）是單語**（阿拉伯文文章+問題+答案）≈ 只代表測試任務的 4%；
+     **MCIF（165 列、21%）是唯一跨語言、唯一忠實的 proxy** —— 而 MCIF 上 adapter 大勝（chrF 49.26
+     vs 3-shot 34.61）。整場 chrF vs EM 之爭是在錯的 source 上打的。
+   - **待辦**：`evaluate.py` 目前把 EM/F1 在 `TASK_PROXY`（tydiqa+MCIF）層級混算 → 決策表裡每個 EM
+     都是 79% 的 tydiqa。**修法是重新計分（4 份 prediction CSV 都還在），不用重跑推理。**
+   - **這就是使用者說「We need an whole new train/dev set」的理由**：唯一忠實的跨語言 QA 來源只有
+     MCIF，n=165，而且是 TED 逐字稿、答案是句子長度（不是 `evaluate.py` header 假設的 2 詞抽取
+     —— 那個假設來自 tydiqa，我們**沒有**測試集 gold）。
 3. **C 尚未套用**：等 35B shards（3859277-79）合併過濾出 `data/sft-distilled.jsonl` 後，
    跑 `augment_constraints.py` 產 `-c.jsonl`，再跟 `data/sft-bho.jsonl` 串起來練。
 4. **D 的 bho 資料還沒被模型看過** — 8,009 列已就緒但尚未進任何一次 SFT；
