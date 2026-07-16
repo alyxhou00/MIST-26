@@ -29,7 +29,10 @@
 # from the 2B-specific defaults benchmark.py otherwise uses.
 
 module load python/3.12-base cuda/12.8.1
-source "$WORK/mist-venv/bin/activate"
+# venv: prefer $WORK (documented home for regenerable software); fall back
+# to $HOME when it has been archived off atuin to relieve the group inode quota.
+MIST_VENV="$WORK/mist-venv"; [ -f "$MIST_VENV/bin/activate" ] || MIST_VENV="$HOME/mist-venv"
+source "$MIST_VENV/bin/activate"
 
 # Compute nodes have no internet -> use the cache populated on the login node.
 export HF_HOME="$WORK/hf_cache"

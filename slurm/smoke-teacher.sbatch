@@ -20,7 +20,10 @@
 # teacher models are directly comparable row-by-row.
 
 module load python/3.12-base cuda/12.8.1
-source "$WORK/mist-venv/bin/activate"
+# venv: prefer $WORK (documented home for regenerable software); fall back
+# to $HOME when it has been archived off atuin to relieve the group inode quota.
+MIST_VENV="$WORK/mist-venv"; [ -f "$MIST_VENV/bin/activate" ] || MIST_VENV="$HOME/mist-venv"
+source "$MIST_VENV/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node (see header).
 # Teacher weights live on $HPCVAULT (1TB quota) -- $HOME's 100GB soft quota is exceeded by

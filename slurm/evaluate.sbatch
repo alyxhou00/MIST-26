@@ -21,7 +21,10 @@
 # && git push` from the cluster once the job finishes.
 
 module load python/3.12-base cuda/12.8.1
-source "$WORK/mist-venv/bin/activate"
+# venv: prefer $WORK (documented home for regenerable software); fall back
+# to $HOME when it has been archived off atuin to relieve the group inode quota.
+MIST_VENV="$WORK/mist-venv"; [ -f "$MIST_VENV/bin/activate" ] || MIST_VENV="$HOME/mist-venv"
+source "$MIST_VENV/bin/activate"
 
 export HF_HOME="$WORK/hf_cache"
 export HF_HUB_OFFLINE=1

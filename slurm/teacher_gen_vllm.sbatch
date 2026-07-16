@@ -23,7 +23,10 @@
 # pure margin. Resubmit with the same --out to resume (skips qa_idx already present).
 
 module load python/3.12-base cuda/12.8.1
-source "$HOME/vllm-venv/bin/activate"
+# venv: prefer $WORK (documented home for regenerable software); fall back
+# to $HOME when it has been archived off atuin to relieve the group inode quota.
+VLLM_VENV="$WORK/vllm-venv"; [ -f "$VLLM_VENV/bin/activate" ] || VLLM_VENV="$HOME/vllm-venv"
+source "$VLLM_VENV/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node.
 export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"

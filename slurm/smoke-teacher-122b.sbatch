@@ -30,7 +30,10 @@
 #     sbatch slurm/smoke-teacher-122b.sbatch
 
 module load python/3.12-base cuda/12.8.1
-source "$HOME/mist-venv2/bin/activate"
+# venv: prefer $WORK (documented home for regenerable software); fall back
+# to $HOME when it has been archived off atuin to relieve the group inode quota.
+MIST_VENV2="$WORK/mist-venv2"; [ -f "$MIST_VENV2/bin/activate" ] || MIST_VENV2="$HOME/mist-venv2"
+source "$MIST_VENV2/bin/activate"
 
 # Compute nodes have no internet -> caches populated on the login node.
 export HF_HOME="/home/vault/b279bb/b279bb31/hf_cache_teacher"
