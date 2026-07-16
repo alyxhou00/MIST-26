@@ -10,21 +10,22 @@ applies the metric each one deserves (TEST_SET_ANALYSIS 5b):
                          the test sub-task is 96% cross-lingual, so **MCIF is the faithful proxy
                          and tydiqa (79% of the pooled rows) is not** -- it is monolingual, worth
                          ~4% of the sub-task. Pooling them, as this script did until 2026-07-16,
-                         reported mostly the wrong task.
-                         Metric per half: EM + token F1 are SQuAD-style and only resolve when the
-                         golds are short enough to hit exactly. Measured: tydiqa's golds are 63%
-                         1-2 words (EM works, chrF has almost no resolution -- "1650" vs "around
-                         1650" moves it about as much as right-vs-wrong does), but **MCIF's are
-                         median 6 words, 42% are 8+, so EM there is capped low** -- it reads only
-                         the short-gold slice. Capped is not dead: on MCIF it still separates the
-                         adapter from 3-shot 21.82 vs 0.61. The script prints the gold-length
-                         share next to EM so the number is read with its ceiling in view.
+                         reported mostly the wrong task. EM/token-F1 are still printed here as
+                         diagnostics, with the share of short golds next to them so their ceiling
+                         is visible -- but they no longer decide anything (see below).
   qa-oeg (long-form)     OEG: chrF/BERTScore against 175-word golds, + word-budget compliance,
                          which is scored at test time and which nothing else here can see.
   qa-oeg (short-answer)  aya: the same test task's short tail -- ~13 of qa-oeg's 100 unique
                          prompts are trivia and lists. Reported separately from long-form on
                          purpose: they are opposite ends of one spectrum and averaging them
                          describes neither.
+
+**Systems are selected on `COMBINED` = mean(chrF, BERTScore, ROUGE-L)** -- one rule for every
+sub-task (user's call, 2026-07-16), replacing `sqrt(EM x chrF)`, which went blind exactly where
+it mattered (EM ~0 on MCIF and on all of qa-oeg). It is a compromise, not a neutral one: read
+`combined()` for what it actually weights before leaning on a close call. The three components
+are always printed next to it -- when they disagree, that disagreement is the finding, and the
+mean is the thing hiding it.
 
 chrF is cheap (CPU, seconds). BERTScore additionally needs a transformer forward pass over
 every row (a GPU helps but CPU works for dev-set sizes); it's loaded once and reused for the
@@ -75,6 +76,39 @@ PROXY_FIDELITY = {
     "qa-context (monolingual)": "❌ UNFAITHFUL -- monolingual; ~4% of the test sub-task. Do not route on this.",
 }
 UNSCORED = {"facebook/belebele": "multiple choice; the test set has none at all"}
+
+
+def combined(chrf_v: float, bertscore_v: float, rouge_v: float) -> float:
+    """The team's selection score (user's call, 2026-07-16): the mean of chrF, BERTScore and
+    ROUGE-L, used for every sub-task instead of a metric that only works on some of them.
+
+    Why not the earlier `sqrt(EM x chrF)`: EM only resolves where the golds are short enough to
+    hit exactly, which is true of tydiqa (63% of golds are 1-2 words) -- the proxy that does NOT
+    resemble the test set -- and false of MCIF (19%) and of qa-oeg (175-word golds, EM ~0). A
+    rule that goes blind on the proxies that matter cannot be the rule.
+
+    **This is a compromise, not a neutral one -- know what it weights before you trust it:**
+
+    - **BERTScore sets the level, not the ranking.** mBERT's floor is ~55-65 even for unrelated
+      text (measured: a system scoring chrF 14.46 / ROUGE-L 9.52 still got BERTScore 56.20), so
+      across our systems it spans only ~1.24x where chrF spans 2.35x and ROUGE-L 1.95x. In an
+      unweighted mean of raw values, each metric's influence on the *ordering* is proportional
+      to its variance -- so BERTScore adds a large near-constant and mostly abstains.
+    - **chrF and ROUGE-L measure the same thing twice.** Both are surface overlap (character
+      n-grams vs token LCS). So the mean is effectively ~2 votes for surface overlap and ~1
+      quiet vote for semantics. That suits extraction (qa-context) better than it suits qa-oeg,
+      where the shared task also runs human eval and rewards fluent, complete answers.
+    - **ROUGE-L is broken on some languages.** ben_Beng scores ROUGE-L 4.02 against chrF 15.68 /
+      BERTScore 64.83, while mar_Deva at a similar chrF (19.57) scores ROUGE-L 40.39 -- a
+      tokenization artifact (no stemmer, and these scripts don't split on spaces the way the
+      scorer assumes), not a quality difference. Same shape for tel_Telu (8.54) and swh_Latn
+      (9.99). Averaging dilutes this; it does not remove it.
+
+    Verified when adopted: this score preserves every routing decision already made from the
+    per-metric tables (qa-context -> adapter, qa-oeg long-form -> adapter), so it was a change
+    of rule, not of conclusions.
+    """
+    return (chrf_v + bertscore_v + rouge_v) / 3
 
 
 def chrf(preds, refs) -> float:
@@ -199,29 +233,23 @@ def main() -> None:
         print(f"\n{task}  (proxy: {', '.join(s.split('/')[-1] for s in sources)}; n={len(g)})")
         if task in PROXY_FIDELITY:
             print(f"  {PROXY_FIDELITY[task]}")
+        c = chrf(g["prediction"], g["gold"])
+        b = g["bertscore_f1"].mean()
+        r = g["rouge_l_f1"].mean()
+        print(f"  chrF = {c:6.2f}   BERTScore = {b:6.2f}   ROUGE-L = {r:6.2f}")
+        print(f"  COMBINED = {combined(c, b, r):6.2f}   <- the selection score "
+              f"(mean of the three; see combined() for what it does and doesn't weigh)")
         if task.startswith("qa-context"):
+            # EM/F1 stay as diagnostics for the extraction sub-task -- they are no longer the
+            # selection rule (see combined()), but "did it return the span exactly" is still
+            # worth seeing. An exact match can only be earned where the gold is short enough to
+            # hit, so print that share next to it: the docstring's "2-word extractions" holds
+            # for tydiqa (63% are 1-2 words) and not for MCIF (19%; median 6, 42% are 8+).
             em = exact_match(g["prediction"], g["gold"])
-            f1 = token_f1(g["prediction"], g["gold"])
-            c = chrf(g["prediction"], g["gold"])
-            # An exact match can only be earned on rows whose gold is short enough to hit, so
-            # print that share next to EM rather than letting the reader carry the docstring's
-            # "2-word extractions" across both proxies -- it holds for tydiqa (63% are 1-2
-            # words) and not for MCIF (19%; median 6, 42% are 8+).
             short = (g["gold"].astype(str).str.split().str.len() <= 2).mean() * 100
-            print(f"  Exact Match = {em:6.2f}   token F1 = {f1:6.2f}   chrF = {c:6.2f}   "
-                  f"BERTScore = {g['bertscore_f1'].mean():6.2f}")
-            # sqrt(EM x chrF): the team's hedge for the unknown official metric (user,
-            # 2026-07-16 -- we are not asking the organisers).
-            print(f"  sqrt(EM x chrF) = {(em * c) ** 0.5:6.2f}   <- the selection rule")
-            if short < 50:
-                # NB: low EM here is a ceiling, not necessarily a tie -- on MCIF the adapter
-                # still separates from 3-shot 21.82 vs 0.61 by hitting the short-gold slice.
-                # So this is a partial signal to read alongside chrF/BERTScore, not a dead one.
-                print(f"  ⚠️ only {short:.0f}% of golds are 1-2 words, so EM is capped low here and "
-                      "reads just that slice -- weigh it with chrF/BERTScore, not alone")
-        else:
-            print(f"  chrF = {chrf(g['prediction'], g['gold']):6.2f}   BERTScore = "
-                  f"{g['bertscore_f1'].mean():6.2f}   ROUGE-L = {g['rouge_l_f1'].mean():6.2f}")
+            print(f"  (diagnostic: Exact Match = {em:6.2f}   token F1 = "
+                  f"{token_f1(g['prediction'], g['gold']):6.2f}; {short:.0f}% of golds are 1-2 "
+                  f"words{'' if short >= 50 else ' -> EM is capped low here, read it as the short-gold slice only'})")
         if "input" in g.columns:
             n_b, ok, over = budget_compliance(g["input"], g["prediction"], g["lang_code"])
             if n_b:
