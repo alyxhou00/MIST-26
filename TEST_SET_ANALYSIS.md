@@ -146,8 +146,9 @@ is what README's grouping said all along.
 
 **Second retraction (2026-07-16): `tydiqa` does not proxy `qa-context` either** — same method,
 same mistake, third time. Test `qa-context` is **96% cross-lingual** (passage in one language,
-question in another; §5c). tydiqa is **monolingual** — Arabic passage, Arabic question, Arabic
-answer — so it stands in for roughly the 4% of the sub-task that isn't cross-lingual, while
+question in another; §5c). tydiqa is **monolingual** — passage, question and answer all in one
+language (11 languages; "Arabic" as previously written here was one of them, not all of it —
+DATA_AUDIT.md §1) — so it stands in for roughly the 4% of the sub-task that isn't cross-lingual, while
 supplying 79% of the pooled proxy rows. **MCIF is the only cross-lingual QA source we have**,
 and it is n=165. Consequence: the "adapter collapses on tydiqa" result that drove routing for
 days was measuring the wrong task, and on MCIF the adapter in fact wins every metric
@@ -156,7 +157,7 @@ days was measuring the wrong task, and on MCIF the adapter in fact wins every me
 
 | dev source | n | gold words p50 | cross-lingual? | proxies |
 |---|---|---|---|---|
-| `FBK-MT/MCIF` (QA) | 165 | 6 | ✅ yes | ✅ **`qa-context` — the only faithful proxy** |
+| `FBK-MT/MCIF` (QA) | 165 | 6 | ✅ 73% (its eng→eng quarter is monolingual) | ✅ **`qa-context` — the only faithful proxy** |
 | `wmt25-mist-oeg-gpt-4.1` | 97 | 175 | — | `qa-oeg`, long-form end (~87% of prompts) |
 | `CohereLabs/aya_dataset` | 978 | 24 | — | `qa-oeg`, short-answer end (~13% of prompts) |
 | `copenlu/answerable_tydiqa` | 615 | 2 | ❌ **no — monolingual** | ❌ **nothing** — ~4% of a sub-task that is 96% cross-lingual (retracted 2026-07-16) |

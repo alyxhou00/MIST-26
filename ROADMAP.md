@@ -101,7 +101,8 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
    - **96% 的列是跨語言的**。**文章語有 25 種、問題語只有 24 種** → `fra` 是**只當文章**的語言。
      第 5 條的「fra/swh/tel/tha 從測試集消失」對**答題語言**成立（`question_lang` 欄位各 0 列），
      對**文章語言不成立**。
-   - **tydiqa（615 列、79%）是單語**（阿拉伯文文章+問題+答案）≈ 只代表測試任務的 4%；
+   - **tydiqa（615 列、79%）是單語**（文章/問題/答案同語言，共 11 種語言 — 先前這裡寫「阿拉伯文」
+     是以偏概全，見 DATA_AUDIT.md §1）≈ 只代表測試任務的 4%；
      **MCIF（165 列、21%）是唯一跨語言、唯一忠實的 proxy** —— 而 MCIF 上 adapter 大勝（chrF 49.26
      vs 3-shot 34.61）。整場 chrF vs EM 之爭是在錯的 source 上打的。
    - **待辦**：`evaluate.py` 目前把 EM/F1 在 `TASK_PROXY`（tydiqa+MCIF）層級混算 → 決策表裡每個 EM

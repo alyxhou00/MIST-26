@@ -73,6 +73,14 @@ it changed the rule, not the conclusions. ⚠️ It is a compromise, not a neutr
 `evaluate.py:combined()`; the components are listed here precisely so a close call can be
 audited rather than taken on the mean's word.
 
+> ⚠️ **Leakage asterisk on every adapter-vs-prompting margin below (found 2026-07-17,
+> DATA_AUDIT.md §2).** The 80/20 split is by *row*, but MCIF/OEG/belebele carry the same item
+> in several languages and aya has verbatim duplicates — so the adapters trained on
+> cross-lingual twins of dev items (all 21 MCIF dev talks have train twins). Adapter-vs-adapter
+> rows (gold vs distilled) and prompting-vs-prompting rows (shots, lang-hint) are unaffected;
+> adapter-vs-prompting margins are optimistic. Directions below likely survive (the MCIF sweep
+> is 4-metrics-unanimous); honest margins await the item-split rebuild.
+
 **`qa-context` — ✅ MCIF, the FAITHFUL proxy (cross-lingual, n=165). Route on this column.**
 
 | System | job | **COMBINED** | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
@@ -139,8 +147,10 @@ invisible here. EM is ~0 for every system on 175-word golds and is not reported.
 > came in *last* on long-form (34.23), so the choice on qa-oeg is still gold-LoRA 0-shot vs
 > gold-LoRA+3-shot on n=97. Nothing here moves it.
 
-Proxies: `qa-context` = **MCIF only** (n=165; tydiqa is reported above but does not proxy the
-test task). `qa-oeg long-form` = OEG (n=97). `qa-oeg short-answer` = aya (n=978). Never average
+Proxies: `qa-context` = **MCIF only** (n=165; its **QA portion** — MCIF also has a 400-row
+summarization portion under task=`sum`, the teammate's; and the same 21 talks sit behind both
+portions and behind dev *and* train, see DATA_AUDIT.md §2 on leakage. tydiqa is reported above
+but does not proxy the test task). `qa-oeg long-form` = OEG (n=97). `qa-oeg short-answer` = aya (n=978). Never average
 the two qa-oeg columns — they are opposite ends of one spectrum, and dev weights them backwards
 (978 rows for ~13% of the task, 97 for ~87%).
 
@@ -217,8 +227,8 @@ passages**: French passages are in the test set; we just never answer in French.
 
 | dev source | n (dev) | shape | faithful to the test task? |
 |---|---|---|---|
-| `copenlu/answerable_tydiqa` | 615 (79%) | Arabic passage + Arabic question + Arabic answer — **monolingual** | ❌ ~4% of the test sub-task |
-| `FBK-MT/MCIF` | 165 (21%) | German question + **English** content + German answer — **cross-lingual** | ✅ the only faithful one |
+| `copenlu/answerable_tydiqa` | 615 (79%) | same-language passage+question+answer, **11 languages** (not "Arabic" as this row once said — DATA_AUDIT.md §1) — **monolingual** | ❌ ~4% of the test sub-task |
+| `FBK-MT/MCIF` (QA portion) | 165 (21%) | question in {deu, eng, ita, zho} + **English** talk content + answer in the question language — **cross-lingual except its eng→eng quarter** (44/165) | ✅ the only (mostly) faithful one |
 
 > **Consequence: the entire "chrF vs EM" fight below was fought on tydiqa** — the monolingual
 > source, which stands in for ~4% of what the test set actually asks. The faithful proxy is
