@@ -77,7 +77,8 @@ audited rather than taken on the mean's word.
 
 | System | job | **COMBINED** | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
 |---|---|---|---|---|---|---|
-| **9B + gold-LoRA, 0-shot** | 3857589 | **62.55** | **49.26** | **86.41** | **51.98** | *21.82 / 57.92* |
+| **9B + gold-LoRA, 0-shot, no lang-hint** | 3866054 | **63.18** | **50.08** | 86.22 | **53.24** | *20.00 / 57.34* |
+| **9B + gold-LoRA, 0-shot** | 3857589 | 62.55 | 49.26 | **86.41** | 51.98 | *21.82 / 57.92* |
 | 9B + distilled LoRA, 0-shot, no lang-hint | 3865036 | 51.26 | 39.23 | 78.53 | 36.02 | *13.33 / 39.39* |
 | 9B 3-shot | 3822329 | 45.73 | 34.61 | 74.38 | 28.19 | *0.61 / 28.15* |
 | 9B 3-shot, no lang-hint | 3859645 | 44.66 | 33.80 | 73.55 | 26.63 | *0.61 / 27.16* |
@@ -87,6 +88,11 @@ audited rather than taken on the mean's word.
 Nothing dissents, so the choice of rule is irrelevant here: any of them picks the adapter — and
 the gold adapter, not the distilled one, which lands 11.29 COMBINED short of it (see below).
 
+**The two gold-LoRA rows are the same adapter with and without the lang-hint** (3866054 vs
+3857589) and they land within 0.6 COMBINED of each other — the hint is ~free on the adapter, not
+just on the 3-shot base. That settles the confound below: the distilled adapter's loss is the
+teacher data, not the dropped hint.
+
 **`qa-context` — ❌ tydiqa, the UNFAITHFUL proxy (monolingual, n=615). Do not route on this.**
 
 | System | job | COMBINED | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
@@ -94,6 +100,7 @@ the gold adapter, not the distilled one, which lands 11.29 COMBINED short of it 
 | 9B + distilled LoRA, 0-shot, no lang-hint | 3865036 | **64.61** | 54.55 | 87.33 | 51.96 | *53.01 / 69.76* |
 | 9B 3-shot | 3822329 | 47.87 | 38.94 | 70.67 | 34.00 | *8.13 / 33.18* |
 | 9B 3-shot, no lang-hint | 3859645 | 44.02 | 34.39 | 67.91 | 29.76 | *5.37 / 26.83* |
+| 9B + gold-LoRA, 0-shot, no lang-hint | 3866054 | 34.45 | 20.09 | 64.59 | 18.66 | *16.42 / 26.59* |
 | 9B + gold-LoRA, 0-shot | 3857589 | 33.36 | 19.53 | 63.01 | 17.53 | *15.61 / 23.90* |
 | 9B + gold-LoRA + 3-shot | 3858987 | 26.73 | 14.46 | 56.20 | 9.52 | *2.76 / 9.62* |
 
@@ -112,6 +119,7 @@ invisible here. EM is ~0 for every system on 175-word golds and is not reported.
 | System | job | **COMBINED** | chrF | BERT | ROUGE-L | **COMBINED** | (legacy overall) |
 |---|---|---|---|---|---|---|---|
 | 9B + gold-LoRA + 3-shot | 3858987 | **48.46** | **29.62** | **73.98** | **41.77** | 30.55 | 21.64 |
+| **9B + gold-LoRA, 0-shot, no lang-hint** | 3866054 | 46.60 | 28.40 | 73.35 | 38.06 | 34.73 | 25.09 |
 | **9B + gold-LoRA, 0-shot** | 3857589 | 46.44 | 29.06 | 72.89 | 37.38 | 34.62 | 26.56 |
 | 9B 3-shot, no lang-hint | 3859645 | 35.33 | 25.64 | 69.27 | 11.07 | 34.64 | 25.97 |
 | 9B 3-shot | 3822329 | 35.30 | 25.55 | 69.38 | 10.96 | 35.30 | 27.64 |
@@ -136,27 +144,32 @@ test task). `qa-oeg long-form` = OEG (n=97). `qa-oeg short-answer` = aya (n=978)
 the two qa-oeg columns — they are opposite ends of one spectrum, and dev weights them backwards
 (978 rows for ~13% of the task, 97 for ~87%).
 
-### ❌ 2026-07-17: distillation did not pay off — and the comparison is confounded
+### ❌ 2026-07-17: distillation did not pay off — the comparison is now clean
 
 **Teacher distillation lost to plain gold SFT on both columns that decide anything.** Adapter
 trained by job 3864945 on `data/sft-distilled.jsonl` (11,915 rows, Qwen3.5-35B-A3B teacher,
 30/70 filter + gold-only belebele), `--no-lang-hint`; scored 0-shot by job 3865036.
 
-| Sub-task (test rows it routes) | distilled | gold-LoRA | Δ |
-|---|---|---|---|
-| `qa-context` — MCIF, faithful (8,640) | 51.26 | **62.55** | **−11.29** |
-| `qa-oeg` long-form — OEG (~2,051) | 34.23 | **46.44** | **−12.21** |
-| `qa-oeg` short-answer — aya (~308) | **36.01** | 34.62 | +1.39 |
+The comparison was originally confounded — distilled changed the data *and* dropped the lang-hint,
+while gold-LoRA 3857589 was hinted. **Job 3866054 removed the confound**: gold-LoRA scored 0-shot
+with `--no-lang-hint`, so both sides now differ only in training data. The hint costs the adapter
+essentially nothing (see the matched column), so the full ~12-point loss is the teacher data.
 
-It beats plain 3-shot on `qa-context` (51.26 vs 45.73) but is **last of all five systems** on
-long-form. Its one win, short-answer, is +0.71 over 3-shot on the end of the spectrum worth ~13%
-of qa-oeg. **No routing changes: gold-LoRA keeps `qa-context` and `qa-oeg`.**
+| Sub-task (test rows it routes) | distilled 3865036 | gold-LoRA +hint 3857589 | gold-LoRA no-hint 3866054 | Δ (matched, vs 3866054) |
+|---|---|---|---|---|
+| `qa-context` — MCIF, faithful (8,640) | 51.26 | 62.55 | **63.18** | **−11.92** |
+| `qa-oeg` long-form — OEG (~2,051) | 34.23 | 46.44 | **46.60** | **−12.37** |
+| `qa-oeg` short-answer — aya (~308) | **36.01** | 34.62 | 34.73 | +1.28 |
 
-> ⚠️ **This is a two-variable comparison — do not read it as "the teacher data is bad."** The
-> distilled run changed the data *and* dropped the lang-hint; gold-LoRA 3857589 was lang-hinted.
-> "Lang-hint is ~free to drop" was measured on the **3-shot** baseline (3859645 vs 3822329), and
-> that was never shown to transfer to an adapter. A clean A/B — distilled *with* the hint, or
-> gold-LoRA *without* — is needed before blaming the distillation itself.
+The two gold columns are within 0.6 COMBINED everywhere — **dropping the lang-hint on the adapter
+is ~free**, the same result the 3-shot base showed (3859645 vs 3822329), now confirmed on an
+adapter for the first time. So the matched Δ against 3866054 (−11.92, −12.37, +1.28) is the honest
+one and it is barely moved from the confounded −11.29/−12.21/+1.39: **the teacher data is the
+cause, not the hint.** The distilled adapter beats plain 3-shot on `qa-context` (51.26 vs 45.73)
+but is **last of all systems** on long-form; its one win, short-answer, is +0.71 over 3-shot on the
+~13% end of qa-oeg. **No routing changes: gold-LoRA keeps `qa-context` and `qa-oeg`, and the whole
+routing table is now known to be lang-hint-invariant — so its hinted gold-LoRA numbers are
+directly comparable to `run_test.py`'s no-hint inference.**
 
 **Checked and false: the length hypothesis.** The eval flags −57% word-budget undershoot on
 long-form, which looks like the cause, but it is not distilled-specific — median prediction is
@@ -448,6 +461,7 @@ below are the ones that survived into the merge):
 |---|---|---|---|---|---|---|---|---|
 | 3864945 | 2026-07-16 | distilled-adapter **SFT** | Qwen3.5-9B, `lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint` | 11,915 train rows | — | — | — | ✅ **Completed 2026-07-17 01:53, 6h10** (the ~6h15 projection held). `train_loss` 0.5706, 2 epochs, no divergence. Log confirms `format=test (no lang-hint)`, 20 rows truncated at 2,048 tok. Adapter → `$HOME/MIST-26/adapters/qwen3.5-9b-qa-lora-3864945` — **$HOME only; it does not exist in the atuin clone.** |
 | 3865036 | 2026-07-17 | distilled-adapter **dev eval** | LoRA from 3864945, shots=0, **`--no-lang-hint`** | 2978 | 27.16 | 84.96 | 53.85 | ✅ **Completed 05:14, 3h21** — half the ~6h52 projected from 3857589. Chained on `--dependency=afterok:3864945`. **These overall numbers are the 71%-noise legacy ones; the verdict is the sub-task table above — MCIF −11.29 and OEG −12.21 vs gold-LoRA.** Submitted from the **atuin** clone against the **$HOME** adapter; only the absolute path made that correct (see the note below). |
+| 3866054 | 2026-07-17 | **gold-LoRA no-hint A/B** (the missing baseline) | gold adapter 3822375, shots=0, **`--no-lang-hint`** | 2978 | 25.09 | 78.45 | 44.85 | ✅ **Completed 20:00, 5h29.** The one-variable A/B that de-confounds 3865036: matched to the gold-LoRA it now differs from *only* in lang-hint (3857589), it moves ≤0.6 COMBINED on every routing column (MCIF 63.18 vs 62.55, OEG 46.60 vs 46.44, aya 34.73 vs 34.62). **So the hint is ~free on the adapter, and the distilled loss is the teacher data — see the sub-task table above.** First run under the fixed `--lora` path: log banner prints `adapter: /home/hpc/.../adapters/qwen3.5-9b-qa-lora-3822375` (absolute). |
 
 > **⚠️ This row is NOT the one-variable A/B it was originally planned as.** It used to read
 > "same recipe as 3822375/3857589, one variable (training targets)". That is no longer true:
@@ -470,10 +484,11 @@ below are the ones that survived into the merge):
 > dropping the hint is near-free for the **base** model at 3-shot, which is not an adapter
 > trained with the hint. Deferred, not resolved.
 >
-> **2026-07-17 — this is now the top of the queue, not a nice-to-have.** The distilled adapter
-> lost on both decisive columns, and with two variables in play that result cannot be attributed.
-> The eval-only run above (3822375 adapter, `--no-lang-hint`, ~6.9h, no retraining) both restores
-> the one-variable A/B *and* measures the adapter in the format `run_test.py` actually feeds.
+> **2026-07-17 — RESOLVED by job 3866054.** The eval-only run above (3822375 adapter,
+> `--no-lang-hint`, ran 5h29) is now in the tables. It confirms the hint is ~free on the adapter
+> (≤0.6 COMBINED vs hinted 3857589 on every routing column), so 3865036's ~12-point loss is the
+> teacher data, not the dropped hint — and the whole routing table's hinted gold-LoRA numbers are
+> now known to be directly comparable to `run_test.py`'s no-hint inference. No baseline outstanding.
 
 > **Sharp edge, fixed 2026-07-17 (post-mortem: IMPLEMENTATION_NOTES).** 3865036 was submitted
 > from the atuin clone against an adapter that exists only in `$HOME`. It was correct **by luck**:
