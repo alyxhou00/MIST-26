@@ -108,6 +108,22 @@ def main() -> None:
                          "on top of --model before generation. Omit for the base model.")
     args = ap.parse_args()
 
+    # An adapter lives next to the clone that trained it, so a *relative* --lora resolves against
+    # whichever clone submitted the job -- it silently misses, or finds a stale adapter, when
+    # training and eval run from different clones (job 3865036 was submitted from the atuin clone
+    # against an adapter trained in $HOME, and only an absolute path saved it). Resolve and check
+    # here, before the dataset and the base model load, so a bad path costs seconds and not GPU
+    # hours -- and print the resolved path so the log records what was actually scored.
+    lora_dir = None
+    if args.lora:
+        lora_dir = Path(args.lora).resolve()
+        if not (lora_dir / "adapter_config.json").is_file():
+            raise SystemExit(
+                f"--lora {args.lora}: no adapter_config.json under {lora_dir}, so this is not a "
+                f"trained adapter dir. Adapters are written next to the clone that trained them; "
+                f"pass an absolute path when submitting from a different clone."
+            )
+
     # --- data: qa subset, 80/20 split, evaluate on dev ---
     df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
     qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
@@ -126,6 +142,7 @@ def main() -> None:
         dev = dev[dev["lang_code"] == args.lang]
     if args.limit:
         dev = dev.head(args.limit)
+    print(f"model: {args.model}  adapter: {lora_dir or 'none (base model)'}")
     print(f"dev examples: {len(dev)}  shots={args.shots}  "
           f"(source={args.source}, lang={args.lang}, limit={args.limit or 'none'})")
     if len(dev) == 0:
@@ -140,9 +157,9 @@ def main() -> None:
     model = AutoModelForImageTextToText.from_pretrained(
         args.model, torch_dtype=torch.bfloat16, device_map="cuda"
     )
-    if args.lora:
+    if lora_dir:
         from peft import PeftModel
-        model = PeftModel.from_pretrained(model, args.lora)
+        model = PeftModel.from_pretrained(model, str(lora_dir))
     model = model.eval()
 
     # --- generation ---

@@ -78,21 +78,28 @@ audited rather than taken on the mean's word.
 | System | job | **COMBINED** | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
 |---|---|---|---|---|---|---|
 | **9B + gold-LoRA, 0-shot** | 3857589 | **62.55** | **49.26** | **86.41** | **51.98** | *21.82 / 57.92* |
+| 9B + distilled LoRA, 0-shot, no lang-hint | 3865036 | 51.26 | 39.23 | 78.53 | 36.02 | *13.33 / 39.39* |
 | 9B 3-shot | 3822329 | 45.73 | 34.61 | 74.38 | 28.19 | *0.61 / 28.15* |
 | 9B 3-shot, no lang-hint | 3859645 | 44.66 | 33.80 | 73.55 | 26.63 | *0.61 / 27.16* |
 | 9B + gold-LoRA + 3-shot | 3858987 | 40.16 | 20.98 | 69.89 | 29.61 | *12.12 / 29.70* |
 
 **The adapter sweeps every component — chrF +14.6, BERTScore +12.0, ROUGE-L +23.8, and EM 36×.**
-Nothing dissents, so the choice of rule is irrelevant here: any of them picks the adapter.
+Nothing dissents, so the choice of rule is irrelevant here: any of them picks the adapter — and
+the gold adapter, not the distilled one, which lands 11.29 COMBINED short of it (see below).
 
 **`qa-context` — ❌ tydiqa, the UNFAITHFUL proxy (monolingual, n=615). Do not route on this.**
 
 | System | job | COMBINED | chrF | BERT | ROUGE-L | *(diag: EM / F1)* |
 |---|---|---|---|---|---|---|
-| 9B 3-shot | 3822329 | **47.87** | 38.94 | 70.67 | 34.00 | *8.13 / 33.18* |
+| 9B + distilled LoRA, 0-shot, no lang-hint | 3865036 | **64.61** | 54.55 | 87.33 | 51.96 | *53.01 / 69.76* |
+| 9B 3-shot | 3822329 | 47.87 | 38.94 | 70.67 | 34.00 | *8.13 / 33.18* |
 | 9B 3-shot, no lang-hint | 3859645 | 44.02 | 34.39 | 67.91 | 29.76 | *5.37 / 26.83* |
 | 9B + gold-LoRA, 0-shot | 3857589 | 33.36 | 19.53 | 63.01 | 17.53 | *15.61 / 23.90* |
 | 9B + gold-LoRA + 3-shot | 3858987 | 26.73 | 14.46 | 56.20 | 9.52 | *2.76 / 9.62* |
+
+**The distilled adapter tops this column by 16.7 and is mid-pack on the faithful one** — a clean
+demonstration of why this table is quarantined. Ranking on tydiqa would pick the system that
+`qa-context` (8,640 test rows, 96% cross-lingual) says is 11.29 COMBINED *worse*.
 
 **This column is where the whole chrF-vs-EM argument lived**, and it inverts the faithful one —
 which is the point: it is a different task. The old pooled numbers reconcile exactly: gold-LoRA's
@@ -106,9 +113,9 @@ invisible here. EM is ~0 for every system on 175-word golds and is not reported.
 |---|---|---|---|---|---|---|---|
 | 9B + gold-LoRA + 3-shot | 3858987 | **48.46** | **29.62** | **73.98** | **41.77** | 30.55 | 21.64 |
 | **9B + gold-LoRA, 0-shot** | 3857589 | 46.44 | 29.06 | 72.89 | 37.38 | 34.62 | 26.56 |
-| 9B 3-shot, no lang-hint | 3859645 | 35.33 | 25.64 | 69.27 | 11.07 | **34.64** | 25.97 |
+| 9B 3-shot, no lang-hint | 3859645 | 35.33 | 25.64 | 69.27 | 11.07 | 34.64 | 25.97 |
 | 9B 3-shot | 3822329 | 35.30 | 25.55 | 69.38 | 10.96 | 35.30 | 27.64 |
-| 9B + distilled LoRA, 0-shot | 3864945 | _pending_ | | | | | |
+| 9B + distilled LoRA, 0-shot, no lang-hint | 3865036 | 34.23 | 23.76 | 68.31 | 10.62 | **36.01** | 27.16 |
 
 > ⚠️ **Open, surfaced by the new rule:** on the long-form end `adapter+3-shot` now scores
 > *highest* (48.46 vs the adapter's 46.44) — it always led OEG on chrF, and ROUGE-L widens it.
@@ -119,11 +126,49 @@ invisible here. EM is ~0 for every system on 175-word golds and is not reported.
 > so its OEG lead is a lucky OOD result on n=97, and the distilled adapter is trained 0-shot in
 > test format, which would make demos OOD for *it* too. Revisit only with the distilled adapter's
 > numbers in hand, and only if n=97 is judged enough to move 2,051 test rows.
+>
+> **Still open, and the distilled numbers did not settle it** (2026-07-17): the distilled adapter
+> came in *last* on long-form (34.23), so the choice on qa-oeg is still gold-LoRA 0-shot vs
+> gold-LoRA+3-shot on n=97. Nothing here moves it.
 
 Proxies: `qa-context` = **MCIF only** (n=165; tydiqa is reported above but does not proxy the
 test task). `qa-oeg long-form` = OEG (n=97). `qa-oeg short-answer` = aya (n=978). Never average
 the two qa-oeg columns — they are opposite ends of one spectrum, and dev weights them backwards
 (978 rows for ~13% of the task, 97 for ~87%).
+
+### ❌ 2026-07-17: distillation did not pay off — and the comparison is confounded
+
+**Teacher distillation lost to plain gold SFT on both columns that decide anything.** Adapter
+trained by job 3864945 on `data/sft-distilled.jsonl` (11,915 rows, Qwen3.5-35B-A3B teacher,
+30/70 filter + gold-only belebele), `--no-lang-hint`; scored 0-shot by job 3865036.
+
+| Sub-task (test rows it routes) | distilled | gold-LoRA | Δ |
+|---|---|---|---|
+| `qa-context` — MCIF, faithful (8,640) | 51.26 | **62.55** | **−11.29** |
+| `qa-oeg` long-form — OEG (~2,051) | 34.23 | **46.44** | **−12.21** |
+| `qa-oeg` short-answer — aya (~308) | **36.01** | 34.62 | +1.39 |
+
+It beats plain 3-shot on `qa-context` (51.26 vs 45.73) but is **last of all five systems** on
+long-form. Its one win, short-answer, is +0.71 over 3-shot on the end of the spectrum worth ~13%
+of qa-oeg. **No routing changes: gold-LoRA keeps `qa-context` and `qa-oeg`.**
+
+> ⚠️ **This is a two-variable comparison — do not read it as "the teacher data is bad."** The
+> distilled run changed the data *and* dropped the lang-hint; gold-LoRA 3857589 was lang-hinted.
+> "Lang-hint is ~free to drop" was measured on the **3-shot** baseline (3859645 vs 3822329), and
+> that was never shown to transfer to an adapter. A clean A/B — distilled *with* the hint, or
+> gold-LoRA *without* — is needed before blaming the distillation itself.
+
+**Checked and false: the length hypothesis.** The eval flags −57% word-budget undershoot on
+long-form, which looks like the cause, but it is not distilled-specific — median prediction is
+**82 words vs gold-LoRA's 76** (golds are 175). So the 3.5× ROUGE-L gap (10.62 vs 37.38) happens
+at *equal length*: it is a content/language difference, not verbosity. Do not "fix" it by asking
+for longer answers.
+
+**Untested hypothesis, recorded so it is not mistaken for a finding.** The distilled mix is 38%
+belebele + 21% tydiqa — 59% of training data on the two proxies this file quarantines as
+non-predictive — against 6% MCIF + 3% OEG. The column it wins (aya) is 32% of the mix; the column
+it loses worst (OEG) is 3%. That is the same "dev weights it backwards" error, possibly now baked
+into the training data — but it is a correlation over five points, not a result.
 
 ### ⚠️⚠️ `qa-context`: the dev proxy is 79% the WRONG TASK — measured 2026-07-16
 
@@ -308,7 +353,7 @@ teacher outputs as targets instead.
 | 3857589 | 2026-07-14/15 | full LoRA SFT dev-set eval | Qwen3.5-9B + LoRA adapter 3822375, shots=0 | 2978 | 26.56 | 79.15 | 48.00 | `lora_eval.sbatch`, 6h52. Below 9B 3-shot on chrF (27.64) but above it on BERTScore (77.79) and ROUGE-L (43.79). Strongly complementary per-source vs 3-shot: belebele 52.70→**85.82**, MCIF 34.61→**49.26**, OEG 25.55→**29.06** (ROUGE-L 10.96→37.38 — gold-SFT *does* move OEG, unlike prompting), but tydiqa **38.94→19.53** (below even the 0-shot base's 21.88) and aya 24.19→21.95. |
 | 3858987 + 3861569 | 2026-07-15 | LoRA adapter + few-shot dev eval (k=3) | Qwen3.5-9B + LoRA adapter 3822375, shots=3 | 2978 | 21.64 | 68.41 | 28.78 | `lora_eval.sbatch ... --shots 3`. **The demos and the adapter fight each other** — worse than *either* component alone on every source but OEG. vs plain 3-shot / adapter-0-shot: belebele 52.70/85.82→**26.66**, MCIF 34.61/49.26→**20.98**, tydiqa 38.94/19.53→**14.46**, aya 24.19/21.95→**19.94**; only OEG holds up (25.55/29.06→29.62, n=97). The hypothesis this run tested — demos recover tydiqa while the adapter keeps its belebele/MCIF/OEG gains — is dead: demos don't recover tydiqa, they sink it below adapter-only. Best explanation: the adapter was fine-tuned 0-shot (`train_lora.py` uses no demos), so a few-shot prompt is a format it never saw in training; it has specialised to 0-shot and the demos are out-of-distribution. **Do not stack the two.** Job 3858987 hit its 10h limit *after* generating all 2,978 rows but before scoring; the predictions CSV survived and 3861569 re-scored it in 59s (`evaluate.sbatch runs/predictions-lora-3858987.csv`) — scores above are from that. |
 
-## LoRA SFT on distilled data — teacher outputs + gold mix (in progress)
+## LoRA SFT on distilled data — teacher outputs + gold mix (❌ ran 2026-07-17; lost to gold SFT)
 
 Key finding from the 9B runs above: few-shot's gain is almost entirely *answer format*
 (belebele chrF 17.69→52.70, tydiqa 21.88→38.94) while open-ended generation (aya) stays flat
@@ -401,8 +446,8 @@ below are the ones that survived into the merge):
 
 | Job ID | Date | Experiment | Model / config | n | chrF | BERTScore | ROUGE-L | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 3864945 | 2026-07-16 | distilled-adapter **SFT** | Qwen3.5-9B, `lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint` | 11,915 train rows | _running_ | | | Log confirms `format=test (no lang-hint)`, 20 rows truncated at 2,048 tok. Trainer's own bar: ~15 s/step × 1,490 → **~6h15, ETA 2026-07-17 ~02:00 CEST**. Adapter → `$HOME/MIST-26/adapters/qwen3.5-9b-qa-lora-3864945`. |
-| 3865036 | 2026-07-17 | distilled-adapter **dev eval** | LoRA from 3864945, shots=0, **`--no-lang-hint`** | 2978 | _queued_ | | | Chained: `--dependency=afterok:3864945`, so it starts itself and only if the SFT exits clean. ~6h52 (cf. 3857589) → **ETA ~09:00 CEST**. `--no-lang-hint` is mandatory here: it must match how 3864945 was trained. |
+| 3864945 | 2026-07-16 | distilled-adapter **SFT** | Qwen3.5-9B, `lora_sft.sbatch --data data/sft-distilled.jsonl --no-lang-hint` | 11,915 train rows | — | — | — | ✅ **Completed 2026-07-17 01:53, 6h10** (the ~6h15 projection held). `train_loss` 0.5706, 2 epochs, no divergence. Log confirms `format=test (no lang-hint)`, 20 rows truncated at 2,048 tok. Adapter → `$HOME/MIST-26/adapters/qwen3.5-9b-qa-lora-3864945` — **$HOME only; it does not exist in the atuin clone.** |
+| 3865036 | 2026-07-17 | distilled-adapter **dev eval** | LoRA from 3864945, shots=0, **`--no-lang-hint`** | 2978 | 27.16 | 84.96 | 53.85 | ✅ **Completed 05:14, 3h21** — half the ~6h52 projected from 3857589. Chained on `--dependency=afterok:3864945`. **These overall numbers are the 71%-noise legacy ones; the verdict is the sub-task table above — MCIF −11.29 and OEG −12.21 vs gold-LoRA.** Submitted from the **atuin** clone against the **$HOME** adapter; only the absolute path made that correct (see the note below). |
 
 > **⚠️ This row is NOT the one-variable A/B it was originally planned as.** It used to read
 > "same recipe as 3822375/3857589, one variable (training targets)". That is no longer true:
@@ -424,6 +469,21 @@ below are the ones that survived into the merge):
 > shape of mismatch that cost 3858987 five chrF. 3859645 does *not* cover this: it showed
 > dropping the hint is near-free for the **base** model at 3-shot, which is not an adapter
 > trained with the hint. Deferred, not resolved.
+>
+> **2026-07-17 — this is now the top of the queue, not a nice-to-have.** The distilled adapter
+> lost on both decisive columns, and with two variables in play that result cannot be attributed.
+> The eval-only run above (3822375 adapter, `--no-lang-hint`, ~6.9h, no retraining) both restores
+> the one-variable A/B *and* measures the adapter in the format `run_test.py` actually feeds.
+
+> **Sharp edge, fixed 2026-07-17 (post-mortem: IMPLEMENTATION_NOTES).** 3865036 was submitted
+> from the atuin clone against an adapter that exists only in `$HOME`. It was correct **by luck**:
+> the submit line happened to use an absolute path, and `lora_sft.sbatch`'s own copy-paste hint
+> printed a *relative* one, which would have resolved inside the atuin clone and hit either
+> nothing or the stale 3822375. `benchmark.py` also never logged which adapter it loaded, so the
+> only record was `sacct --format=SubmitLine`. Now: `benchmark.py` resolves `--lora` to an
+> absolute path, rejects a dir with no `adapter_config.json` before the dataset or base model
+> loads, and prints `model: … adapter: <abs>`; `lora_sft.sbatch` and `train_lora.py` emit
+> absolute paths in their hints.
 
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a

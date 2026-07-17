@@ -245,8 +245,10 @@ def main() -> None:
 
     model.save_pretrained(str(out_dir))  # adapter-only (PeftModel.save_pretrained), not the base model
     tok.save_pretrained(str(out_dir))
-    print(f"adapter saved -> {out_dir}")
-    print(f"evaluate it with:  python scripts/benchmark.py --lora {out_dir} "
+    # Absolute, so the hint stays correct when it is copy-pasted from a different clone than the
+    # one that trained here -- see the note in slurm/lora_sft.sbatch.
+    print(f"adapter saved -> {out_dir.resolve()}")
+    print(f"evaluate it with:  python scripts/benchmark.py --lora {out_dir.resolve()} "
           f"--out runs/predictions-lora.csv  &&  "
           f"python scripts/evaluate.py runs/predictions-lora.csv")
 

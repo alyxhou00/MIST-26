@@ -12,10 +12,16 @@
 # later) without retraining. Zero-shot by default (--shots 0, benchmark.py's own default),
 # matching how the adapter was trained (see scripts/train_lora.py) -- directly comparable to
 # the 0-shot/few-shot baselines.
-# Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU):
-#     sbatch slurm/lora_eval.sbatch adapters/qwen3.5-9b-qa-lora-<jobid> [extra benchmark.py flags]
+# Run from the repo root ($WORK/MIST-26) on Alex (NHR@FAU), and give the adapter as an ABSOLUTE
+# path -- lora_sft.sbatch prints one ready to paste:
+#     sbatch slurm/lora_eval.sbatch /home/hpc/.../MIST-26/adapters/qwen3.5-9b-qa-lora-<jobid> [flags]
+# A relative path resolves against *this* clone, but the adapter lives next to the clone that
+# trained it, which is not always the same one (job 3865036, submitted from atuin against a
+# $HOME-trained adapter, was only correct because the path was absolute). benchmark.py now
+# rejects a --lora dir with no adapter_config.json rather than let a mismatch reach the GPU.
 # Everything after the adapter dir is passed through to benchmark.py, e.g. `--shots 3` to
-# evaluate the adapter combined with few-shot demonstrations.
+# evaluate the adapter combined with few-shot demonstrations, or `--no-lang-hint` to match an
+# adapter trained in the test format.
 # Assumes slurm/setup.sh has been (re-)run since it now also installs peft (requirements.txt)
 # and caches Qwen3.5-9B -- see README.
 #

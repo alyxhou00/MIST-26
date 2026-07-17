@@ -63,5 +63,10 @@ case "${1:-}" in
   *)     ADAPTER="$1"; shift ;;
 esac
 python scripts/train_lora.py --out "$ADAPTER" "$@"
-echo "adapter: $ADAPTER"
-echo "next:  sbatch slurm/lora_eval.sbatch $ADAPTER"
+# Hand on an *absolute* path: the adapter is written next to whichever clone ran this job, and
+# the eval is not always submitted from that same clone (job 3865036 was submitted from atuin
+# against this job's $HOME-trained adapter). A relative path in a copy-pasted hint resolves
+# against the submitting clone and finds nothing -- or, worse, a stale adapter of the same name.
+ADAPTER_ABS="$(readlink -f "$ADAPTER")"
+echo "adapter: $ADAPTER_ABS"
+echo "next:  sbatch slurm/lora_eval.sbatch $ADAPTER_ABS"
