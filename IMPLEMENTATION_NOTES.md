@@ -219,11 +219,15 @@ number PEFT reports), adapted per task type at inference time ("routing"). The o
 test set gives `task` ∈ {qa-context, qa-oeg, sum-sum} per row, so routing on it is
 explicitly legal:
 
-| Test task | Planned serving config | Why |
+Serving config (final, 2026-07-16/17 — supersedes the original 3-shot/distilled plan):
+
+| Test task | Serving config | Why |
 |---|---|---|
-| `qa-context` | base + 3-shot demonstrations (prompting) | few-shot's +35 chrF on format-heavy dev sources; teaches extraction format, incl. calibrating the "no answer" escape |
-| `qa-oeg` | base + distilled LoRA adapter | prompting is flat on open-ended rows (aya 24.03→24.19); only better training targets move it |
+| `qa-context` | base + **gold-LoRA adapter 3822375, 0-shot** | resolved 2026-07-16: on MCIF (the only faithful proxy) the adapter sweeps all four metrics vs 3-shot (chrF 49.26 vs 34.61, EM 21.82 vs 0.61). The old 3-shot plan was based on belebele, which the test set does not contain. |
+| `qa-oeg` | base + **gold-LoRA adapter 3822375, 0-shot** | gold-SFT banks the OEG gain (29.06 vs 3-shot 25.55). The distilled adapter was meant to take this route but **lost the A/B** (§5.4): last on OEG. |
 | `sum-sum` | teammate's system (same base if joint submission) | not ours |
+
+Both qa routes are the **same** gold adapter at 0-shot with no lang-hint — one adapter, and its dev numbers are directly comparable to `run_test.py`'s no-hint inference (confirmed lang-hint-invariant, job 3866054). Do **not** stack the adapter with few-shot demos (§5.4 / EXPERIMENTS: they fight, 21.64).
 
 Inference-time additions planned: fastText LID gate (detect wrong-language output →
 resample), optionally best-of-N with self-judging for the aggressive submission variant.
@@ -267,7 +271,9 @@ Key structure in these numbers (per-source figures in EXPERIMENTS.md):
   even the untuned base's 21.88). Whether the two stack is being measured right now
   (adapter + 3-shot, job 3858987).
 - Gold-SFT *does* move the OEG source (contradicting our earlier aya-only reading) — but
-  aya proper stays flat, so distillation remains the OEG lever.
+  aya proper stays flat. This was read as "distillation is still the OEG lever"; **that bet was
+  tested and lost** (§5.4, jobs 3865036/3866054): the distilled adapter came in last on OEG. The
+  gold-SFT adapter 3822375 already banks the OEG gain and keeps the route.
 
 ## 4. Test-set alignment (roadmap A) — what changed our plans
 
@@ -378,7 +384,18 @@ The OEG golds are GPT-4.1 outputs: median **175 words**, with markdown (`**bold*
 `qa-oeg`, the gold is already a strong model's verbose answer, and the human-eval argument
 for preferring teacher style over gold style largely does not apply there.
 
-### 5.4 The distillation value cross (open strategic question)
+### 5.4 The distillation value cross (RESOLVED 2026-07-17 — the argument held)
+
+> **Measured verdict (jobs 3865036 + 3866054): distillation LOST to plain gold SFT** on both
+> columns that decide anything — `qa-context` MCIF **−11.92** COMBINED, `qa-oeg` long-form OEG
+> **−12.37**, `qa-oeg` short-answer aya **+1.28** (matched Δ, both sides `--no-lang-hint`). This is
+> the crossing below, now measured: the one column the distilled adapter wins (aya) does not reach
+> the test set, and it is *last of all systems* on OEG, the column that does. The confound
+> ("distilled also dropped the lang-hint") was closed by 3866054 — the gold adapter re-scored
+> `--no-lang-hint` moved ≤0.6 COMBINED from its hinted self, so the ~12-point loss is the **teacher
+> data**, not the hint. **No routing change: gold-LoRA 3822375 keeps `qa-context` and `qa-oeg`.**
+> Full tables in EXPERIMENTS.md ("distillation did not pay off"). The argument below predicted this
+> and is kept as the reasoning of record.
 
 Distillation's premise is "the teacher's answer is a better training target than the gold".
 Lining that premise up against where each source actually lands at test time
@@ -398,12 +415,14 @@ trained on those same GPT-4.1 golds. The distilled adapter's marginal value on `
 therefore "how much better than GPT-4.1 is the 122B", filtered down to the subset that
 resembles GPT-4.1.
 
-This is an argument, not a measurement. It could be wrong: §5.1 found the 122B was the only
-teacher to get both knowledge probes right, so it may genuinely beat GPT-4.1 on some rows,
-and the human-eval channel is not captured by any number we have. But roadmap B's headline
-bet — "distillation is the lever, OEG is the scoring headroom" — rests on thinner evidence
-than the plan records, and the merged filter report (per-source pass rates on real data) is
-the thing that should settle it before we commit training time.
+This was an argument, not a measurement — and it warned it could be wrong: §5.1 found the 122B
+was the only teacher to get both knowledge probes right, so it might genuinely beat GPT-4.1 on
+some rows, and the human-eval channel is not captured by any number we have. **We committed the
+training time anyway (user's call) and measured it: the argument held** (verdict box above). Roadmap
+B's headline bet — "distillation is the lever, OEG is the scoring headroom" — did not survive contact
+with the proxies; the distilled adapter came in *last* on OEG. The human-eval caveat is the one live
+thread the automatic metrics cannot close, but it is not enough on its own to deploy an adapter that
+loses ~12 COMBINED on the faithful proxy.
 
 ### 5.5 Per-source thresholds are now required, not optional
 

@@ -100,8 +100,10 @@ Implications: (a) the test prompt already tells the model the output language, s
 lang-hint system turn is redundant-at-best there — **measured (job 3859645): dropping it
 costs 25.97 vs 27.64 overall, but the loss is almost entirely belebele (52.70→32.42), which
 does not transfer; on the sources the test set actually has, the cost is under 1 chrF and
-OEG is +0.09. The test format can be used as-is**; (b) instruction-following — especially
-non-English length control — is directly scored, validating roadmap C.
+OEG is +0.09. The test format can be used as-is** (and job 3866054 later confirmed this on the
+gold **adapter** too, not just the base — ≤0.6 COMBINED on every routing column, so the whole
+routing table is comparable to `run_test.py`'s no-hint inference); (b) instruction-following —
+especially non-English length control — is directly scored, validating roadmap C.
 
 ## 5. No multiple-choice anywhere
 
@@ -245,9 +247,9 @@ otherwise passes them through verbatim. 8 rows of 10,999 — not worth a hack; w
 | Roadmap item | Verdict after analysis |
 |---|---|
 | A (test-format alignment) | Done — `run_test.py` + this analysis. Dev A/B without lang-hint = job **3859645** (not 3859058): dropping the hint is ~free on the sources that matter (§4). |
-| B (distillation) | Unchanged priority, but see §5c for what each teacher run covers: the 122B run is 91% aya, so it is **not** a ready-made `qa-oeg` training set, and only 363 train rows match the `qa-oeg` regime. OEG is 2,359 test rows of mostly-unfixed headroom on the thinnest data we have. |
+| B (distillation) | ❌ **Done and lost (2026-07-17, jobs 3865036/3866054):** the distilled adapter fell ~12 COMBINED short of plain gold SFT on both faithful columns (MCIF, OEG) and won only aya, which does not reach the test set. The lang-hint confound was closed by 3866054, so the loss is the teacher data. **No route change; gold-LoRA 3822375 keeps both qa tasks.** The §5c warning held: the 122B run is 91% aya, only 363 train rows match `qa-oeg`, so OEG stayed the thinnest link and distillation did not fix it. See IMPLEMENTATION_NOTES §5.4. |
 | C (instruction following) | **Upgraded from "nice" to "scored"**: format constraints are on every `qa-context` prompt; numeric word budgets are on **21% of `qa-oeg`** (§4), not all of it. Length control fails today. Augment SFT data with word-budget/format constraints + rewritten targets. |
 | D (Bhojpuri kit) | **Confirmed essential** (drift is real). Only one surprise language — target bho specifically. |
 | E (routing) | Legal and easy (`task` given). Route on the *faithful* proxies only (§5b) — ⚠️ **and tydiqa is not one of them**, which is the correction that settled this row. **`qa-context` → adapter, 0-shot** (MCIF, the only cross-lingual proxy: adapter wins EM 21.82 vs 0.61, F1 57.92 vs 28.15, chrF 49.26 vs 34.61, BERTScore 86.41 vs 74.38 — nothing dissents). ~~tydiqa says plain 3-shot (38.94 vs adapter 19.53)~~ — retracted 2026-07-16: monolingual, ~4% of the sub-task. **`qa-oeg` → adapter** (OEG: 29.06 vs 3-shot 25.55). belebele wins do not transfer; aya proxies only qa-oeg's short tail and must not drive the qa-oeg choice on its own. |
 | F (LID gate) | Directly addresses observed bho drift; cheap. |
-| G (3 submissions) | Unchanged: primary = distilled+routed, variant = 9B 3-shot safe bet, variant = aggressive. |
+| G (3 submissions) | Updated 2026-07-17: primary = **gold-LoRA 3822375 + routed** (distillation lost, row B), variant = 9B 3-shot safe bet, variant = aggressive. |
