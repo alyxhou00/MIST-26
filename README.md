@@ -93,17 +93,50 @@ with strategic implications in [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md)):
   (TEST_SET_ANALYSIS §6). The earlier bug — all 100 English `qa-oeg` prompts empty — was
   **fixed upstream on 15 July**; re-download if your `tests.jsonl` predates that.
 
+## The rebuilt train/dev set (v2, 2026-07-17)
+
+The original 80/20 row split of `samples.jsonl` leaks parallel items across dev/train
+(DATA_AUDIT.md §2) and no sample source matches the test-set format (§4). The v2 set fixes
+both: **`data/train_v2.jsonl` (18,901 rows) + `data/dev_v2.jsonl` (4,748 rows)**, built by
+[`scripts/build_dataset.py`](scripts/build_dataset.py) — gitignored like all of `data/`;
+rebuild them locally (fully deterministic, seed 42):
+
+```bash
+# inputs: data/samples.jsonl (sample download above), data/tests.jsonl (test download above),
+# plus two upstream pulls (see build_dataset.py's docstring for the exact curl commands):
+#   data/upstream/belebele/{24 langs}.jsonl   <- facebook/belebele (parallel items + eng)
+#   data/upstream/tydiqa/{train,validation}.parquet <- copenlu/answerable_tydiqa (unanswerables)
+PYTHONPATH=scripts python scripts/build_dataset.py
+```
+
+Schema: `task` (**exact test names**: `qa-context` / `qa-oeg` / `sum-sum`), `question_lang`
+(bare code — question *and* answer language, the test invariant), `context_lang` (null for
+qa-oeg; CrossSum unknown), `source`, `input`, `output`, `item_group`. **The dev/train side is
+a pure function of `item_group`** — every language version of one underlying item (MCIF talk,
+OEG prompt, belebele passage, tydiqa question/document cluster, aya duplicate cluster) shares
+one group, so no dev item has a train twin. Highlights: belebele and tydiqa are re-synthesized
+from upstream into the attested test `qa-context` layout (lead-in + passage + question +
+constraint tail, literal `\n\n` separators, boilerplate mined per-language from `tests.jsonl`
+by `constraint_bank.py`), including **unanswerable rows** whose gold is the exact per-language
+refusal phrase (7% belebele / 20% tydiqa — the sample had zero); OEG's shuffled-per-language
+parallel prompts were manually aligned ([`scripts/oeg_alignment.py`](scripts/oeg_alignment.py));
+tydiqa tel/swh/tha (languages absent from the test set) and ~38 cross-lingual aya rows are
+dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fresh in
+[`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) — no old dev number is comparable.**
+
 ## Layout
 
 | Path | Contents |
 |------|----------|
-| [`scripts/`](scripts) | `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA), `run_test.py` (official test-set inference → submission JSONL), `train_lora.py` (LoRA SFT), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown) |
+| [`scripts/`](scripts) | `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA), `run_test.py` (official test-set inference → submission JSONL), `train_lora.py` (LoRA SFT), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown), `build_dataset.py` (the v2 train/dev build), `constraint_bank.py` (test-attested per-language boilerplate/constraints), `oeg_alignment.py` (OEG cross-language item alignment) |
 | [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (Qwen3.5-2B full dev runs), `0shot-9b.sbatch` / `fewshot-9b.sbatch` (Qwen3.5-9B), `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT), `run_test.sbatch` (official test set), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` / `smoke-9b.sbatch` / `smoke-lora.sbatch` / `smoke-run-test.sbatch` (cheap A/Bs and pipeline checks); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
 | `adapters/` | gitignored scratch dir for trained LoRA adapters (`train_lora.py --out`), same reasoning as `runs/` |
-| [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log -- one row per SLURM job ID, with its config and chrF/BERTScore/ROUGE-L |
+| [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log for the OLD (row-split, leaky) dev — closed 2026-07-17, kept for the verdicts that survive; one row per SLURM job ID |
+| [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) | the experiment log for the v2 item-split set — all new runs go here |
+| [`DATA_AUDIT.md`](DATA_AUDIT.md) | full-enumeration audit of the sample data (leakage, formats, coverage) + the v2 rebuild record (§7) |
 | [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md) | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically |
 
 `$WORK/mist-out` (outside the repo) was the old location for predictions CSVs before this

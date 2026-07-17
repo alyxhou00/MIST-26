@@ -228,6 +228,49 @@ def context_tail(lang: str, test_file: str = DEFAULT_TEST_FILE) -> ContextTail:
     raise ValueError(f"{lang}: no quoted refusal phrase in {refusal!r}")
 
 
+@lru_cache(maxsize=None)
+def _heads(test_file: str) -> dict[str, tuple[str, str]]:
+    """{question_lang: (lead-in, question-intro)} of the qa-context layout
+    `<lead-in>\\n\\n<passage>\\n\\nThe question is: <q>\\n\\n<tail>` (SEP is the literal
+    backslash-n pair). The lead-in must be unique per language (it is, all 24); the
+    question-intro is the longest common prefix of segment 3 and must end in ':' (ASCII or
+    fullwidth) -- both checked, so a layout change in the test file fails loudly here."""
+    rows = [json.loads(l) for l in open(test_file, encoding="utf-8")]
+    leads: dict[str, set[str]] = {}
+    intros: dict[str, str] = {}
+    for r in rows:
+        if r["task"] != "qa-context" or not r["prompt"].strip():
+            continue
+        segs = r["prompt"].split(SEP)
+        if len(segs) != 4:
+            raise ValueError(f"{r['id']}: expected 4 qa-context segments, got {len(segs)}")
+        lang = r["question_lang"]
+        leads.setdefault(lang, set()).add(segs[0])
+        p = intros.get(lang, segs[2])
+        while not segs[2].startswith(p):
+            p = p[:-1]
+        intros[lang] = p
+    out = {}
+    for lang, ls in leads.items():
+        if len(ls) != 1:
+            raise ValueError(f"{lang}: expected 1 distinct qa-context lead-in, found {len(ls)}")
+        intro = intros[lang]
+        if not intro.rstrip().endswith((":", "：")):
+            raise ValueError(f"{lang}: question-intro prefix {intro!r} does not end in a colon")
+        out[lang] = (next(iter(ls)), intro)
+    return out
+
+
+def lead_in(lang: str, test_file: str = DEFAULT_TEST_FILE) -> str:
+    """The attested qa-context lead-in for `lang` ('I have a question about this passage:')."""
+    return _heads(test_file)[lang][0]
+
+
+def question_intro(lang: str, test_file: str = DEFAULT_TEST_FILE) -> str:
+    """The attested question prefix for `lang` ('The question is: ', trailing space kept)."""
+    return _heads(test_file)[lang][1]
+
+
 def measure(text: str, lang: str) -> int:
     """Length of `text` in `lang`'s own budget unit: characters for jpn/zho (which count 字
     and are not space-delimited), whitespace-delimited words everywhere else."""
@@ -408,6 +451,15 @@ def selftest(test_file: str) -> int:
             continue
         print(f"  ok   {lang}: refusal={t.refusal_phrase!r}")
         print(f"         one-sentence: {t.one_sentence}")
+
+    # 5. lead-in + question-intro: unique lead-in and a colon-terminated intro per language.
+    print("\nqa-context lead-in | question-intro (mined, used by build_dataset.py):")
+    for lang in langs:
+        try:
+            print(f"  ok   {lang}: {lead_in(lang, test_file)[:44]!r} | {question_intro(lang, test_file)!r}")
+        except Exception as e:  # noqa: BLE001
+            print(f"  FAIL {lang}: {type(e).__name__}: {e}")
+            fails += 1
 
     print(f"\n{'FAILED: ' + str(fails) + ' check(s)' if fails else 'all checks passed'}")
     return 1 if fails else 0

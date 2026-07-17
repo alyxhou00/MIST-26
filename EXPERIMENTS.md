@@ -1,5 +1,10 @@
 # Experiment log
 
+> 🔒 **CLOSED 2026-07-17.** This log's dev split leaks parallel items across dev/train
+> (DATA_AUDIT.md §2) — every adapter-vs-prompting margin here is optimistic. New runs go to
+> [EXPERIMENTS_NEW.md](EXPERIMENTS_NEW.md) on the v2 item-split dataset; which old verdicts
+> survive (and which don't) is listed at the top of that file. Do not add rows here.
+
 One row per SLURM job on the `qa` sub-task dev split (n=2978 unless narrowed by `--source`/
 `--lang`/`--limit`). The job ID is the join key across `logs/<jobname>-<jobid>.out`,
 `runs/predictions-*-<jobid>.csv` (or `predictions/predictions-<jobid>.csv` once promoted), and

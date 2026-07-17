@@ -153,3 +153,60 @@ material, wrong as an answer language.
    survives; the MCIF sweep is 4-metrics-unanimous and EM 36×, hard to explain by
    leakage alone, but the honest number awaits the item-split dev). Numbers that carry
    over to the new dev: none — new dev = new baseline runs (hence EXPERIMENTS_NEW.md).
+
+## 7. The rebuild (2026-07-17) — what was actually built
+
+`scripts/build_dataset.py` (seed 42, deterministic) → `data/train_v2.jsonl` **18,901** +
+`data/dev_v2.jsonl` **4,748** (dev fraction 0.201 of item groups). Schema: task /
+question_lang / context_lang / source / input / output / **item_group** (the split is a pure
+function of item_group; C-augmented variants must inherit it). User decisions folded in:
+pull upstream belebele + answerable_tydiqa **yes**; drop tydiqa tel/swh/tha and the
+script-detectable cross-lingual aya rows **yes** (38 found: hin 36, kor 1, mar 1 — the
+Latin-target residue is undetectable without LID and stays); keep belebele monolingual rows
+(4%, the test's own 340/8,640); dev = 20% of item groups.
+
+Facts established during the build (beyond §1–§6):
+
+- **Upstream belebele is fully parallel**: 900 items × all 24 needed languages keyed by
+  (flores URL, question_number) — verified identical key sets for eng/zho/ckb. **No
+  `bho_Deva`** in belebele's 122 languages: bho stays covered only by roadmap D's pack.
+- **32% of belebele questions reference the MC options** ("which of the following …",
+  282/900 items on the parallel English question) — unanswerable once the options are
+  dropped (all the "would NOT be…" ones) and phrased like nothing in the test set. Dropped
+  at the item level; 618 items kept × 10 sampled question langs ≈ 270 rows/lang.
+- **Context languages are sampled from the test's own qa-context marginal** (eng 27.8%,
+  arb/spa/zho 6.9% each, …, measured from tests.jsonl ids; bho excluded, unavailable), 4%
+  monolingual. 7% of belebele rows are made unanswerable by a same-side passage swap; gold
+  = the attested per-language refusal phrase.
+- **`copenlu/answerable_tydiqa` upstream is 50/50 answerable/unanswerable in every
+  language**, `document_plaintext` is already passage-sized (p50 48 words), and
+  `answer_start` is exact (500/500 sampled). v2 takes 240 answerable + 60 unanswerable
+  per kept language (8 langs), passages filtered to 20–200 words (char band for jpn),
+  item groups = union-find over (question, document URL).
+- **OEG's per-language row order is shuffled** — index-alignment across languages is
+  wrong (old dev's implicit assumption; e.g. sample row 30 is "holiday" in eng, "school
+  system" in deu, "time zones" in zho). The 46×10 parallel structure was aligned by
+  reading all 460 prompts (`scripts/oeg_alignment.py`, permutation-asserted, selftest on
+  the two budgets that survive localization: 300-word article, 200-word job posting).
+  Prompts are *localized*, not just translated (Vltava/Volga/Citarum/鴨川 for the river
+  item; 13-line poem is 10 verses in ces, 50-word story is 125 chars in jpn).
+- **MCIF item groups span both portions**: group = talk; the 21 QA talks sit inside the
+  100 sum talks, so a dev talk is dev for qa-context *and* sum-sum (4 QA + 16 sum-only
+  talks in dev).
+- **CrossSum's context_lang is null**: the sample doesn't record the article language and
+  article-hash grouping cannot catch translated-parallel articles across languages — if
+  the sum split ever becomes load-bearing, re-pull the upstream pairing metadata
+  (teammate's call).
+- **Post-build audit (independent, from the output files): all green** — no item_group in
+  both files; no dev synthesized passage/question string anywhere in train; no dev MCIF
+  talk in train; no verbatim dev input in train; every synthesized row carries the exact
+  attested boilerplate (4 literal-`\n\n` segments). Two informational findings, both
+  verified benign: 171 monolingual belebele golds are passage *paraphrases* (belebele
+  options paraphrase; §3's "verbatim in input" was about the old options-in-input format),
+  and 42 synthesized golds fail a script heuristic because they are Latin proper
+  nouns/acronyms (ASUS, Deutsche Bank, …).
+- **Dev composition**: qa-context 1,915 (23 q-langs, 70% cross-lingual) + qa-oeg 1,034
+  (19 q-langs) + sum-sum 1,799. ⚠️ qa-oeg dev is still aya-heavy (944 aya vs 90 OEG rows
+  for a test that is ~87% OEG-shaped) — **weight at scoring time** (0.87·OEG + 0.13·aya),
+  don't average the pool; OEG has only 46 items and giving dev more of them would starve
+  train of the only long-form source.

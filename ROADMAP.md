@@ -110,10 +110,16 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
    - **這就是使用者說「We need an whole new train/dev set」的理由**：唯一忠實的跨語言 QA 來源只有
      MCIF，n=165，而且是 TED 逐字稿、答案是句子長度（不是 `evaluate.py` header 假設的 2 詞抽取
      —— 那個假設來自 tydiqa，我們**沒有**測試集 gold）。
-3. **C 尚未套用**：`data/sft-distilled.jsonl` 已產出（前提滿足），但⚠️ **基礎蒸餾已敗給 gold SFT
-   （2026-07-17，見 B 列/§5.4）**，所以「C+D 要疊在哪個 substrate 上」變成待決：疊在已輸的
-   distilled 混料上，還是改疊在 gold 混料（3822375 的訓練資料）上？跑 `augment_constraints.py` 產
-   `-c.jsonl` 再跟 `data/sft-bho.jsonl` 串起來練的**機制**不變，變的是輸入。等使用者定 substrate。
+   - ✅ **重建完成（2026-07-17）**：`data/{train,dev}_v2.jsonl`（item-split、測試版型、含拒答訊號），
+     `scripts/build_dataset.py` 可重現；決策記錄在 DATA_AUDIT.md §7，新實驗一律記
+     EXPERIMENTS_NEW.md（舊 dev 數字全部不可比）。v2 之後 qa-context 的 dev proxy 不再只剩 MCIF ——
+     belebele-v2 / tydiqa-v2 都是測試版型（跨語言、含 unanswerable），但仍分欄看。
+3. **C 的 substrate 已定案（使用者決定，2026-07-17）：疊在 v2 重建資料集上**（不是 distilled、
+   也不是舊 gold 混料）。`data/train_v2.jsonl` 已建成（`scripts/build_dataset.py`，DATA_AUDIT §7）——
+   本身已內建測試版型＋拒答訊號（belebele 7% / tydiqa 20% 拒答列，per-language 精確字串），C 的
+   `augment_constraints.py` 只需補 qa-oeg 端的字數預算增強；⚠️ 增強列必須**繼承原列的
+   `item_group`**（split 是 item_group 的純函數，混進 `data/sft-bho.jsonl` 時 bho 列自成 group）。
+   待辦 #5（拒答字串沒被訓練路徑用過）隨 v2 一併解掉。
 4. **D 的 bho 資料還沒被模型看過** — 8,009 列已就緒但尚未進任何一次 SFT；
    `bho_lid.py` 可在 eval 後直接量「輸出到底是不是 bho」。
 5. **拒答字串**（`constraint_bank.context_tail(lang).refusal_phrase`）目前只是被抽出來，
