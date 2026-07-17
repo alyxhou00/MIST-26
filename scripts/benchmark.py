@@ -12,6 +12,8 @@ chat template, and writes a predictions CSV. Scoring is a separate step -- run
     python scripts/benchmark.py --out runs/my-run.csv          # choose where predictions are written
     python scripts/benchmark.py --model Qwen/Qwen3.5-9B --temperature 0.7 --top-p 0.8  # a bigger base
     python scripts/benchmark.py --lora adapters/qwen3.5-9b-qa-lora-<jobid>  # a LoRA-SFT'd model
+    python scripts/benchmark.py --data data/dev_v2.jsonl --no-lang-hint     # v2 item-split dev
+    python scripts/benchmark.py --data data/dev_v2.jsonl --train-data data/train_v2.jsonl --shots 3
 
 Flags: --shots (few-shot demonstrations per example, default 0 = zero-shot) · --limit (cap dev
 rows) · --source (substring on `source`) · --lang (exact lang_code) · --[no-]lang-hint
@@ -27,9 +29,21 @@ import csv
 import zlib
 from pathlib import Path
 
-from datasets import load_dataset
-
 from prompt_template import build_messages
+
+
+def load_rows(path: str):
+    """Load a prepared JSONL (e.g. data/dev_v2.jsonl) into the frame shape this script
+    expects. The v2 schema's `question_lang` is renamed to `lang_code` (bare codes work --
+    prompt_template accepts both), and sum-sum rows are dropped: this benchmark is qa-only,
+    the sum task is the teammate's."""
+    import pandas as pd
+    df = pd.read_json(path, lines=True)
+    if "question_lang" in df.columns:
+        df = df.rename(columns={"question_lang": "lang_code"})
+    if "task" in df.columns:
+        df = df[df["task"] != "sum-sum"]
+    return df.reset_index(drop=True)
 
 
 def make_shot_picker(train, k: int, seed: int):
@@ -106,6 +120,17 @@ def main() -> None:
     ap.add_argument("--lora", default=None,
                     help="path to a trained LoRA adapter (from scripts/train_lora.py) to load "
                          "on top of --model before generation. Omit for the base model.")
+    ap.add_argument("--data", default=None,
+                    help="JSONL of dev rows (e.g. data/dev_v2.jsonl) evaluated INSTEAD of the "
+                         "HF sample's internal 80/20 dev split. Accepts the v2 schema "
+                         "(question_lang -> lang_code; sum-sum rows dropped). The old internal "
+                         "split leaks parallel items (DATA_AUDIT.md #2) -- v2 runs must pass "
+                         "this.")
+    ap.add_argument("--train-data", default=None,
+                    help="JSONL pool for --shots demonstrations (e.g. data/train_v2.jsonl). "
+                         "Required when --shots is used together with --data: the internal "
+                         "train split does not exist in that mode, and mixing pools would "
+                         "reintroduce the leakage v2 removed.")
     args = ap.parse_args()
 
     # An adapter lives next to the clone that trained it, so a *relative* --lora resolves against
@@ -124,16 +149,27 @@ def main() -> None:
                 f"pass an absolute path when submitting from a different clone."
             )
 
-    # --- data: qa subset, 80/20 split, evaluate on dev ---
-    df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
-    qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
-    dev = qa.iloc[: int(len(qa) * 0.2)]
-    # Few-shot demonstrations come from the *other* 80% (the train split), so a dev example
-    # can never appear among its own shots and the dev metric stays honest.
+    # --- data: either prepared JSONL files (v2, item-split) or the legacy internal split ---
     pick_shots = None
-    if args.shots:
-        train = qa.iloc[int(len(qa) * 0.2):]
-        pick_shots = make_shot_picker(train, args.shots, args.seed)
+    if args.data:
+        dev = load_rows(args.data)
+        if args.shots:
+            if not args.train_data:
+                raise SystemExit("--shots together with --data needs --train-data "
+                                 "(e.g. data/train_v2.jsonl); see the flag's help.")
+            pick_shots = make_shot_picker(load_rows(args.train_data), args.shots, args.seed)
+    else:
+        # legacy: qa subset, row-level 80/20 split (leaky across parallel items --
+        # DATA_AUDIT.md #2; kept only so old numbers stay reproducible)
+        from datasets import load_dataset
+        df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
+        qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
+        dev = qa.iloc[: int(len(qa) * 0.2)]
+        # Few-shot demonstrations come from the *other* 80% (the train split), so a dev example
+        # can never appear among its own shots and the dev metric stays honest.
+        if args.shots:
+            train = qa.iloc[int(len(qa) * 0.2):]
+            pick_shots = make_shot_picker(train, args.shots, args.seed)
     # Optional filters, applied within the dev split so we still only ever touch dev rows.
     # --limit is applied last, so it caps whatever the filters leave.
     if args.source:

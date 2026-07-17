@@ -54,6 +54,8 @@ export TRANSFORMERS_OFFLINE=1
 # runs don't overwrite each other -- same relative path locally and on the cluster.
 mkdir -p runs
 CSV="runs/predictions-0shot-9b-$SLURM_JOB_ID.csv"
-python scripts/benchmark.py --model Qwen/Qwen3.5-9B --temperature 0.7 --top-p 0.8 --out "$CSV"
+# Extra args go straight to benchmark.py (same convention as fewshot-9b.sbatch), e.g. the v2
+# item-split baseline:  sbatch slurm/0shot-9b.sbatch --data data/dev_v2.jsonl --no-lang-hint
+python scripts/benchmark.py --model Qwen/Qwen3.5-9B --temperature 0.7 --top-p 0.8 --out "$CSV" "$@"
 python scripts/evaluate.py "$CSV"          # prints chrF/BERTScore/ROUGE-L (overall + per-source + per-language)
 # Both scripts' stdout+stderr are captured by SLURM into logs/%x-%j.out (see --output above).

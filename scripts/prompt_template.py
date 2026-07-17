@@ -88,8 +88,12 @@ def build_messages(input_text: str, lang_code: str, lang_hint: bool = True,
     """
     messages = []
     if lang_hint:
+        # Accept both the sample data's script-suffixed codes ("hin_Deva") and the test
+        # set / v2 dataset's bare codes ("hin") -- data/{train,dev}_v2.jsonl use the latter.
         if lang_code in LANG_NAMES:
             lang = LANG_NAMES[lang_code]
+        elif lang_code in TEST_LANG_NAMES:
+            lang = TEST_LANG_NAMES[lang_code]
         else:
             lang = lang_code
             _warn_unknown(lang_code)

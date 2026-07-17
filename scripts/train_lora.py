@@ -186,6 +186,15 @@ def main() -> None:
     if args.data:
         import pandas as pd
         train = pd.read_json(args.data, lines=True)
+        # v2 schema (data/train_v2.jsonl): question_lang -> lang_code (bare codes are fine,
+        # prompt_template accepts both) and drop sum-sum -- qa adapters train on qa only.
+        if "question_lang" in train.columns:
+            train = train.rename(columns={"question_lang": "lang_code"})
+        if "task" in train.columns:
+            n0 = len(train)
+            train = train[train["task"] != "sum-sum"].reset_index(drop=True)
+            if len(train) != n0:
+                print(f"dropped {n0 - len(train)} sum-sum rows (the sum task is the teammate's)")
     else:
         df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
         qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
