@@ -41,6 +41,35 @@ re-establish.
 
 ## Runs
 
-| job | config | qa-context: belebele-v2 / tydiqa-v2 / MCIF | qa-oeg: OEG / aya (0.87/0.13 agg) | notes |
-|---|---|---|---|---|
-| _none yet_ | | | | |
+All scores are **COMBINED** = mean(chrF, BERTScore, ROUGE-L) per source column, computed
+from the per-source lines in the job log. qa-oeg agg = 0.87·OEG + 0.13·aya. Refusal columns
+(new in v2): FR = false-refusal rate on answerable belebele+tydiqa rows; RH = refusal-hit
+rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis note below).
+
+| job | date | config | belebele-v2 | tydiqa-v2 | MCIF | OEG | aya | qa-oeg agg | FR | RH | notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 3867141 | 07-18 | 9B base, 0-shot, no hint (run_test-equivalent) | 34.40 | 51.51 | 42.44 | 34.30 | 33.84 | 34.24 | 7.3% | 74.6% | dev_v2 qa (n=2,949), 4h00. Clean generations (0% runaway). |
+| 3867142 | 07-18 | 9B base, 3-shot (train_v2 pool), no hint | **37.25** | **57.37** | **45.67** | 34.40 | 34.95 | **34.47** | 11.5% | **92.7%** | 3h41. Demos help everywhere on qa-context; qa-oeg ≈ flat (mirrors the old set). Trade-off: refusal-hit 93% but false-refusals up (tydiqa 17.7%). |
+| 3867139 | 07-18 | LoRA SFT on train_v2 qa (11,674 rows, no hint, recipe = 3822375) | — | — | — | — | — | — | — | — | train_loss 0.9656, 6h19, 23 rows truncated \@2048. Adapter: `adapters/qwen3.5-9b-qa-lora-3867139` ($WORK clone). |
+| 3867140 | 07-18 | ↑ adapter, 0-shot, no hint | ~~24.76~~ | ~~39.96~~ | ~~36.73~~ | ~~40.73~~ | ~~32.16~~ | ~~39.62~~ | 0% | 3.9% | 9h13. 🔴 **INVALID as a data verdict — 66% of predictions are runaway generations** (answer, then hallucinated `\nuser\n…\nassistant\n<think>` turns as plain text; belebele 76%, aya 64%, tydiqa 55%, MCIF 47%, OEG 24%). Truncated re-score = 3869088 below. Also: refusal training signal did NOT take (RH 3.9% despite 7%/20% refusal rows). |
+| 3869088 | 07-18 | ↑ same CSV, predictions truncated at the first runaway marker, re-scored | **44.33** | **72.04** | **50.95** | **40.53** | **36.43** | **39.99** | 0% | 3.9% | 3-min re-score of 3867140's CSV (1,934/2,949 rows truncated). **The v2-trained adapter beats base AND 3-shot on every column of the honest item-split dev** — the adapter-over-prompting verdict survives leakage removal, but ONLY together with an inference-side stop fix (truncation was applied post-hoc here; base runs are unaffected at 0% runaway). Margins over 3-shot: belebele +7.1, tydiqa +14.7, MCIF +5.3, qa-oeg agg +5.5. Open sores: refusal-hit still 3.9% (the 7%/20% refusal rows didn't take — next lever), aya chrF is *below* base (17.11 vs 23.69) while its BERTScore/ROUGE are up — style shift, watch it. |
+
+### 🔴 The runaway-generation artifact (found 2026-07-18) — and it retro-explains the old logs
+
+The v2 adapter's collapse is **not** (primarily) about the v2 data: re-checking the OLD
+adapters' prediction CSVs with the same `\nuser|\nassistant|<think>` detector shows the
+gold adapter 3857589 already ran away on **78% of tydiqa and 56% of aya** rows (belebele
+2.7%, MCIF 0%) — **the old "adapter collapses on tydiqa 38.94→19.53" finding was this
+artifact, not a capability loss**. The distilled no-hint adapter 3865036 was much cleaner
+(2–10%). Pattern: sources with SHORT free-form golds run away; templated (old belebele
+"2: option") or long golds don't. v2 turned belebele into short free-form answers, which
+is why the artifact went from "quarantined to tydiqa/aya" to "everywhere".
+
+Mechanism checked (locally, Qwen3.5-9B tokenizer): `train_lora.py`'s label span is
+correct — prefix is an exact token prefix, labels cover answer + `<|im_end|>` — so EOS
+*is* trained; the fine-tuned model still under-samples it after short answers at
+T=0.7/top-p 0.8. Sampled continuations reproduce the chat template as plain text and
+often contain OTHER questions about the same passage. Fix direction: stop-strings /
+post-hoc truncation at inference (benchmark.py + run_test.py), and possibly more eos
+weight at training. The truncated re-score below measures the adapter with the artifact
+removed; a proper inference-side fix must land before any submission uses an adapter.

@@ -4,6 +4,12 @@
 > (DATA_AUDIT.md §2) — every adapter-vs-prompting margin here is optimistic. New runs go to
 > [EXPERIMENTS_NEW.md](EXPERIMENTS_NEW.md) on the v2 item-split dataset; which old verdicts
 > survive (and which don't) is listed at the top of that file. Do not add rows here.
+>
+> ⚠️ **Retro-diagnosis 2026-07-18** (details in EXPERIMENTS_NEW.md): the gold adapter's
+> famous "tydiqa collapse" (38.94→19.53, job 3857589) was a **runaway-generation artifact**
+> — 78% of its tydiqa and 56% of its aya predictions continue past the answer into
+> hallucinated chat turns — not a capability loss. Read every adapter-row tydiqa/aya score
+> here with that in mind.
 
 One row per SLURM job on the `qa` sub-task dev split (n=2978 unless narrowed by `--source`/
 `--lang`/`--limit`). The job ID is the join key across `logs/<jobname>-<jobid>.out`,

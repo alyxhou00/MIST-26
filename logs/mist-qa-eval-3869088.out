@@ -1,0 +1,132 @@
+### Starting TaskPrologue of job 3869088 on a0522 at Sat Jul 18 18:32:58 CEST 2026
+Running on cores 16-31 with governor performance
+Sat Jul 18 18:32:58 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:25:00.0 Off |                  Off |
+|  0%   33C    P8             21W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+scoring: runs/predictions-lora-3867140-trunc.csv
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/199 [00:00<00:04, 43.43it/s]Loading weights:  13%|█▎        | 26/199 [00:00<00:02, 66.71it/s]Loading weights:  17%|█▋        | 33/199 [00:00<00:02, 63.99it/s]Loading weights:  29%|██▉       | 58/199 [00:00<00:01, 93.16it/s]Loading weights:  34%|███▎      | 67/199 [00:00<00:01, 78.39it/s]Loading weights:  38%|███▊      | 75/199 [00:01<00:01, 73.04it/s]Loading weights:  46%|████▌     | 92/199 [00:01<00:01, 85.63it/s]Loading weights:  51%|█████     | 101/199 [00:01<00:01, 82.98it/s]Loading weights:  55%|█████▌    | 110/199 [00:01<00:01, 63.43it/s]Loading weights:  63%|██████▎   | 126/199 [00:01<00:00, 76.89it/s]Loading weights:  68%|██████▊   | 135/199 [00:01<00:00, 73.19it/s]Loading weights:  73%|███████▎  | 146/199 [00:01<00:00, 77.39it/s]Loading weights:  78%|███████▊  | 155/199 [00:02<00:00, 78.39it/s]Loading weights:  83%|████████▎ | 165/199 [00:02<00:00, 71.34it/s]Loading weights:  87%|████████▋ | 173/199 [00:02<00:00, 62.59it/s]Loading weights:  90%|█████████ | 180/199 [00:02<00:00, 52.09it/s]Loading weights: 100%|██████████| 199/199 [00:02<00:00, 74.04it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+file: runs/predictions-lora-3867140-trunc.csv
+n = 2949
+
+=== BY TEST SUB-TASK (use these to compare systems) ===
+
+qa-context (cross-lingual)  (proxy: MCIF; n=160)
+  ✅ FAITHFUL -- matches the 96% of test qa-context that is cross-lingual
+  chrF =  36.42   BERTScore =  80.99   ROUGE-L =  35.44
+  COMBINED =  50.95   <- the selection score (mean of the three; see combined() for what it does and doesn't weigh)
+  (diagnostic: Exact Match =  10.00   token F1 =  40.33; 21% of golds are 1-2 words -> EM is capped low here, read it as the short-gold slice only)
+  word budget: no budgeted rows here (expected on dev; the metric is for test outputs / C-augmented data)
+
+qa-context (monolingual)  (proxy: answerable_tydiqa; n=485)
+  ❌ UNFAITHFUL -- monolingual; ~4% of the test sub-task. Do not route on this.
+  chrF =  72.05   BERTScore =  92.43   ROUGE-L =  51.63
+  COMBINED =  72.04   <- the selection score (mean of the three; see combined() for what it does and doesn't weigh)
+  (diagnostic: Exact Match =  68.66   token F1 =  78.53; 57% of golds are 1-2 words)
+  word budget: 0.0% of 5 budgeted rows in band (mean overshoot -85%)
+
+qa-oeg (long-form)  (proxy: wmt25-mist-oeg-gpt-4.1; n=90)
+  chrF =  23.84   BERTScore =  70.37   ROUGE-L =  27.37
+  COMBINED =  40.53   <- the selection score (mean of the three; see combined() for what it does and doesn't weigh)
+  word budget: 30.0% of 20 budgeted rows in band (mean overshoot -40%)
+
+qa-oeg (short-answer)  (proxy: aya_dataset; n=944)
+  chrF =  17.11   BERTScore =  73.14   ROUGE-L =  19.03
+  COMBINED =  36.43   <- the selection score (mean of the three; see combined() for what it does and doesn't weigh)
+  word budget: 0.0% of 4 budgeted rows in band (mean overshoot +128%)
+
+excluded from the above (1270 rows, 43% of this file) -- these do not predict test performance:
+  facebook/belebele                   n= 1270  multiple choice; the test set has none at all
+
+=== overall (LEGACY -- 71% noise, do not compare systems on this) ===
+overall chrF      = 20.87
+overall BERTScore = 79.83
+overall ROUGE-L   = 27.52
+
+by source:
+  CohereLabs/aya_dataset              n=  944  chrF= 17.11  BERTScore= 73.14  ROUGE-L= 19.03
+  FBK-MT/MCIF                         n=  160  chrF= 36.42  BERTScore= 80.99  ROUGE-L= 35.44
+  copenlu/answerable_tydiqa           n=  485  chrF= 72.05  BERTScore= 92.43  ROUGE-L= 51.63
+  facebook/belebele                   n= 1270  chrF= 28.86  BERTScore= 80.51  ROUGE-L= 23.63
+  wmt25-mist-oeg-gpt-4.1              n=   90  chrF= 23.84  BERTScore= 70.37  ROUGE-L= 27.37
+
+by language (best to worst chrF):
+  fin          n=  129  chrF= 56.89  BERTScore= 86.24  ROUGE-L= 58.28
+  eng          n=  172  chrF= 38.05  BERTScore= 86.33  ROUGE-L= 58.97
+  ind          n=  192  chrF= 35.67  BERTScore= 84.14  ROUGE-L= 54.82
+  slk          n=   47  chrF= 34.47  BERTScore= 80.23  ROUGE-L= 40.15
+  deu          n=  155  chrF= 30.40  BERTScore= 77.47  ROUGE-L= 34.01
+  fra          n=   70  chrF= 26.72  BERTScore= 72.86  ROUGE-L= 24.64
+  pes          n=   64  chrF= 25.49  BERTScore= 80.64  ROUGE-L=  4.69
+  ita          n=  163  chrF= 23.79  BERTScore= 77.17  ROUGE-L= 33.22
+  rus          n=  172  chrF= 23.72  BERTScore= 80.57  ROUGE-L= 29.04
+  hat          n=   55  chrF= 23.57  BERTScore= 76.84  ROUGE-L= 30.90
+  spa          n=  112  chrF= 23.17  BERTScore= 78.20  ROUGE-L= 36.55
+  ckb          n=   59  chrF= 21.27  BERTScore= 85.61  ROUGE-L=  2.37
+  tur          n=  120  chrF= 20.90  BERTScore= 74.50  ROUGE-L= 27.50
+  ces          n=   60  chrF= 20.20  BERTScore= 79.58  ROUGE-L= 39.76
+  zho          n=  160  chrF= 20.09  BERTScore= 82.77  ROUGE-L= 11.08
+  arb          n=  162  chrF= 19.83  BERTScore= 80.06  ROUGE-L= 14.34
+  por          n=  114  chrF= 19.01  BERTScore= 79.86  ROUGE-L= 39.94
+  ben          n=  129  chrF= 17.21  BERTScore= 83.86  ROUGE-L=  2.95
+  vie          n=  118  chrF= 17.06  BERTScore= 76.46  ROUGE-L= 39.60
+  jpn          n=  171  chrF= 16.66  BERTScore= 83.19  ROUGE-L= 17.08
+  hin          n=  114  chrF= 13.92  BERTScore= 73.08  ROUGE-L=  5.52
+  kor          n=  177  chrF= 10.89  BERTScore= 80.75  ROUGE-L=  9.57
+  yor          n=  112  chrF=  9.50  BERTScore= 70.95  ROUGE-L= 18.42
+  mar          n=  122  chrF=  8.52  BERTScore= 74.64  ROUGE-L=  6.06
+=== JOB_STATISTICS ===
+=== current date     : Sat Jul 18 18:36:09 CEST 2026
+= Job-ID             : 3869088 on alex
+= Job-Name           : mist-qa-eval
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/slurm/evaluate.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 00:30:00
+= Elapsed runtime    : 00:03:14
+= Total RAM usage    : 5.5 GiB of assigned  GiB (%)
+= Node list          : a0522
+= Subm/Elig/Start/End: 2026-07-18T18:32:53 / 2026-07-18T18:32:53 / 2026-07-18T18:32:54 / 2026-07-18T18:36:08
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              44.9G   104.9G   209.7G        N/A     179K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin            38.0G     0.0K     0.0K        N/A   1,205                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:25:00.0, 4089035, 9 %, 4 %, 2714 MiB, 107236 ms
