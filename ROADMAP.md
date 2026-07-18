@@ -4,8 +4,10 @@ The strategy brainstorm from 2026-07-14 (the day the test set dropped), kept ver
 the plan of record, plus a live status column. Detailed findings live in
 [TEST_SET_ANALYSIS.md](TEST_SET_ANALYSIS.md) (test-set facts),
 [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md) ("System Architecture" section: measured
-numbers, 10B accounting, distillation pipeline, infra rules), and
-[EXPERIMENTS.md](EXPERIMENTS.md) (per-job results). 繁中原文保留 — 這是計畫的原始語言。
+numbers, 10B accounting, distillation pipeline, infra rules),
+[EXPERIMENTS_NEW.md](EXPERIMENTS_NEW.md) (per-job results on the v2 item-split dev — the
+live log) and [EXPERIMENTS.md](EXPERIMENTS.md) (the closed pre-v2 log; its dev leaks,
+DATA_AUDIT.md §2). 繁中原文保留 — 這是計畫的原始語言。
 
 ## 改變策略的關鍵事實（2026-07-14）
 
@@ -14,15 +16,22 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 2. **測試 prompt 是 self-contained，還內嵌字數限制、風格要求等額外指令** — 我們的訓練/推理是用
    自家模板（外加 lang-hint system turn），存在 train/test 格式落差。
    （07-15 實證更新：*每一筆*測試 prompt 都有內嵌指令，含「無答案」逃生門和「用 X 語回答」結尾；
-   字數預算**每個語言都有、但只在 21% 的 qa-oeg 列上**（各語言精確 21/100，因為 qa-oeg 是
-   100 個 prompt 翻 24 語的平行語料；471/2,359 — 2026-07-15 對官方檔案實測。先前寫「24 語全有」
-   本身沒錯，但易被誤讀成「每列都有」）— 見 TEST_SET_ANALYSIS.md §4。）
+   字數預算**每個語言都有、但只在 20% 的 qa-oeg prompt 上**（各語言精確 **20/100**，因為 qa-oeg 是
+   100 個 prompt 翻 24 語的平行語料；parser 找到 465/2,359 列 ±5%。本段先前寫 21/100、471 列 ——
+   07-16 已在 TEST_SET_ANALYSIS §4 更正（第 21 條是俳句的 5-7-5 格式約束、不是字數預算），
+   這裡當時漏改）— 見 TEST_SET_ANALYSIS.md §4。）
 3. **`task` 欄位在測試時直接給你**（qa-context / qa-oeg / sum-sum）— 按任務路由合法，一個 9B
    底座掛多個 LoRA adapter 依任務切換完全在 10B 限制內（實測帳：9.44B + 0.029B/adapter，
    IMPLEMENTATION_NOTES §2）。
 4. **別再看 dev 的整體分數做決定 —— 但也別過度修剪 dev**（2026-07-16 修訂）。
    dev 是我們的「模擬考」，但題型分佈跟真正的考試不同，所以**總分是假的**。要**分 sub-task 看**，
    而且每個 sub-task 用對的指標。
+
+   > ⚠️ **本條的表格與列數是 v1（洩漏的舊 dev）時代的，07-17 起被 v2 取代**，保留當歷史。
+   > v2 之後：dev = `data/dev_v2.jsonl`（2,949 qa 列），**belebele-v2（1,270）與 tydiqa-v2（485）
+   > 已重製成測試版型（跨語言、含拒答列），是合法的 qa-context proxy**，不再「零預測力」；
+   > MCIF（160）仍是長 context 端的 proxy。qa-oeg 聚合 = **0.87·OEG(90) + 0.13·aya(944)**，
+   > 絕不混池。規則與現行數字見 EXPERIMENTS_NEW.md；「總分是假的」與「分 sub-task 看」不變。
 
    | source | dev 列數 | 代表什麼 |
    |---|---|---|
@@ -52,28 +61,31 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
      100% 的任務。
    - **教訓：qa-oeg 只有 100 個 unique prompt**（平行語料翻 24 語）——要下關於它的結論，
      就把 100 個全部讀完，別抽樣外推。細節見 TEST_SET_ANALYSIS §5b。
-5. **驚喜語言 bho（Bhojpuri）** — 訓練資料零筆；fra/swh/tel/tha 從測試集消失（別再為它們優化）。
+5. **驚喜語言 bho（Bhojpuri）** — sample 訓練資料零筆；fra/swh/tel/tha 從測試集消失（別再為它們優化）。
    每隊可交 3 份輸出（primary + 2 variants），可以對沖。
-   （07-15 更新：最終測試集確認只有這一個驚喜語言。）
+   （07-15 更新：最終測試集確認只有這一個驚喜語言。07-18 更新：D 的 8,009 列 bho pack
+   已隨 3869129 進 SFT——「零筆」自此不成立。）
 
 ## 方法清單（按投報比排序）＋ 現況
 
 | # | 方法 | 原始計畫 | 現況（2026-07-15 晚） |
 |---|---|---|---|
 | A | **對齊測試格式**（必做，投報比最高） | 寫 `run_test.py` 讀官方 JSONL、直接餵 self-contained prompt、輸出 `{id, output}`；dev 改「測試格式」重跑 sanity check — lang-hint 拿掉後大跌就表示依賴自家模板 | ✅ **完成並收尾**。`run_test.py`＋sbatch 就緒、TEST_SET_ANALYSIS.md 文件化。**lang-hint 依賴度 A/B 已出（3859645）：拿掉幾乎不痛 → 可直接用無 hint 的測試格式，不必重練。** ✅ **2026-07-17 在 adapter 上也證實了（3866054）**：gold adapter 用 `--no-lang-hint` 重測，三個 routing 欄都在開 hint 版（3857589）的 0.6 COMBINED 內（MCIF 63.18 vs 62.55、OEG 46.60 vs 46.44、aya 34.73 vs 34.62）——先前只在 base 3-shot 測過的疑慮解除，整張路由表的 gold-LoRA 數字都可直接對照 `run_test.py` 的無 hint 推理。25.97 vs 27.64（−1.67），但這個平均是誤導的：損失幾乎全在 belebele（52.70→32.42），而測試集無選擇題、不轉移；測試集真正有的 source 只掉 1 分內（tydiqa −4.55、MCIF −0.81、aya −0.34、OEG **+0.09**）。附帶觀察：hint 撐的是 MC 的「格式」，與 few-shot 先前被歸功的效果冗餘 —— 拿掉一個就崩。⚠️ 別試圖算「排除 belebele 後的整體 chrF」：整體是 corpus-level 聚合、非 per-source 加權平均（n 加權得 38.61，與實際 27.64 對不上）。⚠️ **新發現（commit df12b0a）**：官方檔案是**雙重跳脫**的——全部 8,640 筆 qa-context prompt 帶的是字面上的 `\` `n` 兩個字元（不是換行），位置正好在「文章／問題／指令」的段落邊界。目前 verbatim 餵法讓模型在 **79% 的 qa 列**讀到字面 `\n\n`。TEST_SET_ANALYSIS §2 原本寫反了（用 `'\n' in prompt` 測，那測的是真換行）。`run_test.py --unescape` 可還原，**預設關**（會動到官方輸入，且 dev 沒有對應樣本可 A/B）→ 建議先 qualitative smoke，並列為 variant 提交的候選軸 |
-| B | **蒸餾**（人工評審讓它更值錢） | teacher 在 train split 生成 → chrF/BERTScore 對 gold 過濾 → teacher+gold 混合練全新 adapter（不接續 3822375，保持單變數可比）。OEG 是主要得分空間 | ❌ **敗給純 gold SFT，收案（2026-07-17）**。全流程跑完：teacher 生成 → 過濾 → SFT（3864945）→ 評測（3865036）。在唯一能決定路由的兩欄都輸：`qa-context` MCIF **−11.92** COMBINED、`qa-oeg` 長篇 OEG **−12.37**，只在不轉移到測試集的 aya 短答 +1.28。confound（蒸餾同時拿掉了 lang-hint）已由 **3866054** 排除——gold adapter 用 `--no-lang-hint` 重測只動 ≤0.6 COMBINED，所以 ~12 分的損失是 **teacher data 本身**，不是 hint。原因見 §5.4 的「價值十字」：蒸餾最有 headroom 的地方（aya）不轉移，最需要的地方（OEG）幾乎沒 headroom（GPT-4.1 gold 已 94% 通過過濾）。**路由不變：gold-LoRA 3822375 保留兩個 qa 任務。** 人工評審是唯一自動指標關不掉的活口，但不足以單獨支撐部署一個在忠實 proxy 上輸 12 分的 adapter。以下為過程記錄：⚠️ **資料形狀已查證（TEST_SET_ANALYSIS §5c）**：122B 那 4,126 列 = aya 3,763 + **oeg 僅 363**，也就是 **91% 是 aya** → **不是**現成的 qa-oeg 訓練集，不能靠它單獨練 qa-oeg adapter；35B 獨有的 7,789 列裡 4,577 列是 belebele（格式不轉移），真正有用的獨有部分是 tydiqa 2,497 + MCIF 715。**qa-oeg 是全盤最薄的一環：2,359 測試列，只有 97 dev proxy + 363 訓練列。** 122B(vLLM)/aya+oeg ✅（3859682，17 分鐘）；35B 全量 3 shards 跑步中（3859277-79，實測 ~215-265 列/hr → 各 15-18h，24h 限內；**先前寫的「ETA 明晨」是低估**）；`filter_teacher.py` ✅ 已在真資料出 report（3860144：30/70 留 44.3%，OEG 對 GPT-4.1 gold 分數特別高）；`train_lora.py --data` ✅ |
+| B | **蒸餾**（人工評審讓它更值錢） | teacher 在 train split 生成 → chrF/BERTScore 對 gold 過濾 → teacher+gold 混合練全新 adapter（不接續 3822375，保持單變數可比）。OEG 是主要得分空間 | ❌ **敗給純 gold SFT，收案（2026-07-17）**。全流程跑完：teacher 生成 → 過濾 → SFT（3864945）→ 評測（3865036）。在唯一能決定路由的兩欄都輸：`qa-context` MCIF **−11.92** COMBINED、`qa-oeg` 長篇 OEG **−12.37**，只在不轉移到測試集的 aya 短答 +1.28。confound（蒸餾同時拿掉了 lang-hint）已由 **3866054** 排除——gold adapter 用 `--no-lang-hint` 重測只動 ≤0.6 COMBINED，所以 ~12 分的損失是 **teacher data 本身**，不是 hint。原因見 §5.4 的「價值十字」：蒸餾最有 headroom 的地方（aya）不轉移，最需要的地方（OEG）幾乎沒 headroom（GPT-4.1 gold 已 94% 通過過濾）。**路由不變：gold-LoRA 3822375 保留兩個 qa 任務。** 人工評審是唯一自動指標關不掉的活口，但不足以單獨支撐部署一個在忠實 proxy 上輸 12 分的 adapter。以下為過程記錄：⚠️ **資料形狀已查證（TEST_SET_ANALYSIS §5c）**：122B 那 4,126 列 = aya 3,763 + **oeg 僅 363**，也就是 **91% 是 aya** → **不是**現成的 qa-oeg 訓練集，不能靠它單獨練 qa-oeg adapter；35B 獨有的 7,789 列裡 4,577 列是 belebele（格式不轉移），真正有用的獨有部分是 tydiqa 2,497 + MCIF 715。**qa-oeg 是全盤最薄的一環：2,359 測試列，只有 97 dev proxy + 363 訓練列。** 122B(vLLM)/aya+oeg ✅（3859682，17 分鐘）；35B 全量 3 shards ✅ 已完成 07-16（3859277-79，11,915 列；先前這裡寫「跑步中」）；`filter_teacher.py` ✅ 已在真資料出 report（3860144：30/70 留 44.3%，OEG 對 GPT-4.1 gold 分數特別高）；`train_lora.py --data` ✅ |
 | C | **指令遵循增強** | 訓練例隨機加「N 字內」「條列式」等約束並改寫目標答案。非英語長度控制是通用模型弱點，可拉開差距 | ✅ 程式就緒（`constraint_bank.py` + `augment_constraints.py`，commit db1addc）。**改良**：約束措辭不用手寫翻譯，直接從測試集**提取**——每個語言的 qa-context 尾巴全 360 列一字不差，可原樣取用；`--selftest` 對 tests.jsonl 驗證每條主張。**兩個易錯點**：jpn/zho 的預算單位是「字」（字元）不是詞，且有換算（150 words → zho 250字 → jpn 300字）；數字字形是**逐語言**而非逐文字系統（ben ১০০、mar १००、ckb ١٠٠、pes ۱۰۰，但 arb/hin/bho 都用 ASCII 100）。副產品：拿到各語言**確切的拒答字串**（"not answerable"/"无法回答"/…），可直接對治 smoke 的假拒答。→ ✅ **已套用在 v2 substrate 上（2026-07-18）**：v2 的 qa-context 本身就內建完整 test tail＋拒答列（拒答已證實訓得進去：3869088 量到 hit 97.5%/88.5%、假拒答 0.1%/4.9%），所以 C 縮減為「qa-oeg 加字數預算」——`augment_constraints.py` 改成 task-aware，`data/train_v2-cd.jsonl` 內 840 列帶預算（≈20% 的 qa-oeg，貼近 test 的 20/100）。**C+D 合體 SFT = job 3869129，eval 3869130（跑步中）** |
 | D | **Bhojpuri 應急包** | FLORES-200、Aya collection 撈 bho_Deva 混進 SFT；驗證輸出不滑回 Hindi | ✅ 資料已產出：**8,009 列** `data/sft-bho.jsonl`（在叢集，commit ab5aad3 + 修正）。⚠️ **原計畫的兩個資料源都是死路**（已對 HF API 查證）：`openlanguagedata/flores_plus` **也是 gated**（正是為了避開 gated 才選它）；`CohereLabs/aya_collection_language_split` 132 個語言 config **完全沒有 bho**。改用：`HuggingFaceFW/fineweb-2` config `bho_Deva`（18,666 篇原生網頁文，唯一有量的來源）→ 續寫任務 6,000 列；`CohereLabs/xP3x` config `bho_Deva`（**未 gated** 地拿到 FLORES 的 bho）→ hin→bho 翻譯 2,009 列。注意 xP3x 的 1.22M 列其實只有 **2,009 句** unique（200+ 來源語 × 3 template 展開），列數不等於資料量。品質閘：`bho_lid.py`（功能詞判別 bho/hin/mai/npi）。⚠️ **更正**：本文件先前寫「fineweb 的 bho 子集混了 167 篇 Hindi/80 篇 Nepali/16 篇 Maithili」——**那是錯的**，經抽樣查證，那些多半是分類器自己把真正的博傑普爾語誤判（原因見下）。實測 fineweb bho_Deva **約 96% 是真 bho，只有約 1% 判為 hin/npi/mai，子集基本乾淨**；這個閘的價值是在邊緣棄權，不是攔截大量污染。→ ✅ **8,009 列首次進 SFT（2026-07-18）**：`augment_constraints.py --append-bho` 正規化成 v2 schema（task=`bho-pack`、question_lang=`bho`）併入 `train_v2-cd.jsonl`，隨 job 3869129 訓練；eval 後用 `bho_lid.py` 驗輸出是否真的是 bho（測試集 bho 有 460 列、訓練資料原本是零） |
-| E | **任務路由**（幾乎零成本，合法） | qa-context 用 few-shot 示範（+35 chrF 來源）、qa-oeg 用蒸餾 adapter、sum-sum 接隊友。與隊友合流成聯合系統（共用同一個 9B base，否則爆 10B）才有總榜資格 | 🟡 **adapter 角色已拍板：原始設計不變，但兩者絕不疊加。** 3858987（adapter+3shot）= **21.64**，比純 3-shot（27.64）和 adapter 0-shot（26.56）**都差**，且除 OEG 外每個 source 都是三者最差（belebele 52.70/85.82→26.66、MCIF 34.61/49.26→20.98、tydiqa 38.94/19.53→**14.46**、aya 24.19/21.95→19.94；只有 OEG 25.55/29.06→29.62 撐住，n=97）。原假設「demo 救回 tydiqa 同時保住 adapter 增益」完全失敗 —— demo 反把 tydiqa 壓到比 adapter-only 更低。解釋：adapter 在 **0-shot 格式**微調（`train_lora.py` 無 demo），few-shot prompt 對它是 OOD。**推論（與 A 列合起來）：蒸餾 adapter 應直接用測試格式（無 hint、無自家模板）訓練並 0-shot 評測** —— 訓練/推理格式必須一致。**路由表（依據 = 唯一忠實的 proxy，見 TEST_SET_ANALYSIS §5b）：`qa-oeg`（2,359 列）→ adapter（OEG chrF 29.06 vs 3-shot 25.55、BERTScore 72.89 vs 69.38，一致）；`sum-sum`（1,776 列）→ 隊友；`qa-context`（8,640 列）→ ✅ **定案：adapter，0-shot**（2026-07-16，jobs 3865022-25 per-source 重算）。**那場「chrF vs EM 誰對」的爭議根本不存在 —— 是我們把兩個不同的任務混在同一個欄位裡算。** 拆開後，**唯一忠實的 proxy（MCIF，跨語言，n=165）上 adapter 四個指標全勝**：EM 21.82 vs 0.61（36 倍）、F1 57.92 vs 28.15、chrF 49.26 vs 34.61、BERTScore 86.41 vs 74.38 —— **沒有任何指標有異議**。先前寫的「EM 16.92 vs 6.54、F1 打平、只有 chrF 偏好 3-shot」全是**混池**數字，79% 來自單語的 tydiqa（≈ 測試任務的 4%）；數字對得起來：16.92 = (615×15.61 + 165×21.82)/780。連帶地，「adapter 在 tydiqa 崩潰是 chrF 假象」這個辯護也不必了 —— tydiqa 崩不崩潰**根本不影響路由**，它不是這個任務的 proxy。**這個決定既不需要官方指標、也不需要 sqrt(EM×chrF) 對沖**（那條規則在 tydiqa 上是 17.79 vs 17.46，本來就分不出勝負），只需要用對 proxy。詳見 EXPERIMENTS.md 的拆分表與待辦 #6。~~缺口：`run_test.py` 還沒有 `--shots` —— qa-context 那半邊現在跑不了~~ → **兩個缺口都沒了**：`--shots` 已於 2026-07-16 實作（commit bae02b9），而且 primary 根本不再需要它 —— **qa-context 和 qa-oeg 現在都走 `--lora` 0-shot，同一條路徑**。`--shots` 現在的用途是 variant1（純 demo 的安全牌）。⚠️ **belebele 與 aya 的分數都不能拿來做路由決策**：測試集無選擇題（belebele 不轉移），且 aya 的 gold 中位僅 24 詞、測試 qa-oeg 要 120-180 詞（OEG gold 中位 175 詞）—— aya 不是 qa-oeg 的 proxy，2026-07-15 對官方檔案實測。dev 2,978 列裡只有 **1,240 列（42%）**有預測力：MCIF 165 + OEG 97 + aya 978（先前寫的「877 列 / 29%」是舊帳 —— 它把 aya 當雜訊排除、又把單語的 tydiqa 615 列算進去，兩處都已撤回） |
-| F | **推理期品質守門** | fastText LID（<1MB）檢查輸出語言、錯了換 seed 重生成；可試 best-of-N + 9B 自評 | 🟡 起步了：`bho_lid.py`（D 的副產品）可當 bho 守門員，對 sib200 實測 3 句以上 recall 94% / precision 99%（單句 73%，別用）。⚠️ **但這組數字只代表 FLORES 新聞文體，不能外推**——第一版就是在 sib200 拿 91%/100%，卻把真正的博傑普爾**網頁**文自信地判成 Nepali（marker 表缺了日常的 -ela/-ala 動詞；且 margin 規則在對手密度為 0 時恆真，已加絕對下限 `MIN_DENSITY` 修掉）。教訓：**換語料就要重新抽樣查證，別信舊的評測數字**。它也只認 bho/hin/mai/npi 四語——全 24 語守門要用 **GlotLID**（`cis-lmu/glotlid`，有 bho_Deva）；fastText `lid.176` 會把 bho/mai/mag 混成一個 `bh`，別用。best-of-N 未動工 |
-| G | **三份提交對沖** | primary = 蒸餾+路由完全體；variant1 = 9B 3-shot（27.64 安全牌）；variant2 = 激進版（best-of-N） | ⬜ 策略已定，最後 3 天執行：用 100% 樣本資料重練最終版、跑測試集、提交 |
+| E | **任務路由**（幾乎零成本，合法） | qa-context 用 few-shot 示範（+35 chrF 來源）、qa-oeg 用蒸餾 adapter、sum-sum 接隊友。與隊友合流成聯合系統（共用同一個 9B base，否則爆 10B）才有總榜資格 | 🟡 **adapter 角色已拍板：原始設計不變，但兩者絕不疊加。** 3858987（adapter+3shot）= **21.64**，比純 3-shot（27.64）和 adapter 0-shot（26.56）**都差**，且除 OEG 外每個 source 都是三者最差（belebele 52.70/85.82→26.66、MCIF 34.61/49.26→20.98、tydiqa 38.94/19.53→**14.46**、aya 24.19/21.95→19.94；只有 OEG 25.55/29.06→29.62 撐住，n=97）。原假設「demo 救回 tydiqa 同時保住 adapter 增益」完全失敗 —— demo 反把 tydiqa 壓到比 adapter-only 更低。解釋：adapter 在 **0-shot 格式**微調（`train_lora.py` 無 demo），few-shot prompt 對它是 OOD。**推論（與 A 列合起來）：蒸餾 adapter 應直接用測試格式（無 hint、無自家模板）訓練並 0-shot 評測** —— 訓練/推理格式必須一致。**路由表（依據 = 唯一忠實的 proxy，見 TEST_SET_ANALYSIS §5b）：`qa-oeg`（2,359 列）→ adapter（OEG chrF 29.06 vs 3-shot 25.55、BERTScore 72.89 vs 69.38，一致）；`sum-sum`（1,776 列）→ 隊友；`qa-context`（8,640 列）→ ✅ **定案：adapter，0-shot**（2026-07-16，jobs 3865022-25 per-source 重算）。**那場「chrF vs EM 誰對」的爭議根本不存在 —— 是我們把兩個不同的任務混在同一個欄位裡算。** 拆開後，**唯一忠實的 proxy（MCIF，跨語言，n=165）上 adapter 四個指標全勝**：EM 21.82 vs 0.61（36 倍）、F1 57.92 vs 28.15、chrF 49.26 vs 34.61、BERTScore 86.41 vs 74.38 —— **沒有任何指標有異議**。先前寫的「EM 16.92 vs 6.54、F1 打平、只有 chrF 偏好 3-shot」全是**混池**數字，79% 來自單語的 tydiqa（≈ 測試任務的 4%）；數字對得起來：16.92 = (615×15.61 + 165×21.82)/780。連帶地，「adapter 在 tydiqa 崩潰是 chrF 假象」這個辯護也不必了 —— tydiqa 崩不崩潰**根本不影響路由**，它不是這個任務的 proxy。**這個決定既不需要官方指標、也不需要 sqrt(EM×chrF) 對沖**（那條規則在 tydiqa 上是 17.79 vs 17.46，本來就分不出勝負），只需要用對 proxy。詳見 EXPERIMENTS.md 的拆分表與待辦 #6。~~缺口：`run_test.py` 還沒有 `--shots` —— qa-context 那半邊現在跑不了~~ → **兩個缺口都沒了**：`--shots` 已於 2026-07-16 實作（commit bae02b9），而且 primary 根本不再需要它 —— **qa-context 和 qa-oeg 現在都走 `--lora` 0-shot，同一條路徑**。`--shots` 現在的用途是 variant1（純 demo 的安全牌）。⚠️ **belebele 與 aya 的分數都不能拿來做路由決策**：測試集無選擇題（belebele 不轉移），且 aya 的 gold 中位僅 24 詞、測試 qa-oeg 要 120-180 詞（OEG gold 中位 175 詞）—— aya 不是 qa-oeg 的 proxy，2026-07-15 對官方檔案實測。dev 2,978 列裡只有 **1,240 列（42%）**有預測力：MCIF 165 + OEG 97 + aya 978（先前寫的「877 列 / 29%」是舊帳 —— 它把 aya 當雜訊排除、又把單語的 tydiqa 615 列算進去，兩處都已撤回）。→ ✅ **07-18 在 v2 乾淨 dev 上重驗：路由結論存活**——plain-v2 adapter（3869088，truncated）**每一欄都贏** base 0-shot 和 3-shot（belebele-v2 44.33 / tydiqa-v2 72.04 / MCIF 50.95 / qa-oeg agg 39.99 vs 3-shot 的 37.25/57.37/45.67/34.47），且 v2 之後 qa-context 有三個合法 proxy（本列前段「belebele/aya 不能用」的量測顧慮是 v1 時代的）。**條件：adapter 推理必須帶 runaway 防護**（見「接下來」#0）。primary 候選 = C+D 完全體（3869129/3869130 出分後定案） |
+| F | **推理期品質守門** | fastText LID（<1MB）檢查輸出語言、錯了換 seed 重生成；可試 best-of-N + 9B 自評 | 🟡 起步了：`bho_lid.py`（D 的副產品）可當 bho 守門員，對 sib200 實測 3 句以上 recall 94% / precision 99%（單句 73%，別用）。⚠️ **但這組數字只代表 FLORES 新聞文體，不能外推**——第一版就是在 sib200 拿 91%/100%，卻把真正的博傑普爾**網頁**文自信地判成 Nepali（marker 表缺了日常的 -ela/-ala 動詞；且 margin 規則在對手密度為 0 時恆真，已加絕對下限 `MIN_DENSITY` 修掉）。教訓：**換語料就要重新抽樣查證，別信舊的評測數字**。它也只認 bho/hin/mai/npi 四語——全 24 語守門要用 **GlotLID**（`cis-lmu/glotlid`，有 bho_Deva）；fastText `lid.176` 會把 bho/mai/mag 混成一個 `bh`，別用。best-of-N 未動工。→ **07-18 補充：F 的第一個守門已上線**——runaway 防護（`stop_strings` + `truncate_runaway`，commit d5a65b3）進了 benchmark.py 和 run_test.py；GlotLID 語言守門仍待做 |
+| G | **三份提交對沖** | primary = 蒸餾+路由完全體；variant1 = 9B 3-shot（27.64 安全牌）；variant2 = 激進版（best-of-N） | ⬜ 策略微調後照走（蒸餾出局 → primary = **gold-v2 adapter 路由**，C+D 或 plain 版看 3869129 出分）；具體排程見「接下來做什麼」#5。variant1 = 3-shot 安全牌在 v2 dev 的新基準是 37.25/57.37/45.67/34.47 |
 
 ## 時程（截止 2026-08-01 AoE）
 
-- **第 1 週（~07-20）**：A ✅ → B teacher 生成 ✅/🟡 → 過濾閾值定案 → C ✅ + D ✅ 資料準備
-- **第 2 週（~07-27）**：C+D 混進同一次 SFT 重練 → E（含 `run_test.py --shots`）+ F 推理管線 →
-  dev 上用測試格式驗證整條路由
-- **最後 3 天**：G — 100% 資料重練最終 adapter、跑官方測試集三種配置、Google Form 提交
+- **第 1 週（~07-20）**：A ✅ → B teacher 生成 ✅（結論：蒸餾出局）→ C ✅ + D ✅ 資料準備
+  →（計畫外但必要）**dev/train 洩漏審計 + v2 重建 ✅ + 乾淨基準線 ✅ + runaway 修正 ✅**
+- **第 2 週（~07-27）**：C+D 混進同一次 SFT 重練 🟡（3869129/3869130 跑步中）→
+  E ✅（路由在 v2 重驗存活）+ F 🟡（runaway 守門 ✅、GlotLID 待做）→ primary 配方定案
+- **最後 3 天**：G — 100%（train_v2+dev_v2）重練最終 adapter、跑官方測試集三種配置、
+  Google Form 提交（細節見「接下來做什麼」#5）
 
 ## 待決策 / 待辦（2026-07-15 晚，主線 session 交出）
 
@@ -130,8 +142,12 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 1. **等 3869129/3869130（C+D 完全體）出分**：對照組是 plain-v2 adapter（3869088：belebele 44.33 /
    tydiqa 72.04 / MCIF 50.95 / qa-oeg agg 39.99）——單變數比較（加了預算+bho）。同時：
    (a) `bho_lid.py` 驗 bho 輸出；(b) 840 列預算的 compliance 用 `constraint_bank.parse_budget` 量。
-2. **讀 aya 的風格偏移**（零 GPU）：adapter 的 aya chrF 17.11 低於 base 23.69 但 BERTScore/ROUGE
-   反升——抽 30 條預測人工讀，判斷是壞事還是 chrF 假象，再決定要不要處理。
+2. ~~讀 aya 的風格偏移~~ → ✅ **讀完，主體是 chrF 假象，不處理（2026-07-18，906 列對讀 + 12 例
+   人工讀，EXPERIMENTS_NEW.md）**：gold 中位 26 詞；base 答 105 詞＋**89% 帶 markdown**（灌水
+   餵飽 chrF 的 recall）；adapter 答 11 詞、gold 式簡答（markdown 2.3%）——BERTScore/ROUGE 升
+   才是對的訊號。殘餘的真問題（不動，記錄在案）：(a) 少數補全/開放題**過短**（arb 補全 7 詞 vs
+   gold 60 詞）；(b) 知識性列舉會**編造**（新浪潮片單張冠李戴）——這與人評「偏好完整流暢」的
+   張力一起留給 G 階段的 variant 決策，不影響路由。
 3. **`--unescape` qualitative smoke**（待辦 #1，一直沒動）：literal `\n\n` 還原與否，
    variant 提交的現成軸；一個 smoke job 對比輸出品質即可。
 4. **F：GlotLID 全語言輸出守門**（`cis-lmu/glotlid`，有 bho_Deva）＋ 錯語言重生成；

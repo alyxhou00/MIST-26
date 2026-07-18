@@ -78,3 +78,18 @@ fake turn instead of burning the token budget) AND truncate every decoded predic
 `truncate_runaway` is verified byte-identical to the 3869088 cleanup on all 2,949 rows;
 base models are unaffected (0% incidence). Every adapter run from here on is clean by
 construction — no post-hoc surgery needed again.
+
+### The aya "style shift" read (2026-07-18) — mostly a chrF artifact, no action
+
+906 aya dev rows joined across 3867141 (base) and the truncated 3867140 (adapter), plus
+12 examples read side by side. Word-length p50: **gold 26 / adapter 11 / base 105**, and
+**89% of base predictions carry markdown scaffolding** vs the adapter's 2.3%. That is the
+whole chrF story: base's 4× verbose, headline-and-bullets answers soak up chrF's
+character-recall; the adapter answers in the golds' own terse register (zho "答案：三星成立
+于1938年。" vs gold "答案：三星公司成立于1938年。"), which chrF under-credits and
+BERTScore/ROUGE-L correctly prefer. **Verdict: chrF-down/BERT-up on aya is the metric
+disagreeing about verbosity, not degradation — no fix.** Two real residuals recorded, not
+acted on: (a) occasional over-terseness on completion/open prompts (an arb passage
+completion: 7 words vs gold's 60); (b) fabrication on knowledge-list prompts (a French
+nouvelle-vague film list with wrong attributions/period). Both fold into the G-phase
+variant discussion (human eval prefers complete-and-fluent), neither changes routing.
