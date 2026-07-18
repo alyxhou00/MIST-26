@@ -451,6 +451,27 @@ Exclude belebele at *filter* time instead, which is free. A `--source` policy (p
 thresholds, or a "this source is gold-only" list) is the missing piece in
 `scripts/filter_teacher.py`.
 
+## 5.6 The runaway-generation artifact (2026-07-18) — smoke + post-mortem record
+
+Full analysis in EXPERIMENTS_NEW.md; this is the pipeline-mechanics record. LoRA
+adapters (v2 gold 3867139 worst at 66% of predictions; OLD gold 3857589 at 78%
+tydiqa / 56% aya — the "tydiqa collapse" retro-explained) continue past the answer
+into hallucinated chat turns. Facts established while debugging:
+
+- **Label masking in `train_lora.py` is NOT the bug**: reproduced locally with the
+  Qwen3.5-9B tokenizer — `prefix_ids` is an exact token prefix of `full_ids` and the
+  label span is `answer + <|im_end|> + \n`, so EOS is trained. The fine-tuned model
+  under-samples it after *short* golds at T=0.7/top-p 0.8/top-k 20; templated (old
+  belebele "2: option") and long golds don't trigger it.
+- **Measure refusals only on truncated predictions**: the correct refusal string is
+  usually there, with junk after it — raw-CSV refusal metrics undercount by ~25× (3.9%
+  vs the true 92.7%).
+- Fix = `prompt_template.RUNAWAY_STOP_STRINGS` (generate-time halt, saves budget) +
+  `truncate_runaway()` on every decode (byte-identical to the 3869088 re-score cleanup
+  on all 2,949 rows). Smoke **3869113** (existing v2 adapter, 60 belebele dev rows —
+  the slice that ran away 76% of the time): **0/60 contaminated**, p50 prediction
+  length 18 chars, 15m45 wall.
+
 ## 6. Infrastructure record (reproducibility appendix material)
 
 - **atuin ($WORK) group file quota exceeded** since 2026-07-14 (578K→561K / 500K files,
