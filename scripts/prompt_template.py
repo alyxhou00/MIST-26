@@ -15,7 +15,31 @@ a Hindi gold). We deliberately:
     (e.g. '演讲者是 James Finch。', 'Infinity Ward', '15,000km²').
 """
 
+import re
 import sys
+
+# --- Runaway-generation guard (2026-07-18, EXPERIMENTS_NEW.md) ---------------------------
+# LoRA adapters fine-tuned on short gold answers under-sample <|im_end|> at T=0.7/top-p 0.8
+# and continue past the answer into hallucinated chat turns, rendered as plain text once
+# special tokens are stripped ("answer\nuser\n<other question>\nassistant\n<think>...").
+# 66% of the v2 gold adapter's dev predictions were contaminated (eval 3867140); the OLD
+# adapter's famous "tydiqa collapse" was the same artifact (78% of 3857589's tydiqa rows).
+# Two-layer fix, shared by benchmark.py and run_test.py:
+#   1. pass RUNAWAY_STOP_STRINGS to model.generate(stop_strings=..., tokenizer=tok) so
+#      generation halts at the first fake turn instead of burning the token budget;
+#   2. ALWAYS pass the decoded prediction through truncate_runaway() -- catches whatever
+#      slips through and cleans the stop-string remnant itself. Base models are unaffected
+#      (0% incidence on jobs 3867141/3867142).
+RUNAWAY_STOP_STRINGS = ["<|im_start|>", "\nuser\n", "\nassistant\n", "<think>"]
+_RUNAWAY = re.compile(r"\nuser\n|\nassistant\n|<think>")
+
+
+def truncate_runaway(pred: str) -> str:
+    """Cut a decoded prediction at the first hallucinated-turn marker (identity for clean
+    text). Verified to reproduce the 3869088 re-score cleanup exactly."""
+    m = _RUNAWAY.search(pred)
+    return pred[:m.start()].rstrip() if m else pred
+
 
 LANG_NAMES = {
     "arb_Arab": "Arabic", "ben_Beng": "Bengali", "ces_Latn": "Czech",

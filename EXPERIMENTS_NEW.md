@@ -51,8 +51,8 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 | 3867141 | 07-18 | 9B base, 0-shot, no hint (run_test-equivalent) | 34.40 | 51.51 | 42.44 | 34.30 | 33.84 | 34.24 | 7.3% | 74.6% | dev_v2 qa (n=2,949), 4h00. Clean generations (0% runaway). |
 | 3867142 | 07-18 | 9B base, 3-shot (train_v2 pool), no hint | **37.25** | **57.37** | **45.67** | 34.40 | 34.95 | **34.47** | 11.5% | **92.7%** | 3h41. Demos help everywhere on qa-context; qa-oeg ≈ flat (mirrors the old set). Trade-off: refusal-hit 93% but false-refusals up (tydiqa 17.7%). |
 | 3867139 | 07-18 | LoRA SFT on train_v2 qa (11,674 rows, no hint, recipe = 3822375) | — | — | — | — | — | — | — | — | train_loss 0.9656, 6h19, 23 rows truncated \@2048. Adapter: `adapters/qwen3.5-9b-qa-lora-3867139` ($WORK clone). |
-| 3867140 | 07-18 | ↑ adapter, 0-shot, no hint | ~~24.76~~ | ~~39.96~~ | ~~36.73~~ | ~~40.73~~ | ~~32.16~~ | ~~39.62~~ | 0% | 3.9% | 9h13. 🔴 **INVALID as a data verdict — 66% of predictions are runaway generations** (answer, then hallucinated `\nuser\n…\nassistant\n<think>` turns as plain text; belebele 76%, aya 64%, tydiqa 55%, MCIF 47%, OEG 24%). Truncated re-score = 3869088 below. Also: refusal training signal did NOT take (RH 3.9% despite 7%/20% refusal rows). |
-| 3869088 | 07-18 | ↑ same CSV, predictions truncated at the first runaway marker, re-scored | **44.33** | **72.04** | **50.95** | **40.53** | **36.43** | **39.99** | 0% | 3.9% | 3-min re-score of 3867140's CSV (1,934/2,949 rows truncated). **The v2-trained adapter beats base AND 3-shot on every column of the honest item-split dev** — the adapter-over-prompting verdict survives leakage removal, but ONLY together with an inference-side stop fix (truncation was applied post-hoc here; base runs are unaffected at 0% runaway). Margins over 3-shot: belebele +7.1, tydiqa +14.7, MCIF +5.3, qa-oeg agg +5.5. Open sores: refusal-hit still 3.9% (the 7%/20% refusal rows didn't take — next lever), aya chrF is *below* base (17.11 vs 23.69) while its BERTScore/ROUGE are up — style shift, watch it. |
+| 3867140 | 07-18 | ↑ adapter, 0-shot, no hint | ~~24.76~~ | ~~39.96~~ | ~~36.73~~ | ~~40.73~~ | ~~32.16~~ | ~~39.62~~ | 0% | 3.9% | 9h13. 🔴 **INVALID as a data verdict — 66% of predictions are runaway generations** (answer, then hallucinated `\nuser\n…\nassistant\n<think>` turns as plain text; belebele 76%, aya 64%, tydiqa 55%, MCIF 47%, OEG 24%). Truncated re-score = 3869088 below. ~~Refusal signal did not take (RH 3.9%)~~ — **measurement artifact**, corrected on the truncated CSV in the next row. |
+| 3869088 | 07-18 | ↑ same CSV, predictions truncated at the first runaway marker, re-scored | **44.33** | **72.04** | **50.95** | **40.53** | **36.43** | **39.99** | **1.3%** | **92.7%** | 3-min re-score of 3867140's CSV (1,934/2,949 rows truncated). **The v2-trained adapter beats base AND 3-shot on every column of the honest item-split dev** — the adapter-over-prompting verdict survives leakage removal, but ONLY together with an inference-side stop fix (truncation was applied post-hoc here; base runs are unaffected at 0% runaway). Margins over 3-shot: belebele +7.1, tydiqa +14.7, MCIF +5.3, qa-oeg agg +5.5. **Refusal correction (measured on THIS CSV, 2026-07-18): the v2 refusal rows DID train the escape** — refusal-hit belebele 97.5% / tydiqa 88.5% with false-refusals 0.1% / 4.9%; the earlier "3.9%" was runaway junk trailing the (correct) refusal phrase. Best refusal profile of all three systems (3-shot matches the 92.7% hit but at 11.5% false-refusals). Remaining watch item: aya chrF *below* base (17.11 vs 23.69) while BERTScore/ROUGE are up — style shift. |
 
 ### 🔴 The runaway-generation artifact (found 2026-07-18) — and it retro-explains the old logs
 
@@ -69,7 +69,12 @@ Mechanism checked (locally, Qwen3.5-9B tokenizer): `train_lora.py`'s label span 
 correct — prefix is an exact token prefix, labels cover answer + `<|im_end|>` — so EOS
 *is* trained; the fine-tuned model still under-samples it after short answers at
 T=0.7/top-p 0.8. Sampled continuations reproduce the chat template as plain text and
-often contain OTHER questions about the same passage. Fix direction: stop-strings /
-post-hoc truncation at inference (benchmark.py + run_test.py), and possibly more eos
-weight at training. The truncated re-score below measures the adapter with the artifact
-removed; a proper inference-side fix must land before any submission uses an adapter.
+often contain OTHER questions about the same passage. The truncated re-score below
+measures the adapter with the artifact removed.
+
+**Fix landed 2026-07-18** (`prompt_template.RUNAWAY_STOP_STRINGS` / `truncate_runaway()`):
+benchmark.py and run_test.py now pass stop-strings to `generate()` (halts at the first
+fake turn instead of burning the token budget) AND truncate every decoded prediction.
+`truncate_runaway` is verified byte-identical to the 3869088 cleanup on all 2,949 rows;
+base models are unaffected (0% incidence). Every adapter run from here on is clean by
+construction — no post-hoc surgery needed again.

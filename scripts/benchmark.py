@@ -29,7 +29,7 @@ import csv
 import zlib
 from pathlib import Path
 
-from prompt_template import build_messages
+from prompt_template import RUNAWAY_STOP_STRINGS, build_messages, truncate_runaway
 
 
 def load_rows(path: str):
@@ -231,10 +231,14 @@ def main() -> None:
                         temperature=args.temperature,
                         top_p=args.top_p,
                         top_k=20,
+                        # halt at hallucinated chat turns (LoRA runaway artifact -- see
+                        # prompt_template.RUNAWAY_STOP_STRINGS)
+                        stop_strings=RUNAWAY_STOP_STRINGS,
+                        tokenizer=tok,
                     )
-                pred = tok.decode(
+                pred = truncate_runaway(tok.decode(
                     out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True
-                ).strip()
+                ).strip())
             except Exception as e:  # noqa: BLE001 - keep going so one bad example can't lose the run
                 print(f"  [{i}] FAILED: {type(e).__name__}: {e}", flush=True)
                 pred = ""

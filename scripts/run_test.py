@@ -53,7 +53,13 @@ import sys
 import zlib
 from pathlib import Path
 
-from prompt_template import TEST_LANG_NAMES, TEST_TASK_SOURCES, system_turn
+from prompt_template import (
+    RUNAWAY_STOP_STRINGS,
+    TEST_LANG_NAMES,
+    TEST_TASK_SOURCES,
+    system_turn,
+    truncate_runaway,
+)
 
 # Unsubstituted template slots in the official prompts -- `{country}`, `{language}`. Only the
 # 8 English qa-oeg rows qa-oeg_93..100 have them (TEST_SET_ANALYSIS 6); detected rather than
@@ -292,10 +298,14 @@ def main() -> None:
                         temperature=args.temperature,
                         top_p=args.top_p,
                         top_k=20,
+                        # halt at hallucinated chat turns (LoRA runaway artifact -- see
+                        # prompt_template.RUNAWAY_STOP_STRINGS)
+                        stop_strings=RUNAWAY_STOP_STRINGS,
+                        tokenizer=tok,
                     )
-                pred = tok.decode(
+                pred = truncate_runaway(tok.decode(
                     out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True
-                ).strip()
+                ).strip())
             except Exception as e:  # noqa: BLE001 - one bad row must not lose the run
                 print(f"  [{i}] {row['id']} FAILED: {type(e).__name__}: {e}", flush=True)
                 pred = ""
