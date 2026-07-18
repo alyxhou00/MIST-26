@@ -62,8 +62,8 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
 |---|---|---|---|
 | A | **對齊測試格式**（必做，投報比最高） | 寫 `run_test.py` 讀官方 JSONL、直接餵 self-contained prompt、輸出 `{id, output}`；dev 改「測試格式」重跑 sanity check — lang-hint 拿掉後大跌就表示依賴自家模板 | ✅ **完成並收尾**。`run_test.py`＋sbatch 就緒、TEST_SET_ANALYSIS.md 文件化。**lang-hint 依賴度 A/B 已出（3859645）：拿掉幾乎不痛 → 可直接用無 hint 的測試格式，不必重練。** ✅ **2026-07-17 在 adapter 上也證實了（3866054）**：gold adapter 用 `--no-lang-hint` 重測，三個 routing 欄都在開 hint 版（3857589）的 0.6 COMBINED 內（MCIF 63.18 vs 62.55、OEG 46.60 vs 46.44、aya 34.73 vs 34.62）——先前只在 base 3-shot 測過的疑慮解除，整張路由表的 gold-LoRA 數字都可直接對照 `run_test.py` 的無 hint 推理。25.97 vs 27.64（−1.67），但這個平均是誤導的：損失幾乎全在 belebele（52.70→32.42），而測試集無選擇題、不轉移；測試集真正有的 source 只掉 1 分內（tydiqa −4.55、MCIF −0.81、aya −0.34、OEG **+0.09**）。附帶觀察：hint 撐的是 MC 的「格式」，與 few-shot 先前被歸功的效果冗餘 —— 拿掉一個就崩。⚠️ 別試圖算「排除 belebele 後的整體 chrF」：整體是 corpus-level 聚合、非 per-source 加權平均（n 加權得 38.61，與實際 27.64 對不上）。⚠️ **新發現（commit df12b0a）**：官方檔案是**雙重跳脫**的——全部 8,640 筆 qa-context prompt 帶的是字面上的 `\` `n` 兩個字元（不是換行），位置正好在「文章／問題／指令」的段落邊界。目前 verbatim 餵法讓模型在 **79% 的 qa 列**讀到字面 `\n\n`。TEST_SET_ANALYSIS §2 原本寫反了（用 `'\n' in prompt` 測，那測的是真換行）。`run_test.py --unescape` 可還原，**預設關**（會動到官方輸入，且 dev 沒有對應樣本可 A/B）→ 建議先 qualitative smoke，並列為 variant 提交的候選軸 |
 | B | **蒸餾**（人工評審讓它更值錢） | teacher 在 train split 生成 → chrF/BERTScore 對 gold 過濾 → teacher+gold 混合練全新 adapter（不接續 3822375，保持單變數可比）。OEG 是主要得分空間 | ❌ **敗給純 gold SFT，收案（2026-07-17）**。全流程跑完：teacher 生成 → 過濾 → SFT（3864945）→ 評測（3865036）。在唯一能決定路由的兩欄都輸：`qa-context` MCIF **−11.92** COMBINED、`qa-oeg` 長篇 OEG **−12.37**，只在不轉移到測試集的 aya 短答 +1.28。confound（蒸餾同時拿掉了 lang-hint）已由 **3866054** 排除——gold adapter 用 `--no-lang-hint` 重測只動 ≤0.6 COMBINED，所以 ~12 分的損失是 **teacher data 本身**，不是 hint。原因見 §5.4 的「價值十字」：蒸餾最有 headroom 的地方（aya）不轉移，最需要的地方（OEG）幾乎沒 headroom（GPT-4.1 gold 已 94% 通過過濾）。**路由不變：gold-LoRA 3822375 保留兩個 qa 任務。** 人工評審是唯一自動指標關不掉的活口，但不足以單獨支撐部署一個在忠實 proxy 上輸 12 分的 adapter。以下為過程記錄：⚠️ **資料形狀已查證（TEST_SET_ANALYSIS §5c）**：122B 那 4,126 列 = aya 3,763 + **oeg 僅 363**，也就是 **91% 是 aya** → **不是**現成的 qa-oeg 訓練集，不能靠它單獨練 qa-oeg adapter；35B 獨有的 7,789 列裡 4,577 列是 belebele（格式不轉移），真正有用的獨有部分是 tydiqa 2,497 + MCIF 715。**qa-oeg 是全盤最薄的一環：2,359 測試列，只有 97 dev proxy + 363 訓練列。** 122B(vLLM)/aya+oeg ✅（3859682，17 分鐘）；35B 全量 3 shards 跑步中（3859277-79，實測 ~215-265 列/hr → 各 15-18h，24h 限內；**先前寫的「ETA 明晨」是低估**）；`filter_teacher.py` ✅ 已在真資料出 report（3860144：30/70 留 44.3%，OEG 對 GPT-4.1 gold 分數特別高）；`train_lora.py --data` ✅ |
-| C | **指令遵循增強** | 訓練例隨機加「N 字內」「條列式」等約束並改寫目標答案。非英語長度控制是通用模型弱點，可拉開差距 | ✅ 程式就緒（`constraint_bank.py` + `augment_constraints.py`，commit db1addc）。**改良**：約束措辭不用手寫翻譯，直接從測試集**提取**——每個語言的 qa-context 尾巴全 360 列一字不差，可原樣取用；`--selftest` 對 tests.jsonl 驗證每條主張。**兩個易錯點**：jpn/zho 的預算單位是「字」（字元）不是詞，且有換算（150 words → zho 250字 → jpn 300字）；數字字形是**逐語言**而非逐文字系統（ben ১০০、mar १००、ckb ١٠٠、pes ۱۰۰，但 arb/hin/bho 都用 ASCII 100）。副產品：拿到各語言**確切的拒答字串**（"not answerable"/"无法回答"/…），可直接對治 smoke 的假拒答。待跑：等 filter_teacher 產出後套用 |
-| D | **Bhojpuri 應急包** | FLORES-200、Aya collection 撈 bho_Deva 混進 SFT；驗證輸出不滑回 Hindi | ✅ 資料已產出：**8,009 列** `data/sft-bho.jsonl`（在叢集，commit ab5aad3 + 修正）。⚠️ **原計畫的兩個資料源都是死路**（已對 HF API 查證）：`openlanguagedata/flores_plus` **也是 gated**（正是為了避開 gated 才選它）；`CohereLabs/aya_collection_language_split` 132 個語言 config **完全沒有 bho**。改用：`HuggingFaceFW/fineweb-2` config `bho_Deva`（18,666 篇原生網頁文，唯一有量的來源）→ 續寫任務 6,000 列；`CohereLabs/xP3x` config `bho_Deva`（**未 gated** 地拿到 FLORES 的 bho）→ hin→bho 翻譯 2,009 列。注意 xP3x 的 1.22M 列其實只有 **2,009 句** unique（200+ 來源語 × 3 template 展開），列數不等於資料量。品質閘：`bho_lid.py`（功能詞判別 bho/hin/mai/npi）。⚠️ **更正**：本文件先前寫「fineweb 的 bho 子集混了 167 篇 Hindi/80 篇 Nepali/16 篇 Maithili」——**那是錯的**，經抽樣查證，那些多半是分類器自己把真正的博傑普爾語誤判（原因見下）。實測 fineweb bho_Deva **約 96% 是真 bho，只有約 1% 判為 hin/npi/mai，子集基本乾淨**；這個閘的價值是在邊緣棄權，不是攔截大量污染 |
+| C | **指令遵循增強** | 訓練例隨機加「N 字內」「條列式」等約束並改寫目標答案。非英語長度控制是通用模型弱點，可拉開差距 | ✅ 程式就緒（`constraint_bank.py` + `augment_constraints.py`，commit db1addc）。**改良**：約束措辭不用手寫翻譯，直接從測試集**提取**——每個語言的 qa-context 尾巴全 360 列一字不差，可原樣取用；`--selftest` 對 tests.jsonl 驗證每條主張。**兩個易錯點**：jpn/zho 的預算單位是「字」（字元）不是詞，且有換算（150 words → zho 250字 → jpn 300字）；數字字形是**逐語言**而非逐文字系統（ben ১০০、mar १००、ckb ١٠٠、pes ۱۰۰，但 arb/hin/bho 都用 ASCII 100）。副產品：拿到各語言**確切的拒答字串**（"not answerable"/"无法回答"/…），可直接對治 smoke 的假拒答。→ ✅ **已套用在 v2 substrate 上（2026-07-18）**：v2 的 qa-context 本身就內建完整 test tail＋拒答列（拒答已證實訓得進去：3869088 量到 hit 97.5%/88.5%、假拒答 0.1%/4.9%），所以 C 縮減為「qa-oeg 加字數預算」——`augment_constraints.py` 改成 task-aware，`data/train_v2-cd.jsonl` 內 840 列帶預算（≈20% 的 qa-oeg，貼近 test 的 20/100）。**C+D 合體 SFT = job 3869129，eval 3869130（跑步中）** |
+| D | **Bhojpuri 應急包** | FLORES-200、Aya collection 撈 bho_Deva 混進 SFT；驗證輸出不滑回 Hindi | ✅ 資料已產出：**8,009 列** `data/sft-bho.jsonl`（在叢集，commit ab5aad3 + 修正）。⚠️ **原計畫的兩個資料源都是死路**（已對 HF API 查證）：`openlanguagedata/flores_plus` **也是 gated**（正是為了避開 gated 才選它）；`CohereLabs/aya_collection_language_split` 132 個語言 config **完全沒有 bho**。改用：`HuggingFaceFW/fineweb-2` config `bho_Deva`（18,666 篇原生網頁文，唯一有量的來源）→ 續寫任務 6,000 列；`CohereLabs/xP3x` config `bho_Deva`（**未 gated** 地拿到 FLORES 的 bho）→ hin→bho 翻譯 2,009 列。注意 xP3x 的 1.22M 列其實只有 **2,009 句** unique（200+ 來源語 × 3 template 展開），列數不等於資料量。品質閘：`bho_lid.py`（功能詞判別 bho/hin/mai/npi）。⚠️ **更正**：本文件先前寫「fineweb 的 bho 子集混了 167 篇 Hindi/80 篇 Nepali/16 篇 Maithili」——**那是錯的**，經抽樣查證，那些多半是分類器自己把真正的博傑普爾語誤判（原因見下）。實測 fineweb bho_Deva **約 96% 是真 bho，只有約 1% 判為 hin/npi/mai，子集基本乾淨**；這個閘的價值是在邊緣棄權，不是攔截大量污染。→ ✅ **8,009 列首次進 SFT（2026-07-18）**：`augment_constraints.py --append-bho` 正規化成 v2 schema（task=`bho-pack`、question_lang=`bho`）併入 `train_v2-cd.jsonl`，隨 job 3869129 訓練；eval 後用 `bho_lid.py` 驗輸出是否真的是 bho（測試集 bho 有 460 列、訓練資料原本是零） |
 | E | **任務路由**（幾乎零成本，合法） | qa-context 用 few-shot 示範（+35 chrF 來源）、qa-oeg 用蒸餾 adapter、sum-sum 接隊友。與隊友合流成聯合系統（共用同一個 9B base，否則爆 10B）才有總榜資格 | 🟡 **adapter 角色已拍板：原始設計不變，但兩者絕不疊加。** 3858987（adapter+3shot）= **21.64**，比純 3-shot（27.64）和 adapter 0-shot（26.56）**都差**，且除 OEG 外每個 source 都是三者最差（belebele 52.70/85.82→26.66、MCIF 34.61/49.26→20.98、tydiqa 38.94/19.53→**14.46**、aya 24.19/21.95→19.94；只有 OEG 25.55/29.06→29.62 撐住，n=97）。原假設「demo 救回 tydiqa 同時保住 adapter 增益」完全失敗 —— demo 反把 tydiqa 壓到比 adapter-only 更低。解釋：adapter 在 **0-shot 格式**微調（`train_lora.py` 無 demo），few-shot prompt 對它是 OOD。**推論（與 A 列合起來）：蒸餾 adapter 應直接用測試格式（無 hint、無自家模板）訓練並 0-shot 評測** —— 訓練/推理格式必須一致。**路由表（依據 = 唯一忠實的 proxy，見 TEST_SET_ANALYSIS §5b）：`qa-oeg`（2,359 列）→ adapter（OEG chrF 29.06 vs 3-shot 25.55、BERTScore 72.89 vs 69.38，一致）；`sum-sum`（1,776 列）→ 隊友；`qa-context`（8,640 列）→ ✅ **定案：adapter，0-shot**（2026-07-16，jobs 3865022-25 per-source 重算）。**那場「chrF vs EM 誰對」的爭議根本不存在 —— 是我們把兩個不同的任務混在同一個欄位裡算。** 拆開後，**唯一忠實的 proxy（MCIF，跨語言，n=165）上 adapter 四個指標全勝**：EM 21.82 vs 0.61（36 倍）、F1 57.92 vs 28.15、chrF 49.26 vs 34.61、BERTScore 86.41 vs 74.38 —— **沒有任何指標有異議**。先前寫的「EM 16.92 vs 6.54、F1 打平、只有 chrF 偏好 3-shot」全是**混池**數字，79% 來自單語的 tydiqa（≈ 測試任務的 4%）；數字對得起來：16.92 = (615×15.61 + 165×21.82)/780。連帶地，「adapter 在 tydiqa 崩潰是 chrF 假象」這個辯護也不必了 —— tydiqa 崩不崩潰**根本不影響路由**，它不是這個任務的 proxy。**這個決定既不需要官方指標、也不需要 sqrt(EM×chrF) 對沖**（那條規則在 tydiqa 上是 17.79 vs 17.46，本來就分不出勝負），只需要用對 proxy。詳見 EXPERIMENTS.md 的拆分表與待辦 #6。~~缺口：`run_test.py` 還沒有 `--shots` —— qa-context 那半邊現在跑不了~~ → **兩個缺口都沒了**：`--shots` 已於 2026-07-16 實作（commit bae02b9），而且 primary 根本不再需要它 —— **qa-context 和 qa-oeg 現在都走 `--lora` 0-shot，同一條路徑**。`--shots` 現在的用途是 variant1（純 demo 的安全牌）。⚠️ **belebele 與 aya 的分數都不能拿來做路由決策**：測試集無選擇題（belebele 不轉移），且 aya 的 gold 中位僅 24 詞、測試 qa-oeg 要 120-180 詞（OEG gold 中位 175 詞）—— aya 不是 qa-oeg 的 proxy，2026-07-15 對官方檔案實測。dev 2,978 列裡只有 **1,240 列（42%）**有預測力：MCIF 165 + OEG 97 + aya 978（先前寫的「877 列 / 29%」是舊帳 —— 它把 aya 當雜訊排除、又把單語的 tydiqa 615 列算進去，兩處都已撤回） |
 | F | **推理期品質守門** | fastText LID（<1MB）檢查輸出語言、錯了換 seed 重生成；可試 best-of-N + 9B 自評 | 🟡 起步了：`bho_lid.py`（D 的副產品）可當 bho 守門員，對 sib200 實測 3 句以上 recall 94% / precision 99%（單句 73%，別用）。⚠️ **但這組數字只代表 FLORES 新聞文體，不能外推**——第一版就是在 sib200 拿 91%/100%，卻把真正的博傑普爾**網頁**文自信地判成 Nepali（marker 表缺了日常的 -ela/-ala 動詞；且 margin 規則在對手密度為 0 時恆真，已加絕對下限 `MIN_DENSITY` 修掉）。教訓：**換語料就要重新抽樣查證，別信舊的評測數字**。它也只認 bho/hin/mai/npi 四語——全 24 語守門要用 **GlotLID**（`cis-lmu/glotlid`，有 bho_Deva）；fastText `lid.176` 會把 bho/mai/mag 混成一個 `bh`，別用。best-of-N 未動工 |
 | G | **三份提交對沖** | primary = 蒸餾+路由完全體；variant1 = 9B 3-shot（27.64 安全牌）；variant2 = 激進版（best-of-N） | ⬜ 策略已定，最後 3 天執行：用 100% 樣本資料重練最終版、跑測試集、提交 |
@@ -114,13 +114,38 @@ numbers, 10B accounting, distillation pipeline, infra rules), and
      `scripts/build_dataset.py` 可重現；決策記錄在 DATA_AUDIT.md §7，新實驗一律記
      EXPERIMENTS_NEW.md（舊 dev 數字全部不可比）。v2 之後 qa-context 的 dev proxy 不再只剩 MCIF ——
      belebele-v2 / tydiqa-v2 都是測試版型（跨語言、含 unanswerable），但仍分欄看。
-3. **C 的 substrate 已定案（使用者決定，2026-07-17）：疊在 v2 重建資料集上**（不是 distilled、
-   也不是舊 gold 混料）。`data/train_v2.jsonl` 已建成（`scripts/build_dataset.py`，DATA_AUDIT §7）——
-   本身已內建測試版型＋拒答訊號（belebele 7% / tydiqa 20% 拒答列，per-language 精確字串），C 的
-   `augment_constraints.py` 只需補 qa-oeg 端的字數預算增強；⚠️ 增強列必須**繼承原列的
-   `item_group`**（split 是 item_group 的純函數，混進 `data/sft-bho.jsonl` 時 bho 列自成 group）。
-   待辦 #5（拒答字串沒被訓練路徑用過）隨 v2 一併解掉。
-4. **D 的 bho 資料還沒被模型看過** — 8,009 列已就緒但尚未進任何一次 SFT；
-   `bho_lid.py` 可在 eval 後直接量「輸出到底是不是 bho」。
-5. **拒答字串**（`constraint_bank.context_tail(lang).refusal_phrase`）目前只是被抽出來，
-   還沒被任何訓練/推理路徑使用 — 對治 smoke 的假拒答（4/10 arb）是現成的一步。
+3. ~~C 的 substrate 待決~~ → ✅ **全部落地（2026-07-18）**：substrate = v2（使用者定案 07-17），
+   `data/train_v2-cd.jsonl` 已建（C 的 qa-oeg 字數預算 840 列 + D 的 bho 8,009 列，增強列繼承
+   `item_group`），**C+D 合體 SFT = 3869129 / eval = 3869130**。見 EXPERIMENTS_NEW.md。
+4. ~~D 的 bho 資料還沒被模型看過~~ → ✅ 已進 3869129；eval 後跑 `bho_lid.py` 驗輸出語言。
+5. ~~拒答字串沒被使用~~ → ✅ v2 資料內建拒答列且**證實訓得進去**（3869088：hit 97.5%/88.5%、
+   假拒答 0.1%/4.9%，三個系統中最佳）。⚠️ 教訓：**拒答指標只能在 truncated 預測上量**——
+   raw CSV 會被 runaway 垃圾拖到低估 25 倍（3.9% vs 92.7%）。
+
+## 接下來做什麼（2026-07-18 更新，按優先序）
+
+0. 🔴 **一切 adapter 推理都必須帶 runaway 防護**（已內建於 benchmark.py / run_test.py，
+   commit d5a65b3——generate `stop_strings` + `truncate_runaway()`；smoke 3869113 = 0/60 污染）。
+   自己另寫推理路徑的話記得掛上 `prompt_template.RUNAWAY_STOP_STRINGS`。
+1. **等 3869129/3869130（C+D 完全體）出分**：對照組是 plain-v2 adapter（3869088：belebele 44.33 /
+   tydiqa 72.04 / MCIF 50.95 / qa-oeg agg 39.99）——單變數比較（加了預算+bho）。同時：
+   (a) `bho_lid.py` 驗 bho 輸出；(b) 840 列預算的 compliance 用 `constraint_bank.parse_budget` 量。
+2. **讀 aya 的風格偏移**（零 GPU）：adapter 的 aya chrF 17.11 低於 base 23.69 但 BERTScore/ROUGE
+   反升——抽 30 條預測人工讀，判斷是壞事還是 chrF 假象，再決定要不要處理。
+3. **`--unescape` qualitative smoke**（待辦 #1，一直沒動）：literal `\n\n` 還原與否，
+   variant 提交的現成軸；一個 smoke job 對比輸出品質即可。
+4. **F：GlotLID 全語言輸出守門**（`cis-lmu/glotlid`，有 bho_Deva）＋ 錯語言重生成；
+   best-of-N 仍未動工，時間不夠就只上語言守門。
+5. **G：最後衝刺排程**（截止 08-01 AoE，倒數兩週）：
+   - ~07-27 前定案 primary 配方（C+D adapter vs plain-v2 adapter，看 #1 的結果）；
+   - 用 **100% 資料（train_v2 + dev_v2 合併）** 重練最終 adapter（split 只是量測工具，
+     交卷前要把 dev 的訊號拿回來）；
+   - 跑官方測試集三種配置：primary = 最終 adapter 路由（qa-context + qa-oeg 都走 adapter、
+     0-shot、無 hint）＋隊友的 sum；variant1 = 9B 3-shot 安全牌；variant2 = 激進軸
+     （--unescape 或 best-of-N，看 #3/#4 誰成熟）；
+   - Google Form 提交。
+6. **小工具債**：`evaluate.py` 自動輸出 qa-oeg 加權聚合（0.87/0.13）＋ truncated 拒答指標，
+   免得每次手算；EM/F1 的 TASK_PROXY 混池問題（待辦 #6）在 v2 時代已無關緊要，不修。
+7. **傳話給隊友**：test sum 輸入 p50 2,773 詞超過 `train_lora.py` 的 2048-token 截斷；
+   另外 v2 的 sum-sum 列已按 item-group 切好（CrossSum 的 context_lang 是 null、
+   跨語言平行文章抓不到——要用的話得回 upstream 拿配對 metadata）。

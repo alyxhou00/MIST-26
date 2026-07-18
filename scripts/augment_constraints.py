@@ -6,11 +6,18 @@ budget in 9 of 10 Bhojpuri qa-oeg rows (150 -> 235 words, 120-150 -> 282, 100 ->
 script takes the SFT rows produced by `scripts/filter_teacher.py` and rewrites a fraction of
 their *inputs* to carry a constraint, so the adapter is trained to obey one.
 
-    # after filter_teacher.py has written the distilled data
+    # v2 era (2026-07-18): the substrate is the item-split train set (ROADMAP todo #3).
+    # v2 qa-context inputs already carry the full attested test tail, so C reduces to
+    # word budgets on the qa-oeg rows; --append-bho folds roadmap D in. One command
+    # builds the C+D training file:
+    python scripts/augment_constraints.py data/train_v2.jsonl \
+        --out data/train_v2-cd.jsonl --append-bho data/sft-bho.jsonl
+
+    python scripts/train_lora.py --data data/train_v2-cd.jsonl --no-lang-hint
+
+    # legacy (pre-v2 files, source-routed constraints):
     python scripts/augment_constraints.py data/sft-distilled.jsonl \
         --out data/sft-distilled-c.jsonl --report
-
-    python scripts/train_lora.py --data data/sft-distilled-c.jsonl
 
 The central design rule is **derive the constraint from the answer, never the other way
 round**. We do not rewrite targets to fit a constraint we invented; we measure the target we
@@ -63,6 +70,11 @@ EXCLUDED_SOURCES = {"facebook/belebele"}  # multiple-choice; absent from the tes
 _TERMINATOR = re.compile(r"[.?!।。？！؟]")
 
 
+def _lang(row: dict) -> str:
+    """Bare language code from either schema (v2 `question_lang` or legacy `lang_code`)."""
+    return (row.get("question_lang") or row["lang_code"]).split("_")[0]
+
+
 def is_one_sentence(text: str) -> bool:
     stripped = text.strip()
     if not stripped:
@@ -75,9 +87,30 @@ def is_one_sentence(text: str) -> bool:
 
 def augment_row(row: dict, rng: random.Random, args: argparse.Namespace) -> tuple[dict, str]:
     """Return (row, kind) where kind is the constraint applied, or "" for untouched."""
-    lang = row["lang_code"].split("_")[0]
+    lang = _lang(row)
     source, out = row.get("source", ""), row["output"]
-    if source in EXCLUDED_SOURCES or lang not in BUDGET:
+    if lang not in BUDGET:
+        return row, ""
+
+    # v2 rows (data/train_v2.jsonl) carry a `task` column and their qa-context inputs
+    # ALREADY end in the full attested test tail (one-sentence + refusal + answer-in --
+    # build_dataset.py wrapped them) -- appending another clause would double-instruct.
+    # So on v2 data C reduces to: word budgets on the qa-oeg rows, everything else
+    # untouched. The source-routed branches below remain for pre-v2 files.
+    if "task" in row:
+        if row["task"] != "qa-oeg":
+            return row, ""
+        n = measure(out, lang)
+        if n < args.min_len:
+            return row, ""
+        if rng.random() < args.exact_ratio:
+            clause, kind = word_budget(lang, max(10, round(n / 10) * 10)), "budget-exact"
+        else:
+            lo, hi = budget_bounds(n, args.slack)
+            clause, kind = word_budget(lang, lo, hi), "budget-range"
+        return {**row, "input": f"{row['input'].rstrip()}\n\n{clause}", "constraint": kind}, kind
+
+    if source in EXCLUDED_SOURCES:
         return row, ""
 
     if source in OPEN_ENDED_SOURCES:
@@ -122,6 +155,14 @@ def main() -> None:
     ap.add_argument("--test-file", default=DEFAULT_TEST_FILE,
                     help="official test JSONL -- the source of the constraint phrasings")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--append-bho", default=None, metavar="JSONL",
+                    help="roadmap-D Bhojpuri pack (data/sft-bho.jsonl) to append to the "
+                         "output, normalized to the v2 schema (task='bho-pack', "
+                         "question_lang='bho', its own item_group per row). bho has ZERO "
+                         "rows in every other source and 460 official test rows, so the "
+                         "C-augmented v2 train set + this pack is the full C+D substrate:\n"
+                         "  python scripts/augment_constraints.py data/train_v2.jsonl \\\n"
+                         "      --out data/train_v2-cd.jsonl --append-bho data/sft-bho.jsonl")
     ap.add_argument("--report", action="store_true",
                     help="print what would be applied, with samples, and write nothing")
     args = ap.parse_args()
@@ -151,18 +192,30 @@ def main() -> None:
     for kind, n in kinds.most_common():
         print(f"  {kind:24s} {n:6d}  ({n / len(rows):5.1%})")
 
-    by_lang = Counter(r["lang_code"].split("_")[0] for r in out_rows if "constraint" in r)
+    by_lang = Counter(_lang(r) for r in out_rows if "constraint" in r)
     if by_lang:
         print(f"\naugmented rows cover {len(by_lang)} languages: "
               f"{', '.join(f'{l}={n}' for l, n in sorted(by_lang.items()))}")
 
     print("\nsample per constraint kind (tail of the input, then the target):")
     for kind, r in samples.items():
-        print(f"\n--- {kind} [{r['lang_code']}, {r['source']}, origin={r['origin']}] ---")
+        print(f"\n--- {kind} [{_lang(r)}, {r['source']}, origin={r.get('origin', '-')}] ---")
         print(f"  input tail: ...{r['input'][-120:]}")
         print(f"  target    : {r['output'][:160]}{'...' if len(r['output']) > 160 else ''}")
-        print(f"  measured  : {measure(r['output'], r['lang_code'].split('_')[0])} "
-              f"{BUDGET[r['lang_code'].split('_')[0]].unit}s")
+        print(f"  measured  : {measure(r['output'], _lang(r))} {BUDGET[_lang(r)].unit}s")
+
+    if args.append_bho:
+        import hashlib
+        n_bho = 0
+        for line in open(args.append_bho, encoding="utf-8"):
+            r = json.loads(line)
+            out_rows.append({
+                "task": "bho-pack", "question_lang": "bho", "context_lang": None,
+                "source": r["source"], "input": r["input"], "output": r["output"],
+                "item_group": "bho:" + hashlib.md5(r["input"].encode()).hexdigest()[:16],
+            })
+            n_bho += 1
+        print(f"\nappended {n_bho} bho-pack rows from {args.append_bho}")
 
     if args.report:
         print("\n--report: nothing written")
