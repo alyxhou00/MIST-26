@@ -493,3 +493,13 @@ into hallucinated chat turns. Facts established while debugging:
 - Measured runtimes that set the sbatch budgets: 2B 0-shot 5h36, 2B 3-shot 3h29, 9B 0-shot
   6h01, 9B 3-shot 3h42, 9B LoRA SFT 6h35, 9B LoRA eval 6h52, scoring 2,978 rows 1m11s,
   35B teacher ~14 s/row (~16h per 1/3 shard), 122B-vLLM 4,126 rows in 17m10s.
+- 🔴 **`run_test.py` on the official test set is ~3× slower per row than the sbatch header
+  assumes, and that changes the submission plan.** Measured on jobs 3875151/3875152
+  (9B + LoRA, `--task qa-oeg`, max-new-tokens 512, one a40 each): **515 rows in 3h10 ≈ 22
+  s/row**, vs the 4.5–8.3 s/row the `slurm/run_test.sbatch` header projects from
+  benchmark.py's dev rates. Test prompts are longer and the answers run to the full budget,
+  so the 512-token ceiling is actually reached. Consequences: one qa-oeg pass (2,359 rows)
+  is **~14h**, and **the full 10,999-row qa set is ~67h — nearly 3× the 24h partition wall.
+  The final submission runs MUST be sharded** (`--shard i/n` with a separate `--out`, then
+  concatenate; `run_test.py` also resumes into an existing `--out`). At n=4 each shard is
+  ~17h, so plan n=4–6 and start them with slack before 08-01.
