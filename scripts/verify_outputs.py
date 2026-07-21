@@ -37,20 +37,29 @@ honestly be measured:
     ~10-25 words. `bho_lid.py` states in its own docstring that it is "usable on anything
     paragraph-sized, not to be trusted on single short sentences" -- so it is **skipped**
     on qa-context rather than run and quietly believed.
-  * Short extractive answers are often mostly named entities lifted from the passage, where
-    "which language is this" is partly undecidable in principle. That also means the drift
-    risk here is structurally lower than for 150-word free generation.
+  * Answers are far shorter than even that suggests -- **median 3 words** -- and are often a
+    noun phrase lifted from the passage, where "which language is this" is undecidable in
+    principle. Those rows are counted as undecidable, never assigned.
 
-What survives on one-sentence answers, strongest first: **script** (Unicode range -- catches
-answering in English/Chinese/Arabic with total reliability, though it cannot separate bho
-from Hindi, both Devanagari), **refusal rate** (exact match against the attested per-language
-phrase from `constraint_bank`), and **one-sentence compliance** (sentence terminators). The
-bho-vs-Hindi question needs GlotLID (roadmap F) or hand-reading; it is deliberately left
-unanswered here instead of being answered badly.
+What survives on one-sentence answers: **script** (Unicode range -- catches answering in
+English/Chinese/Arabic with total reliability, though it cannot separate bho from Hindi,
+both Devanagari), **refusal rate** (exact match against `constraint_bank`'s attested
+phrase), **one-sentence compliance**, and -- the one that turned out to matter --
+**contrastive function words**.
+
+That last one is the lesson of this file. Script and sentence counts showed the C+D and
+plain adapters as *identical* on these 360 rows (Devanagari 358/360, one sentence ~99%,
+both), which reads as "D does nothing here". Reading pairs by hand said otherwise: C+D
+writes `आ`/`खातिर`/`होखल`, plain writes `और`/`के लिए`/`की`. The aggregate was blind, not the
+effect absent. Asking "which of these two words did it pick" needs only one word of output,
+whereas `bho_lid`'s marker *density* needs a paragraph -- so on this data the contrastive
+test resolves 39% of rows where `bho_lid` resolves almost none, and it separates the two
+systems 99% vs 18% bho. Cf. the standing rule: read the data before believing an aggregate.
 """
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -78,6 +87,34 @@ SCRIPTS = {
 # Sentence terminators, incl. the Devanagari danda. Abbreviations and decimals inflate the
 # "." count, so a 2-sentence reading is soft; 3+ is a real violation.
 TERMINATORS = "।॥.!?？！。"
+
+# Minimal contrastive pairs: same grammatical function, different language. This is the
+# instrument that works where `bho_lid` cannot -- it asks "which of these two specific words
+# did it choose", which a 3-word answer can still answer, instead of "what is the marker
+# density of this text", which needs a paragraph. Rows containing neither side are reported
+# as undecidable rather than assigned, because a 2-word noun phrase lifted from the passage
+# genuinely has no language beyond its script.
+BHO_HIN_CONTRASTS = [
+    ("'and'",        r"आ",                    r"और"),
+    ("'for'",        r"खातिर",                r"के लिए"),
+    ("copula",       r"बा|बाड़|होखल|होला",    r"है|हैं"),
+    ("oblique",      r"के",                   r"की|को"),
+    ("infinitive",   r"करे|करल",              r"करना|करता"),
+]
+
+
+def has_token(text: str, pattern: str) -> bool:
+    """Whole-token match -- `के` must not fire inside `केवल`."""
+    return bool(re.search(r"(?:^|[\s,।])(?:" + pattern + r")(?=[\s,।]|$)", f" {text} "))
+
+
+def bho_vs_hin(text: str) -> str | None:
+    """'bho', 'hin', or None when the text commits to neither."""
+    b = sum(has_token(text, pair[1]) for pair in BHO_HIN_CONTRASTS)
+    h = sum(has_token(text, pair[2]) for pair in BHO_HIN_CONTRASTS)
+    if b == h:
+        return None
+    return "bho" if b > h else "hin"
 
 
 def load_tests(path: str) -> dict[str, dict]:
@@ -184,6 +221,9 @@ def check_context(tests: dict, outs: dict, lang: str) -> dict:
 
         if refusal and refusal in text:
             stats["refusal"] += 1
+            continue          # a fixed phrase says nothing about free-generation drift
+        stats["answered"] += 1
+        stats[f"lex_{bho_vs_hin(text) or 'undecidable'}"] += 1
         # One sentence was asked for. Trailing terminator doesn't count as a second.
         n_sent = sum(text.count(t) for t in TERMINATORS)
         if text and text[-1] in TERMINATORS:
@@ -248,6 +288,13 @@ def report(path: str, tests: dict, ctx_lang: str) -> None:
               f"3+ {t['many_sentences']} ({pct('many_sentences'):.1f}%)")
         print(f"    used the attested refusal phrase: {t['refusal']} ({pct('refusal'):.1f}%)"
               f"   empty: {t['empty']}")
+        dec = t["lex_bho"] + t["lex_hin"]
+        if dec:
+            print(f"    bho-vs-Hindi by contrastive function words, on the {t['answered']} "
+                  f"non-refusal answers:")
+            print(f"        bho-leaning {t['lex_bho']}   hin-leaning {t['lex_hin']}   "
+                  f"undecidable {t['lex_undecidable']} (too short to commit)"
+                  f"  ->  {100.0 * t['lex_bho'] / dec:.0f}% bho of the {dec} decidable")
 
 
 def main() -> None:

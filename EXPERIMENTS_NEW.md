@@ -232,3 +232,57 @@ Final split: **1,400 fineweb** (sampled toward the 80–250 word band) + **1,000
 
 Held for job (a) of the decision tree in ROADMAP #1 — it only gets submitted if 3876434
 shows the dilution is real.
+
+### D on qa-context — jobs 3876525 / 3876526, and an aggregate that lied (2026-07-21)
+
+Every D number so far came from the 100 bho **qa-oeg** rows. bho has **460** qa rows in the
+test set; the other **360 are qa-context** and had never been generated. Two 30-minute jobs
+fixed that (`run_test.py --task qa-context --lang bho`, C+D 3869129 vs plain 3867139).
+
+Reading those rows first changed the instrument. They are 97% cross-lingual (passage in
+eng ×100, arb/spa/zho ×25 each, …; only 10 rows have a bho passage), the prompt asks for
+**one sentence**, and answers come out at a **median of 3 words**. `bho_lid` says in its own
+docstring that it is not to be trusted on single short sentences, so it is now filtered to
+qa-oeg rather than run here and quietly believed.
+
+**The first three checks said the two systems were identical:**
+
+| check | C+D (3876525) | plain (3876526) |
+|---|---|---|
+| Devanagari script | 358/360 (99.4%) | 358/360 (99.4%) |
+| one sentence | ~99% | ~99% |
+| attested refusal phrase | 19.7% | 17.2% |
+
+Read literally, that is "D does nothing on 78% of the bho test rows". **It is wrong.**
+Hand-reading pairs on the same ids showed a consistent difference the aggregate could not
+see — C+D writes `आ` / `खातिर` / `होखल`, plain writes `और` / `के लिए` / `की`:
+
+    [qa-context_18_bho_spa] C+D  : संरक्षण खातिर पूर्ण रुप से पर्याप्त साधन ना होखल
+                            plain: संरक्षण के लिए परिपूर्ण साधनों की कमी
+
+So the fourth check: **contrastive function words** — "which of these two words did it
+pick", which one word of output can answer, instead of `bho_lid`'s marker *density*, which
+needs a paragraph.
+
+| | C+D | plain |
+|---|---|---|
+| bho-leaning / hin-leaning | **163 / 1** | 21 / 93 |
+| undecidable (too short to commit) | 125 | 184 |
+| **% bho of the decidable** | **99%** | **18%** |
+| `आ` vs `और` alone | 82 vs **0** | 5 vs **67** |
+
+**D's benefit now rests on 460 rows, not 100, and the qa-context effect is cleaner than the
+qa-oeg one** (40% vs 12% there). That strengthens the case for keeping D in the primary and
+supports ROADMAP #1's rule that C-only winning on dev would still not settle it.
+
+Two honest limits: only 39% of rows are decidable at all — the rest are 2–3 word noun
+phrases lifted from the passage, where language is undecidable in principle; and this shows
+the output *looks* Bhojpuri, not that it is *correct*, which no test-set check can show
+without gold.
+
+🟢 **Side result that changes the submission schedule: qa-context runs at 5.9 s/row, not
+20.5.** The 67h projection for the full qa set came from extrapolating the qa-oeg rate to
+everything, but qa-context is 8,640 of the 10,999 rows (79%) and answers one sentence
+instead of 512 tokens. Recomputed: 8,640×5.9 + 2,359×20.5 = **27.5h**, so `--shard i/2`
+(13.8h each) is enough and n=4–6 was over-planning. Measured on bho only; the one-sentence
+instruction is universal, so it should carry, but worth re-checking before the final runs.
