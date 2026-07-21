@@ -493,13 +493,22 @@ into hallucinated chat turns. Facts established while debugging:
 - Measured runtimes that set the sbatch budgets: 2B 0-shot 5h36, 2B 3-shot 3h29, 9B 0-shot
   6h01, 9B 3-shot 3h42, 9B LoRA SFT 6h35, 9B LoRA eval 6h52, scoring 2,978 rows 1m11s,
   35B teacher ~14 s/row (~16h per 1/3 shard), 122B-vLLM 4,126 rows in 17m10s.
-- 🔴 **`run_test.py` on the official test set is ~3× slower per row than the sbatch header
-  assumes, and that changes the submission plan.** Measured on jobs 3875151/3875152
-  (9B + LoRA, `--task qa-oeg`, max-new-tokens 512, one a40 each): **515 rows in 3h10 ≈ 22
-  s/row**, vs the 4.5–8.3 s/row the `slurm/run_test.sbatch` header projects from
-  benchmark.py's dev rates. Test prompts are longer and the answers run to the full budget,
-  so the 512-token ceiling is actually reached. Consequences: one qa-oeg pass (2,359 rows)
-  is **~14h**, and **the full 10,999-row qa set is ~67h — nearly 3× the 24h partition wall.
-  The final submission runs MUST be sharded** (`--shard i/n` with a separate `--out`, then
-  concatenate; `run_test.py` also resumes into an existing `--out`). At n=4 each shard is
-  ~17h, so plan n=4–6 and start them with slack before 08-01.
+- 🟡 **`run_test.py` throughput on the official test set is strongly task-dependent — and
+  the first estimate here was wrong because it generalised from the slow task.** Measured
+  on one a40, 9B + LoRA, max-new-tokens 512:
+  - **`qa-oeg` ≈ 20.5 s/row** (jobs 3875151/3875152, 2,359 rows in 13h25 each). Test
+    prompts are long and the answers run to the full budget, so the 512-token ceiling is
+    actually reached. This is ~3× the 4.5–8.3 s/row the `slurm/run_test.sbatch` header
+    projects from benchmark.py's dev rates, and that header is still stale.
+  - **`qa-context` ≈ 5.9 s/row** (jobs 3876525/3876526, 360 bho rows in 35:13 / 29:34).
+    The prompt asks for **one sentence**, so generation stops early and the ceiling is
+    never approached.
+  - ⚠️ **This note first recorded the full qa set as "~67h, nearly 3× the wall" — that was
+    an extrapolation of the qa-oeg rate onto all 10,999 rows, and it is wrong.** qa-context
+    is **8,640 of those rows (79%)**. Correct arithmetic: 8,640×5.9 + 2,359×20.5 ≈
+    **27.5h**. Still over the 24h partition wall, so the final runs must still shard
+    (`--shard i/n`, separate `--out` each, concatenate; `run_test.py` also resumes into an
+    existing `--out`) — but **n=2 (13.8h/shard) is enough**, where n=4–6 was planned.
+  - Caveat on the qa-context rate: measured on bho only. The one-sentence instruction is
+    attested in every language's `context_tail`, so it should carry, but re-check on a
+    second language before committing the final schedule.

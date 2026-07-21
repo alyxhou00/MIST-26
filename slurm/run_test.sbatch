@@ -16,11 +16,18 @@
 #     curl -sL "https://huggingface.co/datasets/pinzhenchen/wmt26-mist-test/resolve/main/tests.jsonl" \
 #       -o data/tests.jsonl
 #
-# Time limit is the 24h partition max: at benchmark.py's measured 9B rates (~4.5-8.3 s/row on
-# an a40, and this workload doubles max-new-tokens to 512) the full 10,999-row qa set projects
-# to roughly 14-25h -- a single job may hit the wall. Either split the work with --shard i/n
-# (separate --out per shard, concatenate afterwards) or just resubmit with the SAME --out:
-# run_test.py skips ids already present in it and resumes.
+# Time limit is the 24h partition max. MEASURED rates on this workload (9B + LoRA, one a40,
+# max-new-tokens 512) -- NOT benchmark.py's dev rates, which this header used to quote and
+# which understate qa-oeg by ~3x:
+#     qa-context  ~5.9 s/row   (jobs 3876525/3876526 -- the prompt asks for ONE SENTENCE,
+#                               so generation stops early and 512 is never approached)
+#     qa-oeg     ~20.5 s/row   (jobs 3875151/3875152 -- answers run to the full budget)
+# The full qa set is 8,640 qa-context + 2,359 qa-oeg = 8,640*5.9 + 2,359*20.5 ~= 27.5h, i.e.
+# over the wall but only just: --shard i/2 is ~13.8h per shard and is enough. Use a separate
+# --out per shard and concatenate, or just resubmit with the SAME --out -- run_test.py skips
+# ids already present in it and resumes.
+# (Caveat: the qa-context rate was measured on bho only; the one-sentence instruction is
+# attested in every language, so it should carry, but re-check before the final schedule.)
 #
 # Smoke-test first with slurm/smoke-run-test.sbatch.
 
