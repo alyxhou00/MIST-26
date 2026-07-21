@@ -118,23 +118,44 @@ higher train_loss) and none of its *benefit*. The benefit has to be measured on 
 test prompts — jobs **3875151** (C+D) and **3875152** (plain-v2 control), `run_test.py
 --task qa-oeg`, scored with `scripts/verify_outputs.py`.
 
-#### Verification, first 517/2,359 rows (jobs still running, 2026-07-20)
+#### Verification, complete — 2,359/2,359 rows, all 24 languages (2026-07-21)
 
-⚠️ **Partial and NOT representative for C**: `run_test.py` walks the test file in order,
-which is grouped by language, so the 517 rows so far cover only **arb, ben, bho, ces, ckb
-and part of deu** — and arb/ben/ckb are among the *worst* compliance languages in both
-systems. The **bho slice is complete** (all 100 qa-oeg rows).
+Both jobs COMPLETED (13h25 / 13h27 wall, 2,359 rows each ≈ 20.5 s/row, confirming the
+throughput warning below). The partial read from 07-20 held up: the language-ordering bias
+moved C's absolute numbers up ~9pp for both systems but left the gap intact.
 
 | check | C+D (3875151) | plain-v2 (3875152) |
 |---|---|---|
-| C: budget compliance (107 rows so far) | **57.0%** | 34.6% |
-| ↳ over budget / under budget | 5.6% / 37.4% | 2.8% / **62.6%** |
+| C: budget compliance, all 465 budget rows | **65.8%** | 44.9% |
+| ↳ over budget / under budget | 7.1% / 27.1% | 3.9% / **51.2%** |
+| ↳ mean overshoot beyond the band | 67 units | 86 units |
+| ↳ worst languages | mar 25, ben 35, ckb 45 | ben 10, mar 20, tur 20 |
 | D: bho_lid on the 100 bho rows — bho | **40%** | 12% |
 | ↳ hin / npi / abstain | 36% / 1% / 23% | 67% / 0% / 21% |
 
-Both effects are large and in the intended direction: **C lifts compliance by +22pp, and
+Both effects are large and in the intended direction: **C lifts compliance by +20.9pp, and
 the failure it removes is under-shooting** (answering far below the stated budget,
-62.6% → 37.4%), not padding. **D triples the bho rate and halves the Hindi drift.**
+51.2% → 27.1%), not padding. **D triples the bho rate and halves the Hindi drift.**
+
+**C is conditional, not a blanket length shift** — the worry was that training on 840
+budgeted rows would make the adapter terser everywhere, which would cost recall on the
+1,894 test rows that state *no* budget. Measured: on those non-budget rows the two systems
+are near-identical (median length 73 vs 81, mean 128.3 vs 133.7), while on the 465 budget
+rows C+D moves 119 → **149** — i.e. the length change is keyed to the instruction. So the
+dev regression is *not* a length effect; it is the bho pack (41% of the mix) diluting the
+qa head.
+
+Two flaws quantified over the full 2,359 rows, **both present in the plain control**, so
+neither is caused by C or D:
+
+| flaw | C+D | plain-v2 |
+|---|---|---|
+| degenerate repetition (one clause ≥4×) | 52 rows (2.2%) | 57 rows (2.4%) |
+| literal `<br>` markup in the output | 731 rows (**31.0%**) | 657 rows (27.9%) |
+
+The `<br>` number is the surprise — **roughly 30% of every qa-oeg prediction carries HTML
+markup**, on both adapters. It comes from the web-scraped qa substrate, and a one-line
+strip at submission time is the cheapest point available anywhere on the roadmap.
 
 **Read the LID numbers narrowly** — 12 outputs were read side by side before drawing
 anything from them, and three things showed up that the aggregate hides:
@@ -157,6 +178,25 @@ markup. plain-v2 emits it too, so it comes from the qa substrate (web-scraped ay
 text), not from the bho pack. Candidate for a cheap post-processing strip at submission
 time — logged, not acted on.
 
-**Status: primary recipe NOT yet decided.** The trade is a −1.42 qa-oeg dev drop against
-+22pp constraint compliance and 3× bho on the 460 test rows dev is blind to. Decide when
-the full 2,359-row runs land (all 24 languages, all 465 budget rows).
+**Status: C is keep, D is keep, but C+D as one adapter is probably not the primary.**
+
+The full runs sharpen the trade rather than settling it, and they point at a recipe that
+was never trained:
+
+* **C earns its place.** +20.9pp compliance on 465 rows, no spillover onto the other 1,894.
+  There is no measured cost to C anywhere.
+* **D earns its place too**, on 460 test rows dev cannot see. Wrong-language output scores
+  near-zero on chrF, so lifting bho 12% → 40% plausibly moves the bho column by more than
+  the −1.67 C+D loses on OEG overall — bho is 1 of 24 languages, so the two are the same
+  order of magnitude. This is why dev's −1.42 does not settle it.
+* **The −1.42 is attributable to the bho pack's 41% share of the mix**, not to C (proven
+  above: C's length effect is conditional on the instruction).
+
+So the missing datapoint is **C-only** — `augment_constraints.py` without `--append-bho`,
+i.e. `train_v2-c.jsonl`. Built and **running as job 3876434** (2026-07-21): 18,901 file
+rows → **11,674 training examples, row-for-row identical to 3867139's**, with 840 of them
+carrying a budget sentence and 0 bho rows. That makes it a clean single-variable test of C.
+
+**Decision rule**: if C-only recovers plain-v2's dev score *and* keeps the ~65% compliance,
+it is the primary and C+D becomes the bho-hedging variant. If C-only's dev also drops, then
+the −1.42 was not the bho pack's fault and plain-v2 is the primary instead.
