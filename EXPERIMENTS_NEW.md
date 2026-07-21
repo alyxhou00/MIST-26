@@ -280,14 +280,28 @@ needs a paragraph.
 | **% bho of the decidable** | **99%** | **18%** |
 | `आ` vs `और` alone | 82 vs **0** | 5 vs **67** |
 
-**D's benefit now rests on 460 rows, not 100, and the qa-context effect is cleaner than the
-qa-oeg one** (40% vs 12% there). That strengthens the case for keeping D in the primary and
-supports ROADMAP #1's rule that C-only winning on dev would still not settle it.
+**D is now checked across all 460 bho qa rows instead of 100, and the qa-context effect is
+cleaner than the qa-oeg one** (40% vs 12% there). That strengthens the case for keeping D in
+the primary and supports ROADMAP #1's rule that C-only winning on dev would still not
+settle it.
 
-Two honest limits: only 39% of rows are decidable at all — the rest are 2–3 word noun
-phrases lifted from the passage, where language is undecidable in principle; and this shows
-the output *looks* Bhojpuri, not that it is *correct*, which no test-set check can show
-without gold.
+**But "460 rows" is coverage, not evidence count — say it the careful way.** Both adapters
+generated 460/460; a language verdict lands on **241 (C+D) / 193 (plain)**:
+
+| | C+D | plain |
+|---|---|---|
+| qa-oeg: verdict / abstained | 77 / 23 | 79 / 21 |
+| qa-context: fixed refusal phrase | 71 | 62 |
+| qa-context: free answers, of which decidable | 289 → **164** | 298 → **114** |
+| **rows with a language verdict** | **241 / 460** | **193 / 460** |
+
+Neither excluded group is a failure. The refusal rows emit the attested string
+`जवाब नइखे`, which is Bhojpuri by definition but memorised — it says nothing about whether
+the model can *generate* Bhojpuri. The rest are 2–3 word noun phrases lifted from the
+passage, where there is not enough text to have a language at all.
+
+Second honest limit: this shows the output *looks* Bhojpuri, not that it is *correct*, which
+no test-set check can show without gold.
 
 🟢 **Side result that changes the submission schedule: qa-context runs at 5.9 s/row, not
 20.5.** The 67h projection for the full qa set came from extrapolating the qa-oeg rate to
