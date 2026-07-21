@@ -55,6 +55,7 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 | 3869088 | 07-18 | ↑ same CSV, predictions truncated at the first runaway marker, re-scored | **44.33** | **72.04** | **50.95** | **40.53** | **36.43** | **39.99** | **1.3%** | **92.7%** | 3-min re-score of 3867140's CSV (1,934/2,949 rows truncated). **The v2-trained adapter beats base AND 3-shot on every column of the honest item-split dev** — the adapter-over-prompting verdict survives leakage removal, but ONLY together with an inference-side stop fix (truncation was applied post-hoc here; base runs are unaffected at 0% runaway). Margins over 3-shot: belebele +7.1, tydiqa +14.7, MCIF +5.3, qa-oeg agg +5.5. **Refusal correction (measured on THIS CSV, 2026-07-18): the v2 refusal rows DID train the escape** — refusal-hit belebele 97.5% / tydiqa 88.5% with false-refusals 0.1% / 4.9%; the earlier "3.9%" was runaway junk trailing the (correct) refusal phrase. Best refusal profile of all three systems (3-shot matches the 92.7% hit but at 11.5% false-refusals). Remaining watch item: aya chrF *below* base (17.11 vs 23.69) while BERTScore/ROUGE are up — style shift. |
 | 3869129 | 07-19 | **C+D SFT**: LoRA on `train_v2-cd.jsonl` (19,683 rows = 11,674 qa + 8,009 bho-pack; 840 qa-oeg rows carry a word budget), no hint, otherwise the 3867139 recipe | — | — | — | — | — | — | — | — | train_loss **1.156** (vs 3867139's 0.9656 — expected, the bho pack is 41% of the mix and is continuation/translation text), 11h23, 25 rows truncated \@2048. Adapter: `adapters/qwen3.5-9b-qa-lora-3869129`. |
 | 3869130 | 07-19 | ↑ adapter, 0-shot, no hint (first run with the stop-fix in place — clean by construction) | 44.70 | 70.72 | **51.11** | 38.86 | **36.65** | 38.57 | — | — | 5h06, dev_v2 qa (n=2,949). **C+D does not beat plain-v2 on dev: qa-context is a wash (±0.4, noise), qa-oeg agg −1.42.** Deltas vs 3869088: belebele +0.37, tydiqa −1.32, MCIF +0.16, OEG **−1.67**, aya +0.22. See the C+D read below — dev cannot see either thing C+D adds. |
+| 3876434 | 07-21 | **C-only SFT**: LoRA on `train_v2-c.jsonl` — the same 11,674 examples as 3867139, row for row, with 840 of them carrying a word budget and **0 bho rows**. Isolates C from D, which had only ever been trained together | — | — | — | — | — | — | — | — | train_loss **0.9648** vs 3867139's 0.9656 and 3869129's 1.156 — i.e. **the 840 budget sentences cost essentially nothing to fit, and the C+D loss increase was entirely the bho pack** (continuation/translation text at 41% of the mix). 6h27, 24 rows truncated \@2048. Adapter: `adapters/qwen3.5-9b-qa-lora-3876434`. Dev eval = 3878452, test compliance = 3878453. |
 
 ### 🔴 The runaway-generation artifact (found 2026-07-18) — and it retro-explains the old logs
 
@@ -193,13 +194,21 @@ was never trained:
   above: C's length effect is conditional on the instruction).
 
 So the missing datapoint is **C-only** — `augment_constraints.py` without `--append-bho`,
-i.e. `train_v2-c.jsonl`. Built and **running as job 3876434** (2026-07-21): 18,901 file
+i.e. `train_v2-c.jsonl`. Built and trained as **job 3876434** ✅ (2026-07-21): 18,901 file
 rows → **11,674 training examples, row-for-row identical to 3867139's**, with 840 of them
 carrying a budget sentence and 0 bho rows. That makes it a clean single-variable test of C.
 
 **Decision rule**: if C-only recovers plain-v2's dev score *and* keeps the ~65% compliance,
 it is the primary and C+D becomes the bho-hedging variant. If C-only's dev also drops, then
 the −1.42 was not the bho pack's fault and plain-v2 is the primary instead.
+
+**First signal, from training loss alone (2026-07-21): 0.9648, against plain-v2's 0.9656 and
+C+D's 1.156.** A difference of 0.0008 on the same 11,674 examples says the 840 budget
+sentences are free to fit and the whole of C+D's loss increase came from the bho pack. That
+is consistent with dilution being the cause of the −1.42 — but it is not the answer:
+train_loss is measured on the training distribution, and C could still change generation
+behaviour on dev without being harder to fit. Jobs **3878452** (dev eval) and **3878453**
+(test compliance) settle it.
 
 **C-only is a diagnostic, not a default primary.** It separates a cause that has never been
 measured apart — C and D went into the same SFT — but winning on dev would *not* by itself
