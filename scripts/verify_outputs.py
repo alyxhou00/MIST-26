@@ -25,6 +25,28 @@ Caveats worth keeping in mind when reading the output:
     separately: they are different failures (padding vs truncation).
   * `bho_lid.classify` abstains rather than guess, and is documented as unreliable on
     single short sentences -- abstentions are reported, never folded into either side.
+
+**qa-context needs a different toolkit, and `bho_lid` is not part of it.** The 360 bho
+qa-context test rows differ from the 100 qa-oeg ones in three ways that change what can
+honestly be measured:
+
+  * **97% are cross-lingual** (the passage is in another language: eng 100, arb/spa/zho 25
+    each, ...; only 10 rows have a bho passage). So there is a failure mode qa-oeg does not
+    have -- answering in the *passage's* language rather than drifting to Hindi.
+  * **The prompt asks for one sentence** ("एके वाक्य में जवाब दे सकीं"), so answers are
+    ~10-25 words. `bho_lid.py` states in its own docstring that it is "usable on anything
+    paragraph-sized, not to be trusted on single short sentences" -- so it is **skipped**
+    on qa-context rather than run and quietly believed.
+  * Short extractive answers are often mostly named entities lifted from the passage, where
+    "which language is this" is partly undecidable in principle. That also means the drift
+    risk here is structurally lower than for 150-word free generation.
+
+What survives on one-sentence answers, strongest first: **script** (Unicode range -- catches
+answering in English/Chinese/Arabic with total reliability, though it cannot separate bho
+from Hindi, both Devanagari), **refusal rate** (exact match against the attested per-language
+phrase from `constraint_bank`), and **one-sentence compliance** (sentence terminators). The
+bho-vs-Hindi question needs GlotLID (roadmap F) or hand-reading; it is deliberately left
+unanswered here instead of being answered badly.
 """
 
 import argparse
@@ -36,9 +58,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bho_lid import classify
-from constraint_bank import measure, parse_budget
+from constraint_bank import context_tail, measure, parse_budget
 
 SLACK = 0.15
+
+# Unicode ranges, majority-vote over letters. Deliberately coarse: the question this answers
+# is "did it answer in the passage's language instead of the asked one", which is a
+# script-level failure. It cannot separate bho from Hindi -- both are Devanagari.
+SCRIPTS = {
+    "Deva": [(0x0900, 0x097F)],
+    "Latn": [(0x0041, 0x005A), (0x0061, 0x007A), (0x00C0, 0x024F)],
+    "Arab": [(0x0600, 0x06FF), (0x0750, 0x077F)],
+    "Han": [(0x4E00, 0x9FFF), (0x3400, 0x4DBF)],
+    "Kana": [(0x3040, 0x30FF)],
+    "Hang": [(0xAC00, 0xD7AF)],
+    "Cyrl": [(0x0400, 0x04FF)],
+    "Beng": [(0x0980, 0x09FF)],
+}
+# Sentence terminators, incl. the Devanagari danda. Abbreviations and decimals inflate the
+# "." count, so a 2-sentence reading is soft; 3+ is a real violation.
+TERMINATORS = "।॥.!?？！。"
 
 
 def load_tests(path: str) -> dict[str, dict]:
@@ -84,9 +123,11 @@ def check_budgets(tests: dict, outs: dict) -> dict:
 
 
 def check_bho(tests: dict, outs: dict) -> Counter:
+    """bho_lid on the qa-oeg bho rows only -- see the module docstring for why qa-context
+    is excluded rather than measured badly."""
     stats = Counter()
     for rid, row in tests.items():
-        if row["question_lang"] != "bho" or rid not in outs:
+        if row["question_lang"] != "bho" or row["task"] != "qa-oeg" or rid not in outs:
             continue
         text = outs[rid]
         stats["n"] += 1
@@ -98,7 +139,65 @@ def check_bho(tests: dict, outs: dict) -> Counter:
     return stats
 
 
-def report(path: str, tests: dict) -> None:
+def script_of(text: str) -> str:
+    """Majority script over the letters in `text`, or "none" if it has none."""
+    counts: Counter = Counter()
+    for ch in text:
+        cp = ord(ch)
+        for name, ranges in SCRIPTS.items():
+            if any(lo <= cp <= hi for lo, hi in ranges):
+                counts[name] += 1
+                break
+    return counts.most_common(1)[0][0] if counts else "none"
+
+
+def context_lang_of(rid: str) -> str:
+    """qa-context ids are qa-context_{n}_{question_lang}_{context_lang}."""
+    return rid.rsplit("_", 1)[-1]
+
+
+def check_context(tests: dict, outs: dict, lang: str) -> dict:
+    """Script / refusal / one-sentence checks for one question language's qa-context rows."""
+    stats = Counter()
+    scripts: Counter = Counter()
+    by_ctx: dict[str, Counter] = {}
+    try:
+        refusal = context_tail(lang).refusal_phrase
+    except Exception:
+        refusal = None
+
+    for rid, row in tests.items():
+        if row["task"] != "qa-context" or row["question_lang"] != lang or rid not in outs:
+            continue
+        text = outs[rid].strip()
+        stats["n"] += 1
+        if not text:
+            stats["empty"] += 1
+            continue
+
+        sc = script_of(text)
+        scripts[sc] += 1
+        ctx = context_lang_of(rid)
+        by_ctx.setdefault(ctx, Counter())
+        by_ctx[ctx]["n"] += 1
+        by_ctx[ctx][sc] += 1
+
+        if refusal and refusal in text:
+            stats["refusal"] += 1
+        # One sentence was asked for. Trailing terminator doesn't count as a second.
+        n_sent = sum(text.count(t) for t in TERMINATORS)
+        if text and text[-1] in TERMINATORS:
+            n_sent -= 1
+        if n_sent <= 0:
+            stats["one_sentence"] += 1
+        elif n_sent == 1:
+            stats["two_sentences"] += 1
+        else:
+            stats["many_sentences"] += 1
+    return {"totals": stats, "scripts": scripts, "by_ctx": by_ctx}
+
+
+def report(path: str, tests: dict, ctx_lang: str) -> None:
     outs = load_outputs(path)
     print(f"\n=== {path}  ({len(outs)} rows) ===")
 
@@ -125,8 +224,30 @@ def report(path: str, tests: dict) -> None:
         order = ["bho", "hin", "mai", "npi", "abstain", "empty"]
         print("    " + "  ".join(f"{k}={s[k]} ({100.0 * s[k] / s['n']:.1f}%)"
                                  for k in order if s[k]))
-    else:
+    elif not any(tests[r]["task"] == "qa-context" for r in outs if r in tests):
         print("D -- no bho rows found (wrong task slice?)")
+
+    c = check_context(tests, outs, ctx_lang)
+    t = c["totals"]
+    if t["n"]:
+        n = t["n"]
+        pct = lambda k: 100.0 * t[k] / n
+        print(f"D(ctx) -- {n} {ctx_lang} qa-context rows "
+              f"(bho_lid NOT applicable at one-sentence length -- see docstring):")
+        want = "Deva" if ctx_lang in ("bho", "hin", "mar", "npi", "mai") else "?"
+        right = c["scripts"].get(want, 0)
+        print(f"    script: {want} {right} ({100.0 * right / n:.1f}%)   "
+              + "  ".join(f"{k}={v}" for k, v in c["scripts"].most_common() if k != want))
+        wrong = [(ctx, cc) for ctx, cc in c["by_ctx"].items() if cc["n"] - cc[want] > 0]
+        if wrong:
+            wrong.sort(key=lambda kv: kv[1][want] / kv[1]["n"])
+            print("    wrong-script rows by PASSAGE language (the drift-to-passage failure): "
+                  + ", ".join(f"{ctx} {cc['n'] - cc[want]}/{cc['n']}" for ctx, cc in wrong[:8]))
+        print(f"    one sentence {t['one_sentence']} ({pct('one_sentence'):.1f}%)   "
+              f"two {t['two_sentences']} ({pct('two_sentences'):.1f}%)   "
+              f"3+ {t['many_sentences']} ({pct('many_sentences'):.1f}%)")
+        print(f"    used the attested refusal phrase: {t['refusal']} ({pct('refusal'):.1f}%)"
+              f"   empty: {t['empty']}")
 
 
 def main() -> None:
@@ -134,11 +255,14 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("outputs", nargs="+", help="run_test.py output JSONL files")
     ap.add_argument("--test-file", default="data/tests.jsonl")
+    ap.add_argument("--ctx-lang", default="bho",
+                    help="question language for the qa-context script/refusal/sentence "
+                         "checks (default bho -- the only language D targets)")
     args = ap.parse_args()
 
     tests = load_tests(args.test_file)
     for path in args.outputs:
-        report(path, tests)
+        report(path, tests, args.ctx_lang)
 
 
 if __name__ == "__main__":
