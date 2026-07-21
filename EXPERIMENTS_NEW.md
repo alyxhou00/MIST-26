@@ -200,3 +200,35 @@ carrying a budget sentence and 0 bho rows. That makes it a clean single-variable
 **Decision rule**: if C-only recovers plain-v2's dev score *and* keeps the ~65% compliance,
 it is the primary and C+D becomes the bho-hedging variant. If C-only's dev also drops, then
 the −1.42 was not the bho pack's fault and plain-v2 is the primary instead.
+
+**C-only is a diagnostic, not a default primary.** It separates a cause that has never been
+measured apart — C and D went into the same SFT — but winning on dev would *not* by itself
+make it the right submission, because it puts bho back to 12% and dev is structurally blind
+to that. Choosing on dev alone is the exact mistake this whole round exists to avoid.
+
+#### The proportionate D — `sft-bho-small.jsonl` (built 2026-07-21, not yet trained)
+
+The suspicion is about **proportion**, not about whether D belongs. The pack is **40.7% of
+the training mix** (8,009 of 19,683) buying **4.2% of the test set** (460 of 10,999 qa
+rows) — a ~10× over-allocation whose cost lands on the 96% of rows that are not bho. So
+`scripts/shrink_bho_pack.py` builds a 2,400-row pack → `data/train_v2-cd-small.jsonl`,
+**14,074 training examples with bho at 17.1%**, the same 840 budget rows, so it stays a
+single-variable comparison against 3869129.
+
+**The row selection is the opposite of the obvious one, and the data is why.** The instinct
+was to keep the xP3x half (clean parallel supervision) and drop fineweb (raw web scrape).
+Measured:
+
+| source | n | median | p10 | p90 |
+|---|---|---|---|---|
+| `HuggingFaceFW/fineweb-2:bho_Deva` (continuation) | 6,000 | **120 words** | 55 | 237 |
+| `CohereLabs/xP3x:bho_Deva` (hin→bho) | 2,009 | **24 words** | 15 | 37 |
+
+qa-oeg wants ~150-word answers, and one of the three hand-read flaws was **bho answers of
+5–10 words**. fineweb is the only half that demonstrates paragraph-length bho at all — an
+xP3x-only pack would have trained the terseness in. xP3x earns its place on the *other*
+flaw: it is hin→bho parallel text, a direct demonstration of not falling back to Hindi.
+Final split: **1,400 fineweb** (sampled toward the 80–250 word band) + **1,000 xP3x**.
+
+Held for job (a) of the decision tree in ROADMAP #1 — it only gets submitted if 3876434
+shows the dilution is real.

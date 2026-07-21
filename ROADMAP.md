@@ -160,7 +160,27 @@ DATA_AUDIT.md §2). 繁中原文保留 — 這是計畫的原始語言。
      與 3867139 **逐列相同**，只有 840 列多了預算句、0 列 bho）→ **單變數可比**。
      SFT job **3876434** RUNNING（`--data data/train_v2-c.jsonl --no-lang-hint`）；
      跑完接 `sbatch slurm/lora_eval.sbatch <adapter>`，再用 `run_test.py --task qa-oeg`
-     + `verify_outputs.py` 補 compliance。
+     + `verify_outputs.py` 補 compliance（**兩個都要**——dev 量不到 compliance，這正是本輪的起點）。
+   - ⚠️ **C-only 是「診斷」，不是預設的 primary。** 它要拆的是一個因果問題：−1.42 到底是 C 造成
+     還是 bho pack 造成——C 和 D 從頭到尾綁在同一次 SFT 裡，沒被分開量過。但**就算 C-only 的 dev
+     漂亮也不能直接選它**，因為它把 bho 退回 12%，而 dev 對 bho 是瞎的——那正是本輪剛踩過的坑。
+   - **真正的嫌疑是「配比」不是「該不該有 D」**：bho pack 佔訓練混合 **40.7%**（8,009/19,683），
+     但 bho 只佔 qa 測試集 **4.2%**（460/10,999）——**超配約 10 倍**，代價付在 96% 不是 bho 的列上。
+   - → ✅ **縮小版已建好待命（07-21）**：`scripts/shrink_bho_pack.py` →
+     `data/sft-bho-small.jsonl`（**2,400 列**）→ `data/train_v2-cd-small.jsonl`
+     （**14,074 個訓練樣本，bho 佔 17.1%**，840 列預算不變 ⇒ 對 3869129 仍是單變數）。
+     ⚠️ **選列邏輯跟直覺相反，有量過**：本來想「留 xP3x 譯文（監督乾淨）、砍 fineweb（網頁爬文）」，
+     但 fineweb 中位 **120 詞**、xP3x 只有 **24 詞**——qa-oeg 要 ~150 詞，而人工讀到的三個瑕疵之一
+     就是 **bho 答案只有 5–10 詞**。**fineweb 是唯一示範「段落長度博傑普爾語」的一半**，只留 xP3x
+     等於把過短訓進去。所以兩半都留：fineweb 1,400（偏向 80–250 詞帶）＋ xP3x 1,000（反 Hindi 漂移）。
+   - **決策樹**：
+     (a) 3876434 的 dev **追回** → 稀釋屬實 → 送 `train_v2-cd-small.jsonl`，目標是同時拿到
+         ~65% compliance ＋ 40% bho 而不付 −1.42；三選一變成 C-only / C+D / C+D-small。
+     (b) 3876434 的 dev **也掉** → pack 是無辜的，−1.42 來自 C 本身或訓練噪音 → C+D 直接當
+         primary，small 版不用送。
+   - **份量粗算**（給 (a) 用）：錯語言 chrF 近乎零分，bho 那欄從 ~10 拉到 ~25、攤到 4.2% 約
+     **+0.6**，對上 −1.42 → **純看自動指標 C+D 是虧的**；但人工評審那關「整段答錯語言」是最刺眼的
+     失敗模式，這部分自動指標嚴重低估。這也是為什麼 D 要留、但要留得**成比例**。
      **判準**：C-only 若把 dev 追回 plain-v2 的水準、compliance 又守住 ~65%，
      它就是 primary，C+D 降為對沖 bho 的 variant；若 C-only 的 dev 也掉，
      那 −1.42 就不是 bho pack 的錯，回頭選 plain-v2 當 primary、C+D 當 variant。
