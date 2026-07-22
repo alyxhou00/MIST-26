@@ -87,14 +87,6 @@ with strategic implications in `TEST_SET_ANALYSIS.md`, kept locally, gitignored)
   `qa-context` prompts carry a *literal* backslash-`n`** at their section boundaries — the
   file is double-escaped, so the model reads `\n\n` as text unless `run_test.py --unescape`
   is passed (TEST_SET_ANALYSIS §2). qa prompt length ≤ 2,607 chars, median 654.
-- **Two data bugs, both now fixed upstream — re-download if your `tests.jsonl` predates 20
-  July.** All 100 English `qa-oeg` prompts were empty (fixed 15 July, commit `5950311`); 8 of
-  them (`qa-oeg_93..100_eng_eng`) then still shipped unsubstituted `{country}`/`{language}`
-  placeholders, e.g. "the national sport in {country}" (fixed 20 July, sha `ad630f88`) — we
-  had already flagged this one ourselves before the organizers' fix landed (TEST_SET_ANALYSIS
-  §6). `run_test.py`'s empty-prompt guard and placeholder warning are kept as safety nets but
-  are now dead code on the current file — 0/12,775 rows affected.
-
 ## The rebuilt train/dev set (v2, 2026-07-17)
 
 The original 80/20 row split of `samples.jsonl` leaks parallel items across dev/train
@@ -130,7 +122,7 @@ dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fr
 
 | Path | Contents |
 |------|----------|
-| [`scripts/`](scripts) | `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA), `run_test.py` (official test-set inference → submission JSONL), `train_lora.py` (LoRA SFT), `evaluate.py` (scoring), `error_analysis.py` (failure-mode breakdown), `build_dataset.py` (the v2 train/dev build), `constraint_bank.py` (test-attested per-language boilerplate/constraints), `augment_constraints.py` (roadmap C+D: word budgets + bho-pack fold-in), `shrink_bho_pack.py` (subsample the bho pack to a proportionate share of the mix), `bho_lid.py` (Bhojpuri-vs-neighbours function-word LID), `verify_outputs.py` (C budget compliance + D bho LID on qa-oeg test outputs — neither is measurable on dev — plus script/refusal/one-sentence checks for bho qa-context, where one-sentence answers make `bho_lid` inapplicable), `oeg_alignment.py` (OEG cross-language item alignment) |
+| [`scripts/`](scripts) | - `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA)<br>- `run_test.py` (official test-set inference → submission JSONL)<br>- `train_lora.py` (LoRA SFT)<br>- `evaluate.py` (scoring)<br>- `error_analysis.py` (failure-mode breakdown)<br>- `build_dataset.py` (the v2 train/dev build)<br>- `constraint_bank.py` (test-attested per-language boilerplate/constraints)<br>- `augment_constraints.py` (roadmap C+D: word budgets + bho-pack fold-in)<br>- `shrink_bho_pack.py` (subsample the bho pack to a proportionate share of the mix)<br>- `bho_lid.py` (Bhojpuri-vs-neighbours function-word LID)<br>- `verify_outputs.py` (C budget compliance + D bho LID on qa-oeg test outputs — neither is measurable on dev — plus script/refusal/one-sentence checks for bho qa-context, where one-sentence answers make `bho_lid` inapplicable)<br>- `oeg_alignment.py` (OEG cross-language item alignment) |
 | [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (Qwen3.5-2B full dev runs), `0shot-9b.sbatch` / `fewshot-9b.sbatch` (Qwen3.5-9B), `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT), `run_test.sbatch` (official test set), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` / `smoke-9b.sbatch` / `smoke-lora.sbatch` / `smoke-run-test.sbatch` (cheap A/Bs and pipeline checks); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
@@ -140,12 +132,6 @@ dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fr
 | [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) | the experiment log for the v2 item-split set — all new runs go here |
 | `DATA_AUDIT.md` | full-enumeration audit of the sample data (leakage, formats, coverage) + the v2 rebuild record (§7) — kept locally, gitignored, not in this repo |
 | `TEST_SET_ANALYSIS.md` | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically — kept locally, gitignored, not in this repo |
-
-`$WORK/mist-out` (outside the repo) was the old location for predictions CSVs before this
-layout existed. It's no longer used by any sbatch job -- everything now lives
-under the repo (`logs/`, `runs/`, `predictions/`) so the same relative paths work locally and on
-the cluster. Any old files left in `$WORK/mist-out` are safe to ignore or delete; nothing reads
-from there anymore.
 
 ## 0. Zero-shot QA benchmark (`Qwen/Qwen3.5-2B`)
 
@@ -378,11 +364,6 @@ had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, a
   adapter (no lang-hint, 0-shot) beats prompting on both `qa-context` and `qa-oeg`; adapter +
   few-shot demos don't stack (train/inference format must match); distillation was tried and
   lost to gold SFT (worse on both routing-relevant sub-tasks) and the roadmap closed on it.
-- **In progress — finalizing the primary recipe**: constraint-augmentation (word-budget
-  compliance, roadmap item C) and a Bhojpuri emergency pack (roadmap item D) both measurably
-  help on the official test set (compliance +20.9pp; bho correctness 40% vs 12% on `qa-oeg`,
-  99% vs 18% on `qa-context`), but bundling them raises the dev loss — a C-only adapter is
-  being evaluated to isolate the cause before picking C-only / C+D / C+D-small as primary.
 - Full experiment log: [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) (current, v2 item-split) and
   [`EXPERIMENTS.md`](EXPERIMENTS.md) (closed, pre-v2, kept for surviving verdicts). Live status
   and next steps: `ROADMAP.md` (kept locally, gitignored). Script/length-mismatch breakdown of
