@@ -524,3 +524,7 @@ below are the ones that survived into the merge):
 Scope notes: the `sum` sub-task is handled by a teammate, this repo's experiments stay on `qa`
 (incl. the OEG rows folded into it). The official test set is out (as of 2026-07-15), so once a
 recipe wins on dev, retrain it on 100% of the sample data and run the test set with it.
+
+---
+
+*This is co-authored by Claude.*
