@@ -1,7 +1,8 @@
 # WMT26 MIST
 
-Working notes for the WMT26 MIST shared task, using the sample dataset
-[`pinzhenchen/wmt26-mist-sample`](https://huggingface.co/datasets/pinzhenchen/wmt26-mist-sample).
+Working notes for the WMT26 MIST shared task. We reconstruct our train/dev set from the sample
+dataset [`pinzhenchen/wmt26-mist-sample`](https://huggingface.co/datasets/pinzhenchen/wmt26-mist-sample)
+(see "The rebuilt train/dev set (v2)" below).
 
 ## Tasks
 
@@ -123,15 +124,13 @@ dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fr
 | Path | Contents |
 |------|----------|
 | [`scripts/`](scripts) | - `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA)<br>- `run_test.py` (official test-set inference → submission JSONL)<br>- `train_lora.py` (LoRA SFT)<br>- `evaluate.py` (scoring)<br>- `error_analysis.py` (failure-mode breakdown)<br>- `build_dataset.py` (the v2 train/dev build)<br>- `constraint_bank.py` (test-attested per-language boilerplate/constraints)<br>- `augment_constraints.py` (roadmap C+D: word budgets + bho-pack fold-in)<br>- `shrink_bho_pack.py` (subsample the bho pack to a proportionate share of the mix)<br>- `bho_lid.py` (Bhojpuri-vs-neighbours function-word LID)<br>- `verify_outputs.py` (C budget compliance + D bho LID on qa-oeg test outputs — neither is measurable on dev — plus script/refusal/one-sentence checks for bho qa-context, where one-sentence answers make `bho_lid` inapplicable)<br>- `oeg_alignment.py` (OEG cross-language item alignment) |
-| [`slurm/`](slurm) | one sbatch file per experiment, named after it: `0shot.sbatch` / `fewshot.sbatch` (Qwen3.5-2B full dev runs), `0shot-9b.sbatch` / `fewshot-9b.sbatch` (Qwen3.5-9B), `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT), `run_test.sbatch` (official test set), `smoke-langhint.sbatch` / `smoke-fewshot.sbatch` / `smoke-9b.sbatch` / `smoke-lora.sbatch` / `smoke-run-test.sbatch` (cheap A/Bs and pipeline checks); plus `setup.sh` (one-time login-node setup) and `evaluate.sbatch` (re-scoring) |
+| [`slurm/`](slurm) | one sbatch file per experiment, named after it:<br>- `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT + dev eval)<br>- `run_test.sbatch` (official test set)<br>- `evaluate.sbatch` (re-scoring)<br>- `setup.sh` (one-time login-node setup)<br>- `smoke-*.sbatch` (cheap smoke tests / pipeline checks before committing to a full run) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
 | `adapters/` | gitignored scratch dir for trained LoRA adapters (`train_lora.py --out`), same reasoning as `runs/` |
 | [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log for the OLD (row-split, leaky) dev — closed 2026-07-17, kept for the verdicts that survive; one row per SLURM job ID |
 | [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) | the experiment log for the v2 item-split set — all new runs go here |
-| `DATA_AUDIT.md` | full-enumeration audit of the sample data (leakage, formats, coverage) + the v2 rebuild record (§7) — kept locally, gitignored, not in this repo |
-| `TEST_SET_ANALYSIS.md` | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically — kept locally, gitignored, not in this repo |
 
 ## 0. Zero-shot QA benchmark (`Qwen/Qwen3.5-2B`)
 
@@ -371,4 +370,4 @@ had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, a
 
 ---
 
-This README is co-authored by Claude.
+*This README is co-authored by Claude.*
