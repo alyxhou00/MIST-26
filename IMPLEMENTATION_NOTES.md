@@ -512,3 +512,35 @@ into hallucinated chat turns. Facts established while debugging:
   - Caveat on the qa-context rate: measured on bho only. The one-sentence instruction is
     attested in every language's `context_tail`, so it should carry, but re-check on a
     second language before committing the final schedule.
+
+## Per-language dev breakdown — what it is, and what it cannot say (2026-07-21)
+
+Requested by Tsedi for the writing. `scripts/evaluate.py` has printed a
+`by language (best to worst chrF)` block all along (it groups on `lang_code`), and
+`benchmark.py --data data/dev_v2.jsonl` renames **`question_lang` → `lang_code`** and drops
+the sum-sum rows, so the breakdown is keyed on the **question language**, not the context
+language. On the cross-lingual sources (belebele especially) those differ; say so in the
+paper. No new GPU run is needed for the plain-v2 adapter — the table is already in
+`logs/mist-qa-eval-3869088.out` (adapter 3867139, n=2,949, 24 languages).
+
+Three caveats that must travel with the table:
+
+- **The language inventory changed with the split.** The v2/item-split dev has **24**
+  languages where the old row-split dev had 27: **`tha`, `swh`, `tel` are gone entirely**,
+  and several languages' `n` moved a lot (e.g. `ben` 32→129, `ces` 11→60, `eng` 109→172,
+  `fin` 65→129). That is an artefact of rebuilding the split, not of the model. Any
+  old-vs-new per-language comparison is therefore **not** like-for-like, and the paper needs
+  one sentence saying so.
+- **dev↔train leakage makes dev optimistic** (`DATA_AUDIT.md`, 2026-07-17: the old split was
+  by row, so parallel items straddled train and dev). Read the per-language numbers as a
+  **relative** ranking across languages, never as an absolute capability estimate.
+- **dev is structurally blind to our two actual contributions.** `dev_v2` contains **0 bho
+  rows and 0 budgeted rows** (both enumerated). The real margins live on test: bho **40 vs
+  12** and budget compliance **65.8% vs 44.9%**. So this table is an **in-domain language
+  breakdown** and nothing more — the C and D results belong in a separate section, scored on
+  test outputs via `scripts/verify_outputs.py`.
+
+One more trap when copying numbers out: evaluate.py now labels the single `overall` line
+**"LEGACY -- 71% noise, do not compare systems on this"**, because dev's source weighting is
+inverted against the test mix. Quote it only for continuity with the older table, and never
+use it to rank systems.

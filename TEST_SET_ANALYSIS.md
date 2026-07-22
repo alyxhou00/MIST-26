@@ -11,6 +11,15 @@ no report from us was needed. Diffed old vs new: **exactly the 100 `qa-oeg_*_eng
 changed, `prompt` field only — no rows added or removed, and no other row touched anywhere in
 the file.** So every count below that does not involve English `qa-oeg` still stands as
 measured; the ones that did are re-derived and marked in place.
+
+**Revision 2 — re-downloaded 2026-07-21, HF sha `ad630f88` (2026-07-20T14:33Z).** Organizers'
+email 2026-07-20 + changelog: "some English QA-OEG prompts are not localised" — this is the
+8-row `{country}`/`{language}` placeholder bug from §6 below, which we'd already found and
+flagged as reportable. Diffed old vs new: **9 rows changed, `prompt` field only, no rows
+added/removed** — the 8 placeholder rows (§6) plus `qa-oeg_47_eng_eng`, an unrelated
+punctuation fix (an em dash became `--`). No submission had been generated yet at this point,
+so nothing needed to be regenerated; this was a re-download ahead of the final runs, not a
+correction to anything already produced.
 Data-level facts are summarized in the README's "The official test set" section; this file
 is the full analysis and what it means for the plan. Submission deadline: **1 Aug 2026 AoE**.
 
@@ -199,29 +208,31 @@ fills all 100; nothing else in the file changed (see the header). We never had t
 `run_test.py`'s empty-prompt guard is kept as a safety net but is now dead code on this
 revision — 0/12,775 rows have an empty prompt.
 
-**Still broken, narrower: 8 rows ship unsubstituted template placeholders.** Found by reading
-the restored block rather than assuming the fix was complete:
+**Placeholders — FIXED upstream 2026-07-20 (sha `ad630f88`).** 8 rows shipped unsubstituted
+template placeholders. Found by reading the restored block rather than assuming the earlier
+fix was complete, and flagged as reportable before the organizers' own fix landed (see
+Revision 2 above — their 20 July email/changelog matches this exactly):
 
-| row | placeholder |
-|---|---|
-| `qa-oeg_93_eng_eng`, `qa-oeg_94_eng_eng`, `qa-oeg_99_eng_eng` | `{language}` (99 has it twice) |
-| `qa-oeg_95..98_eng_eng`, `qa-oeg_100_eng_eng` | `{country}` |
+| row | placeholder | now localizes to |
+|---|---|---|
+| `qa-oeg_93_eng_eng`, `qa-oeg_94_eng_eng`, `qa-oeg_99_eng_eng` | `{language}` (99 had it twice) | "English" |
+| `qa-oeg_95_eng_eng`, `qa-oeg_96_eng_eng` | `{country}` | "the US" / "America" |
+| `qa-oeg_97_eng_eng`, `qa-oeg_98_eng_eng` | `{country}` | "the United States of America" / "the US" |
+| `qa-oeg_100_eng_eng` | `{country}` | "the United States" |
 
-e.g. #95 English: *"What is considered the national sport in {country}?"* — where every other
-language localizes the slot (spa "España", deu "Deutschland", zho "中国", bho "भारत"). English
-alone was left as the raw template, plausibly because these prompts key off the language's
-country and English has no single one. As-is those 8 rows are unanswerable: the model is asked
-about a literal `{country}`.
+e.g. #95 English used to read *"What is considered the national sport in {country}?"* — where
+every other language already localized the slot (spa "España", deu "Deutschland", zho "中国",
+bho "भारत"). Now fixed to "the US". Note the fix isn't a single uniform string across rows
+(US / America / United States / United States of America) — the organizers localized each
+prompt individually rather than templating one substitution.
 
-Scope: **English `qa-oeg` only** — 0/8,640 qa-context rows and 0 rows in the other 23 languages
-carry a placeholder. (`sum-sum` has 192 such rows, but that is the teammate's subtask and
-predates this commit — worth passing on.)
+Scope confirmed unchanged: **English `qa-oeg` only** — 0/8,640 qa-context rows and 0 rows in
+the other 23 languages ever carried a placeholder. (`sum-sum` has 192 such rows, but that is
+the teammate's subtask, a separate issue, and untouched by this fix.)
 
-**Actions:** (a) report to the organizers (schmidtova@ufal.mff.cuni.cz) — this is now the only
-open data bug on our side; (b) do **not** silently substitute a value in `run_test.py`: picking
-"the United States" or "the United Kingdom" invents an input the graders did not write, and the
-gold was presumably produced against whatever they intend. `run_test.py` warns on these rows and
-otherwise passes them through verbatim. 8 rows of 10,999 — not worth a hack; worth an email.
+`run_test.py`'s placeholder warning is kept as a safety net but is now dead code on the
+current file — 0/12,775 rows carry an unsubstituted placeholder. No action needed; this was
+the only open data bug on our side and it's now closed.
 
 ## 7. Qualitative smoke findings (job 3859059, base 9B, verbatim prompts)
 

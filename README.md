@@ -87,11 +87,13 @@ with strategic implications in [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md)):
   `qa-context` prompts carry a *literal* backslash-`n`** at their section boundaries — the
   file is double-escaped, so the model reads `\n\n` as text unless `run_test.py --unescape`
   is passed (TEST_SET_ANALYSIS §2). qa prompt length ≤ 2,607 chars, median 654.
-- **Known data bug (`5950311`): 8 English `qa-oeg` rows (`qa-oeg_93..100_eng_eng`) ship
-  unsubstituted `{country}`/`{language}` placeholders** where every other language has a real
-  value. `run_test.py` passes them through verbatim and warns; reportable to the organizers
-  (TEST_SET_ANALYSIS §6). The earlier bug — all 100 English `qa-oeg` prompts empty — was
-  **fixed upstream on 15 July**; re-download if your `tests.jsonl` predates that.
+- **Two data bugs, both now fixed upstream — re-download if your `tests.jsonl` predates 20
+  July.** All 100 English `qa-oeg` prompts were empty (fixed 15 July, commit `5950311`); 8 of
+  them (`qa-oeg_93..100_eng_eng`) then still shipped unsubstituted `{country}`/`{language}`
+  placeholders, e.g. "the national sport in {country}" (fixed 20 July, sha `ad630f88`) — we
+  had already flagged this one ourselves before the organizers' fix landed (TEST_SET_ANALYSIS
+  §6). `run_test.py`'s empty-prompt guard and placeholder warning are kept as safety nets but
+  are now dead code on the current file — 0/12,775 rows affected.
 
 ## The rebuilt train/dev set (v2, 2026-07-17)
 
@@ -136,7 +138,7 @@ dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fr
 | `adapters/` | gitignored scratch dir for trained LoRA adapters (`train_lora.py --out`), same reasoning as `runs/` |
 | [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log for the OLD (row-split, leaky) dev — closed 2026-07-17, kept for the verdicts that survive; one row per SLURM job ID |
 | [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) | the experiment log for the v2 item-split set — all new runs go here |
-| [`DATA_AUDIT.md`](DATA_AUDIT.md) | full-enumeration audit of the sample data (leakage, formats, coverage) + the v2 rebuild record (§7) |
+| `DATA_AUDIT.md` | full-enumeration audit of the sample data (leakage, formats, coverage) + the v2 rebuild record (§7) — kept locally, gitignored, not in this repo |
 | [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md) | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically |
 
 `$WORK/mist-out` (outside the repo) was the old location for predictions CSVs before this
@@ -147,78 +149,54 @@ from there anymore.
 
 ## 0. Zero-shot QA benchmark (`Qwen/Qwen3.5-2B`)
 
-[`scripts/benchmark.py`](scripts/benchmark.py) is a minimal zero-shot benchmark of the `qa`
-sub-task: it splits the examples **80/20 train/dev** (seed 42), runs the model on the dev half
-via its chat template, and writes a **predictions CSV**. Scoring is a separate step --
-[`scripts/evaluate.py`](scripts/evaluate.py) reads the CSV and reports **chrF / BERTScore /
-ROUGE-L** (single source of truth). `Qwen/Qwen3.5-2B` is multimodal but used here text-only
-(each `input` is one user turn); it needs a recent `transformers` (see `requirements.txt`).
+- [`scripts/benchmark.py`](scripts/benchmark.py) splits the `qa` sub-task **80/20 train/dev**
+  (seed 42), runs `Qwen/Qwen3.5-2B` zero-shot via its chat template, writes a predictions CSV.
+  [`scripts/evaluate.py`](scripts/evaluate.py) scores the CSV — **chrF / BERTScore / ROUGE-L**
+  (single source of truth).
+- **Language hint (on by default):** a system turn `Respond in <language>.`, derived from the
+  **output** language `lang_code` (verified against e.g. `FBK-MT/MCIF` `zho_Hans` rows: English
+  input, Chinese gold). Needed for rows where nothing in the input signals a language switch
+  (e.g. some `aya_dataset` rows). Shared template: [`scripts/prompt_template.py`](scripts/prompt_template.py)
+  (also used for SFT, so train/inference match).
+- `--no-lang-hint` drops the system turn — raw zero-shot baseline, useful as an A/B control.
 
 ```bash
 python scripts/benchmark.py --limit 50     # quick check
-python scripts/benchmark.py                # full dev split (target-language hint ON by default)
+python scripts/benchmark.py                # full dev split (lang hint ON by default)
 python scripts/benchmark.py --no-lang-hint # raw zero-shot: no target-language instruction
 ```
 
-**Language hint (on by default).** Each prompt gets a system turn `Respond in <language>.`,
-where `<language>` is derived from `lang_code`. `lang_code` is the **output** language (verified:
-e.g. `FBK-MT/MCIF` `zho_Hans` rows have an English input passage but Chinese golds). Most examples
-don't strictly need the hint — the input's language already matches the expected output — but a
-few (e.g. `aya_dataset` rows where the question is English but the answer is expected in another
-language) are otherwise ambiguous: nothing in the input signals that the output should switch
-languages. The same template lives in [`scripts/prompt_template.py`](scripts/prompt_template.py)
-and is reused for SFT so training and inference match.
-
-Pass **`--no-lang-hint`** to drop the system turn and reproduce the raw zero-shot baseline
-(user turn only) — useful as an A/B control to measure how much the hint helps.
-
 ## 1. Few-shot prompting (`--shots N`)
 
-`benchmark.py --shots 3` prepends N demonstration examples to each prompt as **completed
-user/assistant chat turns** (real prior exchanges the model can imitate), before the actual
-question. `--shots 0` (the default) is the zero-shot behavior above. How shots are chosen:
-
-- **Pool:** only the **train 80%** of the split — a dev example can never appear among its own
-  demonstrations, so the dev metric stays honest. Train rows whose input is byte-identical to
-  the dev example's are also excluded: a few aya prompts repeat verbatim across the split
-  (53 of 2978 dev rows, 4 with the same gold), and showing such a copy as a demonstration
-  would hand the model its own answer.
-- **Matching:** shots share the dev example's `(source, lang_code)` where possible, so they
-  demonstrate both the task format (e.g. `belebele`'s multiple-choice answers) and the target
-  language. If that stratum has fewer than N train rows, selection falls back to same `source`
-  only, then to the whole train pool.
-- **Determinism:** each dev example's shots are seeded from a hash of its input text, so they
-  don't change with `--limit`/`--source`/`--lang` filters or row order — A/B runs stay
-  comparable and any single prediction is reproducible in isolation.
-
-The turn insertion lives in `build_messages()` in
-[`scripts/prompt_template.py`](scripts/prompt_template.py) (shared with SFT); the selection
-logic is `make_shot_picker()` in [`scripts/benchmark.py`](scripts/benchmark.py).
-
-On the cluster: [`slurm/smoke-fewshot.sbatch`](slurm/smoke-fewshot.sbatch) is a ~1h A/B of
-N-shot vs zero-shot on the cross-lingual `aya` subset (edit `SRC`/`LANG`/`SHOTS` at the top);
-[`slurm/fewshot.sbatch`](slurm/fewshot.sbatch) is the full dev run
-(`sbatch slurm/fewshot.sbatch` for 3 shots, or pass a count: `sbatch slurm/fewshot.sbatch 5`).
-Its time limit is 18h rather than 12h because every prompt carries N extra demonstration
-passages.
+- `benchmark.py --shots N` prepends N demonstrations as completed user/assistant turns before
+  the real question (`--shots 0`, the default, is the zero-shot behavior above).
+- **Pool:** train 80% only, so a dev example can't demonstrate itself; byte-identical
+  train/dev duplicates are excluded too (53 of 2978 dev rows have one).
+- **Matching:** shots share the dev example's `(source, lang_code)` where possible (falls back
+  to same-`source`, then the whole pool), so they demonstrate both format and language.
+- **Determinism:** shots are seeded from a hash of the dev input, so they're stable across
+  `--limit`/`--source`/`--lang`/row order — A/B runs stay comparable.
+- Code: `build_messages()` in [`scripts/prompt_template.py`](scripts/prompt_template.py)
+  (shared with SFT), shot selection in `make_shot_picker()` in
+  [`scripts/benchmark.py`](scripts/benchmark.py).
+- On the cluster: [`slurm/smoke-fewshot.sbatch`](slurm/smoke-fewshot.sbatch) (~1h N-shot vs
+  0-shot A/B on the cross-lingual `aya` subset) and
+  [`slurm/fewshot.sbatch`](slurm/fewshot.sbatch) (full dev run, 18h; pass a shot count as `$1`,
+  default 3).
 
 ## 2. Qwen3.5-9B benchmark
 
-The organizers allow any model/approach (including fine-tuning or distillation) as long as the
-final model is under 10B parameters, so `Qwen/Qwen3.5-9B` -- the same model family as the 2B
-above, just a bigger size in the same collection -- is benchmarked the same two ways (0-shot,
-then few-shot) before building on it with LoRA SFT. `benchmark.py --model`/`--shots` already
-generalize to it; the only real difference is sampling parameters, since Qwen's model cards give
-per-size recommendations (9B's non-thinking-mode card: `temperature=0.7, top_p=0.8, top_k=20`,
-vs. the 2B-specific `1.0/1.0/20` `benchmark.py` otherwise defaults to) -- hence the new
-`--temperature`/`--top-p` flags.
-
-On the cluster: `bash slurm/setup.sh` now also caches Qwen3.5-9B (re-run it if you set up before
-this was added). [`slurm/smoke-9b.sbatch`](slurm/smoke-9b.sbatch) is a ~1h 0-shot/3-shot A/B on
-the same `aya`/`hin_Deva` subset `smoke-fewshot.sbatch` uses, to sanity-check the bigger model
-before committing to a full run; [`slurm/0shot-9b.sbatch`](slurm/0shot-9b.sbatch) (24h) and
-[`slurm/fewshot-9b.sbatch`](slurm/fewshot-9b.sbatch) (30h, shot count as `$1`) are the full
-dev-set runs -- longer time limits than their 2B counterparts since 9B is ~4.5x the weights.
+- Organizers allow any approach under 10B params, so `Qwen/Qwen3.5-9B` — same family, bigger
+  size — gets the same 0-shot/few-shot benchmarks as 2B before building on it with LoRA SFT.
+- `benchmark.py --model`/`--shots` already generalize; the only real difference is sampling
+  params, since Qwen's model cards give per-size recommendations (9B non-thinking:
+  `temperature=0.7, top_p=0.8, top_k=20` vs. 2B's `1.0/1.0/20` default) — hence the
+  `--temperature`/`--top-p` flags.
+- On the cluster: `bash slurm/setup.sh` also caches Qwen3.5-9B.
+  [`slurm/smoke-9b.sbatch`](slurm/smoke-9b.sbatch) (~1h 0-shot/3-shot A/B) sanity-checks the
+  bigger model before the full runs: [`slurm/0shot-9b.sbatch`](slurm/0shot-9b.sbatch) (24h),
+  [`slurm/fewshot-9b.sbatch`](slurm/fewshot-9b.sbatch) (30h, shot count as `$1`) — longer time
+  limits than 2B since 9B is ~4.5x the weights.
 
 ## 3. LoRA SFT
 
@@ -393,9 +371,23 @@ had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, a
 
 ## Results so far
 
-See [`EXPERIMENTS.md`](EXPERIMENTS.md) for the full experiment log (one row per SLURM job ID,
-with its config and chrF/BERTScore/ROUGE-L). Headline so far: Qwen3.5-2B 0-shot chrF=18.01 ->
-2B 3-shot 21.84 -> 9B 0-shot 23.12 -> 9B 3-shot 27.64 (BERTScore/ROUGE-L improve alongside).
-The trained LoRA adapter (job 3822375) is awaiting its dev-set eval. See
-[`scripts/error_analysis.py`](scripts/error_analysis.py) for a script-mismatch/length-mismatch
-breakdown of the low-scoring languages.
+- **Prompting baseline** (old row-split dev, closed — see [`EXPERIMENTS.md`](EXPERIMENTS.md)):
+  Qwen3.5-2B 0-shot chrF=18.01 → 2B 3-shot 21.84 → 9B 0-shot 23.12 → 9B 3-shot 27.64
+  (BERTScore/ROUGE-L improve alongside).
+- **Routing decided on the v2 set** ([`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md)): a gold-LoRA
+  adapter (no lang-hint, 0-shot) beats prompting on both `qa-context` and `qa-oeg`; adapter +
+  few-shot demos don't stack (train/inference format must match); distillation was tried and
+  lost to gold SFT (worse on both routing-relevant sub-tasks) and the roadmap closed on it.
+- **In progress — finalizing the primary recipe**: constraint-augmentation (word-budget
+  compliance, roadmap item C) and a Bhojpuri emergency pack (roadmap item D) both measurably
+  help on the official test set (compliance +20.9pp; bho correctness 40% vs 12% on `qa-oeg`,
+  99% vs 18% on `qa-context`), but bundling them raises the dev loss — a C-only adapter is
+  being evaluated to isolate the cause before picking C-only / C+D / C+D-small as primary.
+- Full experiment log: [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) (current, v2 item-split) and
+  [`EXPERIMENTS.md`](EXPERIMENTS.md) (closed, pre-v2, kept for surviving verdicts). Live status
+  and next steps: [`ROADMAP.md`](ROADMAP.md). Script/length-mismatch breakdown of low-scoring
+  languages: [`scripts/error_analysis.py`](scripts/error_analysis.py).
+
+---
+
+This README is co-authored by Claude.
