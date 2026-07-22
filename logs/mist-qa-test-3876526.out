@@ -1,0 +1,772 @@
+### Starting TaskPrologue of job 3876526 on a0321 at Tue Jul 21 12:20:16 CEST 2026
+Running on cores 80-95 with governor performance
+Tue Jul 21 12:20:16 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:A1:00.0 Off |                  Off |
+|  0%   34C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+test rows: 360 after filters (task=['qa-context'], lang=bho, shard=None, limit=none), 360 to generate
+Loading weights:   0%|          | 0/760 [00:00<?, ?it/s]Loading weights:   0%|          | 1/760 [00:07<1:41:06,  7.99s/it]Loading weights:   0%|          | 2/760 [00:09<56:04,  4.44s/it]  Loading weights:   1%|          | 9/760 [00:10<08:22,  1.49it/s]Loading weights:   1%|▏         | 11/760 [00:10<07:13,  1.73it/s]Loading weights:   2%|▏         | 15/760 [00:11<05:07,  2.42it/s]Loading weights:   3%|▎         | 23/760 [00:11<02:23,  5.12it/s]Loading weights:   3%|▎         | 26/760 [00:12<02:13,  5.50it/s]Loading weights:   4%|▍         | 29/760 [00:12<02:21,  5.17it/s]Loading weights:   4%|▍         | 34/760 [00:12<01:40,  7.25it/s]Loading weights:   5%|▌         | 39/760 [00:13<01:20,  8.94it/s]Loading weights:   6%|▌         | 42/760 [00:13<01:16,  9.42it/s]Loading weights:   6%|▌         | 44/760 [00:13<01:11,  9.95it/s]Loading weights:   6%|▌         | 46/760 [00:13<01:11,  9.93it/s]Loading weights:   6%|▋         | 48/760 [00:14<01:30,  7.83it/s]Loading weights:   7%|▋         | 52/760 [00:14<01:04, 11.04it/s]Loading weights:   7%|▋         | 54/760 [00:14<01:01, 11.40it/s]Loading weights:   8%|▊         | 60/760 [00:15<00:52, 13.23it/s]Loading weights:   9%|▊         | 66/760 [00:15<01:04, 10.77it/s]Loading weights:  10%|█         | 76/760 [00:15<00:36, 18.94it/s]Loading weights:  11%|█         | 80/760 [00:16<00:40, 16.78it/s]Loading weights:  11%|█         | 83/760 [00:16<00:47, 14.28it/s]Loading weights:  12%|█▏        | 90/760 [00:16<00:37, 18.09it/s]Loading weights:  12%|█▏        | 94/760 [00:17<00:39, 16.89it/s]Loading weights:  13%|█▎        | 97/760 [00:17<00:54, 12.20it/s]Loading weights:  13%|█▎        | 99/760 [00:17<00:52, 12.67it/s]Loading weights:  13%|█▎        | 101/760 [00:17<01:03, 10.46it/s]Loading weights:  14%|█▍        | 105/760 [00:18<00:48, 13.61it/s]Loading weights:  14%|█▍        | 107/760 [00:18<00:47, 13.68it/s]Loading weights:  15%|█▍        | 113/760 [00:18<00:40, 16.03it/s]Loading weights:  16%|█▌        | 119/760 [00:18<00:34, 18.43it/s]Loading weights:  16%|█▌        | 121/760 [00:19<00:51, 12.49it/s]Loading weights:  17%|█▋        | 129/760 [00:19<00:32, 19.42it/s]Loading weights:  17%|█▋        | 132/760 [00:19<00:33, 18.94it/s]Loading weights:  18%|█▊        | 135/760 [00:20<00:58, 10.76it/s]Loading weights:  19%|█▉        | 143/760 [00:20<00:39, 15.71it/s]Loading weights:  19%|█▉        | 146/760 [00:20<00:44, 13.91it/s]Loading weights:  19%|█▉        | 148/760 [00:21<01:34,  6.50it/s]Loading weights:  20%|██        | 153/760 [00:22<01:10,  8.63it/s]Loading weights:  20%|██        | 155/760 [00:22<01:10,  8.55it/s]Loading weights:  21%|██        | 157/760 [00:22<01:04,  9.33it/s]Loading weights:  21%|██        | 159/760 [00:22<00:58, 10.34it/s]Loading weights:  21%|██        | 161/760 [00:23<01:04,  9.27it/s]Loading weights:  22%|██▏       | 168/760 [00:23<00:34, 16.98it/s]Loading weights:  22%|██▎       | 171/760 [00:23<00:31, 18.88it/s]Loading weights:  23%|██▎       | 174/760 [00:24<01:05,  8.96it/s]Loading weights:  24%|██▍       | 183/760 [00:24<00:36, 15.72it/s]Loading weights:  24%|██▍       | 186/760 [00:24<00:40, 14.01it/s]Loading weights:  25%|██▍       | 189/760 [00:25<00:57,  9.94it/s]Loading weights:  26%|██▌       | 199/760 [00:25<00:30, 18.13it/s]Loading weights:  27%|██▋       | 203/760 [00:25<00:42, 13.26it/s]Loading weights:  27%|██▋       | 206/760 [00:26<00:59,  9.30it/s]Loading weights:  28%|██▊       | 211/760 [00:26<00:44, 12.47it/s]Loading weights:  28%|██▊       | 214/760 [00:26<00:41, 13.06it/s]Loading weights:  29%|██▉       | 220/760 [00:27<00:34, 15.70it/s]Loading weights:  30%|██▉       | 225/760 [00:27<00:35, 14.88it/s]Loading weights:  30%|███       | 228/760 [00:28<00:45, 11.57it/s]Loading weights:  31%|███       | 235/760 [00:28<00:34, 15.31it/s]Loading weights:  31%|███▏      | 239/760 [00:28<00:34, 14.95it/s]Loading weights:  32%|███▏      | 241/760 [00:28<00:46, 11.26it/s]Loading weights:  33%|███▎      | 249/760 [00:29<00:28, 18.11it/s]Loading weights:  33%|███▎      | 252/760 [00:29<00:35, 14.22it/s]Loading weights:  34%|███▎      | 255/760 [00:29<00:44, 11.23it/s]Loading weights:  34%|███▍      | 258/760 [00:30<00:43, 11.60it/s]Loading weights:  34%|███▍      | 260/760 [00:30<00:54,  9.18it/s]Loading weights:  35%|███▌      | 266/760 [00:30<00:35, 13.93it/s]Loading weights:  36%|███▌      | 274/760 [00:30<00:23, 20.88it/s]Loading weights:  36%|███▋      | 277/760 [00:31<00:23, 20.13it/s]Loading weights:  37%|███▋      | 280/760 [00:31<00:39, 12.05it/s]Loading weights:  38%|███▊      | 288/760 [00:31<00:24, 19.05it/s]Loading weights:  38%|███▊      | 292/760 [00:32<00:31, 15.02it/s]Loading weights:  39%|███▉      | 295/760 [00:32<00:39, 11.79it/s]Loading weights:  39%|███▉      | 299/760 [00:32<00:35, 13.07it/s]Loading weights:  40%|████      | 306/760 [00:33<00:39, 11.41it/s]Loading weights:  41%|████      | 311/760 [00:33<00:33, 13.42it/s]Loading weights:  41%|████      | 313/760 [00:34<00:43, 10.37it/s]Loading weights:  42%|████▏     | 319/760 [00:34<00:33, 13.14it/s]Loading weights:  43%|████▎     | 327/760 [00:34<00:22, 19.24it/s]Loading weights:  43%|████▎     | 330/760 [00:34<00:24, 17.59it/s]Loading weights:  44%|████▍     | 333/760 [00:35<00:36, 11.56it/s]Loading weights:  44%|████▍     | 338/760 [00:35<00:27, 15.27it/s]Loading weights:  45%|████▌     | 342/760 [00:35<00:23, 18.13it/s]Loading weights:  45%|████▌     | 345/760 [00:36<00:28, 14.41it/s]Loading weights:  46%|████▌     | 348/760 [00:36<00:33, 12.21it/s]Loading weights:  47%|████▋     | 355/760 [00:37<00:33, 11.96it/s]Loading weights:  47%|████▋     | 360/760 [00:37<00:29, 13.34it/s]Loading weights:  48%|████▊     | 362/760 [00:37<00:33, 11.77it/s]Loading weights:  48%|████▊     | 364/760 [00:37<00:38, 10.28it/s]Loading weights:  48%|████▊     | 366/760 [00:38<00:49,  7.99it/s]Loading weights:  49%|████▊     | 370/760 [00:38<00:35, 11.02it/s]Loading weights:  49%|████▉     | 372/760 [00:38<00:32, 11.79it/s]Loading weights:  50%|█████     | 380/760 [00:38<00:19, 19.49it/s]Loading weights:  50%|█████     | 383/760 [00:39<00:18, 20.36it/s]Loading weights:  51%|█████     | 386/760 [00:39<00:33, 11.27it/s]Loading weights:  52%|█████▏    | 394/760 [00:39<00:19, 18.38it/s]Loading weights:  52%|█████▏    | 398/760 [00:40<00:21, 16.98it/s]Loading weights:  53%|█████▎    | 401/760 [00:40<00:28, 12.57it/s]Loading weights:  54%|█████▎    | 408/760 [00:40<00:19, 17.91it/s]Loading weights:  54%|█████▍    | 411/760 [00:40<00:18, 19.22it/s]Loading weights:  54%|█████▍    | 414/760 [00:41<00:30, 11.38it/s]Loading weights:  55%|█████▍    | 417/760 [00:41<00:28, 12.10it/s]Loading weights:  55%|█████▌    | 419/760 [00:42<00:36,  9.33it/s]Loading weights:  56%|█████▌    | 423/760 [00:42<00:26, 12.59it/s]Loading weights:  56%|█████▌    | 426/760 [00:42<00:25, 13.23it/s]Loading weights:  57%|█████▋    | 435/760 [00:42<00:13, 23.44it/s]Loading weights:  60%|█████▉    | 454/760 [00:42<00:06, 49.87it/s]Loading weights:  62%|██████▏   | 469/760 [00:42<00:04, 66.50it/s]Loading weights:  65%|██████▍   | 493/760 [00:42<00:02, 98.67it/s]Loading weights:  67%|██████▋   | 507/760 [00:42<00:02, 105.76it/s]Loading weights:  68%|██████▊   | 520/760 [00:43<00:02, 110.71it/s]Loading weights:  71%|███████   | 539/760 [00:43<00:01, 126.17it/s]Loading weights:  73%|███████▎  | 553/760 [00:43<00:01, 104.63it/s]Loading weights:  76%|███████▌  | 575/760 [00:43<00:01, 115.19it/s]Loading weights:  79%|███████▊  | 597/760 [00:43<00:01, 138.08it/s]Loading weights:  81%|████████  | 615/760 [00:43<00:01, 142.98it/s]Loading weights:  84%|████████▎ | 635/760 [00:43<00:00, 137.76it/s]Loading weights:  87%|████████▋ | 659/760 [00:44<00:00, 136.75it/s]Loading weights:  90%|█████████ | 685/760 [00:44<00:00, 160.94it/s]Loading weights:  93%|█████████▎| 704/760 [00:44<00:00, 166.80it/s]Loading weights:  95%|█████████▌| 722/760 [00:44<00:00, 165.82it/s]Loading weights:  97%|█████████▋| 740/760 [00:44<00:00, 163.64it/s]Loading weights: 100%|█████████▉| 757/760 [00:44<00:00, 93.67it/s] Loading weights: 100%|██████████| 760/760 [00:44<00:00, 16.91it/s]
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [1/360] qa-context_1_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [2/360] qa-context_2_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [3/360] qa-context_3_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [4/360] qa-context_4_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [5/360] qa-context_5_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [6/360] qa-context_6_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [7/360] qa-context_7_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [8/360] qa-context_8_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [9/360] qa-context_9_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [10/360] qa-context_10_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [11/360] qa-context_11_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [12/360] qa-context_12_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [13/360] qa-context_13_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [14/360] qa-context_14_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [15/360] qa-context_15_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [16/360] qa-context_16_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [17/360] qa-context_17_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [18/360] qa-context_18_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [19/360] qa-context_19_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [20/360] qa-context_20_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [21/360] qa-context_21_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [22/360] qa-context_22_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [23/360] qa-context_23_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [24/360] qa-context_24_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [25/360] qa-context_25_bho_arb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [26/360] qa-context_1_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [27/360] qa-context_2_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [28/360] qa-context_3_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [29/360] qa-context_4_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [30/360] qa-context_5_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [31/360] qa-context_6_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [32/360] qa-context_7_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [33/360] qa-context_8_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [34/360] qa-context_9_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [35/360] qa-context_10_bho_ben
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [36/360] qa-context_1_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [37/360] qa-context_2_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [38/360] qa-context_3_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [39/360] qa-context_4_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [40/360] qa-context_5_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [41/360] qa-context_6_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [42/360] qa-context_7_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [43/360] qa-context_8_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [44/360] qa-context_9_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [45/360] qa-context_10_bho_bho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [46/360] qa-context_1_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [47/360] qa-context_2_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [48/360] qa-context_3_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [49/360] qa-context_4_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [50/360] qa-context_5_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [51/360] qa-context_6_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [52/360] qa-context_7_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [53/360] qa-context_8_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [54/360] qa-context_9_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [55/360] qa-context_10_bho_ces
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [56/360] qa-context_1_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [57/360] qa-context_2_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [58/360] qa-context_3_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [59/360] qa-context_4_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [60/360] qa-context_5_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [61/360] qa-context_6_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [62/360] qa-context_7_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [63/360] qa-context_8_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [64/360] qa-context_9_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [65/360] qa-context_10_bho_ckb
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [66/360] qa-context_1_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [67/360] qa-context_2_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [68/360] qa-context_3_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [69/360] qa-context_4_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [70/360] qa-context_5_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [71/360] qa-context_6_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [72/360] qa-context_7_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [73/360] qa-context_8_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [74/360] qa-context_9_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [75/360] qa-context_10_bho_deu
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [76/360] qa-context_1_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [77/360] qa-context_2_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [78/360] qa-context_3_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [79/360] qa-context_4_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [80/360] qa-context_5_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [81/360] qa-context_6_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [82/360] qa-context_7_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [83/360] qa-context_8_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [84/360] qa-context_9_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [85/360] qa-context_10_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [86/360] qa-context_11_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [87/360] qa-context_12_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [88/360] qa-context_13_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [89/360] qa-context_14_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [90/360] qa-context_15_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [91/360] qa-context_16_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [92/360] qa-context_17_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [93/360] qa-context_18_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [94/360] qa-context_19_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [95/360] qa-context_20_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [96/360] qa-context_21_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [97/360] qa-context_22_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [98/360] qa-context_23_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [99/360] qa-context_24_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [100/360] qa-context_25_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [101/360] qa-context_26_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [102/360] qa-context_27_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [103/360] qa-context_28_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [104/360] qa-context_29_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [105/360] qa-context_30_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [106/360] qa-context_31_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [107/360] qa-context_32_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [108/360] qa-context_33_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [109/360] qa-context_34_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [110/360] qa-context_35_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [111/360] qa-context_36_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [112/360] qa-context_37_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [113/360] qa-context_38_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [114/360] qa-context_39_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [115/360] qa-context_40_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [116/360] qa-context_41_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [117/360] qa-context_42_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [118/360] qa-context_43_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [119/360] qa-context_44_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [120/360] qa-context_45_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [121/360] qa-context_46_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [122/360] qa-context_47_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [123/360] qa-context_48_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [124/360] qa-context_49_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [125/360] qa-context_50_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [126/360] qa-context_51_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [127/360] qa-context_52_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [128/360] qa-context_53_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [129/360] qa-context_54_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [130/360] qa-context_55_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [131/360] qa-context_56_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [132/360] qa-context_57_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [133/360] qa-context_58_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [134/360] qa-context_59_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [135/360] qa-context_60_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [136/360] qa-context_61_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [137/360] qa-context_62_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [138/360] qa-context_63_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [139/360] qa-context_64_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [140/360] qa-context_65_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [141/360] qa-context_66_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [142/360] qa-context_67_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [143/360] qa-context_68_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [144/360] qa-context_69_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [145/360] qa-context_70_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [146/360] qa-context_71_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [147/360] qa-context_72_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [148/360] qa-context_73_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [149/360] qa-context_74_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [150/360] qa-context_75_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [151/360] qa-context_76_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [152/360] qa-context_77_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [153/360] qa-context_78_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [154/360] qa-context_79_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [155/360] qa-context_80_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [156/360] qa-context_81_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [157/360] qa-context_82_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [158/360] qa-context_83_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [159/360] qa-context_84_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [160/360] qa-context_85_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [161/360] qa-context_86_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [162/360] qa-context_87_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [163/360] qa-context_88_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [164/360] qa-context_89_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [165/360] qa-context_90_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [166/360] qa-context_91_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [167/360] qa-context_92_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [168/360] qa-context_93_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [169/360] qa-context_94_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [170/360] qa-context_95_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [171/360] qa-context_96_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [172/360] qa-context_97_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [173/360] qa-context_98_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [174/360] qa-context_99_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [175/360] qa-context_100_bho_eng
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [176/360] qa-context_1_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [177/360] qa-context_2_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [178/360] qa-context_3_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [179/360] qa-context_4_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [180/360] qa-context_5_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [181/360] qa-context_6_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [182/360] qa-context_7_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [183/360] qa-context_8_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [184/360] qa-context_9_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [185/360] qa-context_10_bho_fin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [186/360] qa-context_1_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [187/360] qa-context_2_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [188/360] qa-context_3_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [189/360] qa-context_4_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [190/360] qa-context_5_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [191/360] qa-context_6_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [192/360] qa-context_7_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [193/360] qa-context_8_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [194/360] qa-context_9_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [195/360] qa-context_10_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [196/360] qa-context_11_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [197/360] qa-context_12_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [198/360] qa-context_13_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [199/360] qa-context_14_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [200/360] qa-context_15_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [201/360] qa-context_16_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [202/360] qa-context_17_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [203/360] qa-context_18_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [204/360] qa-context_19_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [205/360] qa-context_20_bho_fra
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [206/360] qa-context_1_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [207/360] qa-context_2_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [208/360] qa-context_3_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [209/360] qa-context_4_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [210/360] qa-context_5_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [211/360] qa-context_6_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [212/360] qa-context_7_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [213/360] qa-context_8_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [214/360] qa-context_9_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [215/360] qa-context_10_bho_hat
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [216/360] qa-context_1_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [217/360] qa-context_2_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [218/360] qa-context_3_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [219/360] qa-context_4_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [220/360] qa-context_5_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [221/360] qa-context_6_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [222/360] qa-context_7_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [223/360] qa-context_8_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [224/360] qa-context_9_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [225/360] qa-context_10_bho_hin
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [226/360] qa-context_1_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [227/360] qa-context_2_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [228/360] qa-context_3_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [229/360] qa-context_4_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [230/360] qa-context_5_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [231/360] qa-context_6_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [232/360] qa-context_7_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [233/360] qa-context_8_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [234/360] qa-context_9_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [235/360] qa-context_10_bho_ind
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [236/360] qa-context_1_bho_ita
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [237/360] qa-context_2_bho_ita
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [238/360] qa-context_3_bho_ita
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [239/360] qa-context_4_bho_ita
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [240/360] qa-context_5_bho_ita
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [241/360] qa-context_1_bho_jpn
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [242/360] qa-context_2_bho_jpn
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [243/360] qa-context_3_bho_jpn
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [244/360] qa-context_4_bho_jpn
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [245/360] qa-context_5_bho_jpn
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [246/360] qa-context_1_bho_kor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [247/360] qa-context_2_bho_kor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [248/360] qa-context_3_bho_kor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [249/360] qa-context_4_bho_kor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [250/360] qa-context_5_bho_kor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [251/360] qa-context_1_bho_mar
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [252/360] qa-context_2_bho_mar
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [253/360] qa-context_3_bho_mar
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [254/360] qa-context_4_bho_mar
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [255/360] qa-context_5_bho_mar
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [256/360] qa-context_1_bho_pes
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [257/360] qa-context_2_bho_pes
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [258/360] qa-context_3_bho_pes
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [259/360] qa-context_4_bho_pes
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [260/360] qa-context_5_bho_pes
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [261/360] qa-context_1_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [262/360] qa-context_2_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [263/360] qa-context_3_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [264/360] qa-context_4_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [265/360] qa-context_5_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [266/360] qa-context_6_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [267/360] qa-context_7_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [268/360] qa-context_8_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [269/360] qa-context_9_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [270/360] qa-context_10_bho_por
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [271/360] qa-context_1_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [272/360] qa-context_2_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [273/360] qa-context_3_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [274/360] qa-context_4_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [275/360] qa-context_5_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [276/360] qa-context_6_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [277/360] qa-context_7_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [278/360] qa-context_8_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [279/360] qa-context_9_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [280/360] qa-context_10_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [281/360] qa-context_11_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [282/360] qa-context_12_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [283/360] qa-context_13_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [284/360] qa-context_14_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [285/360] qa-context_15_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [286/360] qa-context_16_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [287/360] qa-context_17_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [288/360] qa-context_18_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [289/360] qa-context_19_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [290/360] qa-context_20_bho_rus
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [291/360] qa-context_1_bho_slk
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [292/360] qa-context_2_bho_slk
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [293/360] qa-context_3_bho_slk
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [294/360] qa-context_4_bho_slk
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [295/360] qa-context_5_bho_slk
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [296/360] qa-context_1_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [297/360] qa-context_2_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [298/360] qa-context_3_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [299/360] qa-context_4_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [300/360] qa-context_5_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [301/360] qa-context_6_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [302/360] qa-context_7_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [303/360] qa-context_8_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [304/360] qa-context_9_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [305/360] qa-context_10_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [306/360] qa-context_11_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [307/360] qa-context_12_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [308/360] qa-context_13_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [309/360] qa-context_14_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [310/360] qa-context_15_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [311/360] qa-context_16_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [312/360] qa-context_17_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [313/360] qa-context_18_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [314/360] qa-context_19_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [315/360] qa-context_20_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [316/360] qa-context_21_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [317/360] qa-context_22_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [318/360] qa-context_23_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [319/360] qa-context_24_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [320/360] qa-context_25_bho_spa
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [321/360] qa-context_1_bho_tur
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [322/360] qa-context_2_bho_tur
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [323/360] qa-context_3_bho_tur
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [324/360] qa-context_4_bho_tur
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [325/360] qa-context_5_bho_tur
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [326/360] qa-context_1_bho_vie
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [327/360] qa-context_2_bho_vie
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [328/360] qa-context_3_bho_vie
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [329/360] qa-context_4_bho_vie
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [330/360] qa-context_5_bho_vie
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [331/360] qa-context_1_bho_yor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [332/360] qa-context_2_bho_yor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [333/360] qa-context_3_bho_yor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [334/360] qa-context_4_bho_yor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [335/360] qa-context_5_bho_yor
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [336/360] qa-context_1_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [337/360] qa-context_2_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [338/360] qa-context_3_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [339/360] qa-context_4_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [340/360] qa-context_5_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [341/360] qa-context_6_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [342/360] qa-context_7_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [343/360] qa-context_8_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [344/360] qa-context_9_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [345/360] qa-context_10_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [346/360] qa-context_11_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [347/360] qa-context_12_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [348/360] qa-context_13_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [349/360] qa-context_14_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [350/360] qa-context_15_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [351/360] qa-context_16_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [352/360] qa-context_17_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [353/360] qa-context_18_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [354/360] qa-context_19_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [355/360] qa-context_20_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [356/360] qa-context_21_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [357/360] qa-context_22_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [358/360] qa-context_23_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [359/360] qa-context_24_bho_zho
+[transformers] Setting `pad_token_id` to `eos_token_id`:248044 for open-end generation.
+  [360/360] qa-context_25_bho_zho
+appended 360 rows -> runs/test-qactx-bho-plain-3867139.jsonl
+=== JOB_STATISTICS ===
+=== current date     : Tue Jul 21 12:49:46 CEST 2026
+= Job-ID             : 3876526 on alex
+= Job-Name           : mist-qa-test
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/slurm/run_test.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 1-00:00:00
+= Elapsed runtime    : 00:29:34
+= Total RAM usage    : 20.6 GiB of assigned  GiB (%)
+= Node list          : a0321
+= Subm/Elig/Start/End: 2026-07-21T12:19:54 / 2026-07-21T12:19:54 / 2026-07-21T12:20:12 / 2026-07-21T12:49:46
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              45.5G   104.9G   209.7G        N/A     180K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin           126.2G     0.0K     0.0K        N/A  42,526                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:A1:00.0, 2845969, 17 %, 12 %, 19228 MiB, 1697047 ms

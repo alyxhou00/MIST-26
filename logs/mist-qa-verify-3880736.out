@@ -1,0 +1,70 @@
+### Starting TaskPrologue of job 3880736 on a0429 at Wed Jul 22 12:49:31 CEST 2026
+Running on cores 0-15 with governor performance
+Wed Jul 22 12:49:31 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:41:00.0 Off |                  Off |
+|  0%   35C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+
+=== runs/test-qaoeg-conly-3876434.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  285 ( 61.3%)   over   50 ( 10.8%)   under  130 ( 28.0%)
+    mean overshoot beyond the band: 41 units
+    worst languages: mar 0%, hat 25%, ben 35%, kor 35%, bho 38%, ckb 40%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=12 (12.0%)  hin=64 (64.0%)  abstain=24 (24.0%)
+
+=== runs/test-qaoeg-cd-3869129.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  306 ( 65.8%)   over   33 (  7.1%)   under  126 ( 27.1%)
+    mean overshoot beyond the band: 67 units
+    worst languages: mar 25%, ben 35%, ckb 45%, hat 50%, kor 50%, yor 50%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=40 (40.0%)  hin=36 (36.0%)  npi=1 (1.0%)  abstain=23 (23.0%)
+
+=== runs/test-qaoeg-plain-3867139.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  209 ( 44.9%)   over   18 (  3.9%)   under  238 ( 51.2%)
+    mean overshoot beyond the band: 86 units
+    worst languages: ben 10%, mar 20%, tur 20%, kor 25%, ckb 30%, arb 35%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=12 (12.0%)  hin=67 (67.0%)  abstain=21 (21.0%)
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 22 12:49:34 CEST 2026
+= Job-ID             : 3880736 on alex
+= Job-Name           : mist-qa-verify
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/slurm/verify_outputs.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 00:20:00
+= Elapsed runtime    : 00:00:07
+= Total RAM usage    : 0.3 GiB of assigned  GiB (%)
+= Node list          : a0429
+= Subm/Elig/Start/End: 2026-07-22T12:49:02 / 2026-07-22T12:49:02 / 2026-07-22T12:49:27 / 2026-07-22T12:49:34
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              57.1G   104.9G   209.7G        N/A     182K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin           140.9G     0.0K     0.0K        N/A   1,986                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
