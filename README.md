@@ -68,7 +68,7 @@ submission format (verbatim prompt as a single user turn, no template;
 [`slurm/run_test.sbatch`](slurm/run_test.sbatch) / `smoke-run-test.sbatch` on the cluster).
 
 What inspecting the file shows (all counts for the qa tasks unless noted; full analysis
-with strategic implications in [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md)):
+with strategic implications in `TEST_SET_ANALYSIS.md`, kept locally, gitignored):
 
 - **12,775 rows = 8,640 `qa-context` + 2,359 `qa-oeg` (ours) + 1,776 `sum-sum` (teammate's).**
   460 qa rows per language × 24 languages (yoruba 419), incl. the surprise **`bho`
@@ -139,7 +139,7 @@ dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fr
 | [`EXPERIMENTS.md`](EXPERIMENTS.md) | the experiment log for the OLD (row-split, leaky) dev — closed 2026-07-17, kept for the verdicts that survive; one row per SLURM job ID |
 | [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) | the experiment log for the v2 item-split set — all new runs go here |
 | `DATA_AUDIT.md` | full-enumeration audit of the sample data (leakage, formats, coverage) + the v2 rebuild record (§7) — kept locally, gitignored, not in this repo |
-| [`TEST_SET_ANALYSIS.md`](TEST_SET_ANALYSIS.md) | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically |
+| `TEST_SET_ANALYSIS.md` | analysis of the official test set (composition, format, cross-lingual structure, embedded instructions, known bugs) and what it changes strategically — kept locally, gitignored, not in this repo |
 
 `$WORK/mist-out` (outside the repo) was the old location for predictions CSVs before this
 layout existed. It's no longer used by any sbatch job -- everything now lives
@@ -385,8 +385,8 @@ had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, a
   being evaluated to isolate the cause before picking C-only / C+D / C+D-small as primary.
 - Full experiment log: [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) (current, v2 item-split) and
   [`EXPERIMENTS.md`](EXPERIMENTS.md) (closed, pre-v2, kept for surviving verdicts). Live status
-  and next steps: [`ROADMAP.md`](ROADMAP.md). Script/length-mismatch breakdown of low-scoring
-  languages: [`scripts/error_analysis.py`](scripts/error_analysis.py).
+  and next steps: `ROADMAP.md` (kept locally, gitignored). Script/length-mismatch breakdown of
+  low-scoring languages: [`scripts/error_analysis.py`](scripts/error_analysis.py).
 
 ---
 

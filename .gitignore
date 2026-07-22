@@ -57,3 +57,4 @@ env/
 # Internal audit notes -- kept locally, not shared in the repo.
 /DATA_AUDIT.md
 /TEST_SET_ANALYSIS.md
+/ROADMAP.md
