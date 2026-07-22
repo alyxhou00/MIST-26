@@ -124,7 +124,7 @@ dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fr
 | Path | Contents |
 |------|----------|
 | [`scripts/`](scripts) | - `benchmark.py` (dev-split generation, zero/few-shot, base or LoRA)<br>- `run_test.py` (official test-set inference → submission JSONL)<br>- `train_lora.py` (LoRA SFT)<br>- `evaluate.py` (scoring)<br>- `error_analysis.py` (failure-mode breakdown)<br>- `build_dataset.py` (the v2 train/dev build)<br>- `constraint_bank.py` (test-attested per-language boilerplate/constraints)<br>- `augment_constraints.py` (roadmap C+D: word budgets + bho-pack fold-in)<br>- `shrink_bho_pack.py` (subsample the bho pack to a proportionate share of the mix)<br>- `bho_lid.py` (Bhojpuri-vs-neighbours function-word LID)<br>- `verify_outputs.py` (C budget compliance + D bho LID on qa-oeg test outputs — neither is measurable on dev — plus script/refusal/one-sentence checks for bho qa-context, where one-sentence answers make `bho_lid` inapplicable)<br>- `oeg_alignment.py` (OEG cross-language item alignment) |
-| [`slurm/`](slurm) | one sbatch file per experiment, named after it:<br>- `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT + dev eval)<br>- `run_test.sbatch` (official test set)<br>- `evaluate.sbatch` (re-scoring)<br>- `setup.sh` (one-time login-node setup)<br>- `smoke-*.sbatch` (cheap smoke tests / pipeline checks before committing to a full run) |
+| [`slurm/`](slurm) | one sbatch file per experiment, named after it:<br>- `lora_sft.sbatch` / `lora_eval.sbatch` (LoRA SFT + dev eval)<br>- `run_test.sbatch` (official test set)<br>- `verify_outputs.sbatch` (roadmap C/D acceptance checks on test outputs)<br>- `evaluate.sbatch` (re-scoring)<br>- `setup.sh` (one-time login-node setup)<br>- `smoke-*.sbatch` (cheap smoke tests / pipeline checks before committing to a full run) |
 | [`predictions/`](predictions) | predictions CSVs worth keeping long-term, committed deliberately |
 | [`logs/`](logs) | every slurm `.out` log, always committed -- `$WORK` has no backup/retention guarantee, so logs are small and cheap enough to keep all of them |
 | `runs/` | gitignored scratch dir for ad-hoc predictions CSVs (large, so only the ones worth keeping get promoted into `predictions/`) |
@@ -339,8 +339,17 @@ Until then, the working setup is a **hybrid**:
 
   ```bash
   cd $HOME/MIST-26
-  sbatch slurm/lora_eval.sbatch /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3822375
+  sbatch slurm/lora_eval.sbatch /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-3876434 \
+    --data data/dev_v2.jsonl --no-lang-hint
   ```
+
+  ⚠️ **`--data data/dev_v2.jsonl` is not optional for a v2 adapter.** Without it `benchmark.py`
+  silently falls back to the HF sample's internal 80/20 dev split — the *old* row-split one,
+  which leaks parallel items into `train_v2` (DATA_AUDIT.md §2), so the adapter is scored partly
+  on its own training data and the numbers come out inflated and incomparable. This example
+  previously omitted both flags and cost job **3878452** a 5h23 run (2,978 rows instead of 2,949,
+  MCIF COMBINED 66.54 vs the honest 50.95). `lora_eval.sbatch` now prints a loud banner when
+  `--data` is missing; the banner is not a substitute for passing the flag.
 
 - **Big model weights (the distillation teachers) live on `$HPCVAULT`**
   (`/home/vault/b279bb/b279bb31/hf_cache_teacher`, per-user 1TB/200K files): `$HOME` is no
