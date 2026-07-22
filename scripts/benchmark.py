@@ -1,13 +1,18 @@
 """Minimal QA benchmark: Qwen3.5-2B on the WMT26 MIST `qa` task, zero- or few-shot.
 
-Splits the `qa` examples 80/20 (train/dev, seed 42), runs the model on the dev half via its
-chat template, and writes a predictions CSV. Scoring is a separate step -- run
-`scripts/evaluate.py` on the CSV for chrF/BERTScore/ROUGE-L (single source of truth).
+Runs the model over the dev rows named by --data via its chat template and writes a predictions
+CSV. Scoring is a separate step -- run `scripts/evaluate.py` on the CSV for chrF/BERTScore/
+ROUGE-L (single source of truth). The 80/20 seed-42 split of the `qa` examples that this script
+used to perform itself now happens only under `--data hf-sample`; v2 sets are split by item
+ahead of time by scripts/build_dataset.py.
 
---data is REQUIRED and names the evaluation set explicitly -- either a prepared v2 JSONL or the
-literal `hf-sample` for the legacy internal split. There is no default: the default used to be
-the legacy split, and a submission that forgot the flag scored a v2 adapter on leaky data for
-five hours without erroring (job 3878452).
+--data is REQUIRED and names the evaluation set explicitly. There are exactly three outcomes:
+
+    --data data/dev_v2.jsonl   the v2 item-split dev. Runs silently -- the normal path.
+    --data hf-sample           the legacy internal 80/20 split. Runs, but warns loudly: it is
+                               row-level and leaks into train_v2 (DATA_AUDIT.md #2), so it is
+                               only correct for reproducing a pre-v2 run.
+    (omitted)                  argparse error, exit 2. There is deliberately no default.
 
     python scripts/benchmark.py --data data/dev_v2.jsonl --no-lang-hint     # v2 item-split dev
     python scripts/benchmark.py --data hf-sample      # legacy leaky split; warns loudly
@@ -20,7 +25,9 @@ five hours without erroring (job 3878452).
     python scripts/benchmark.py --data data/dev_v2.jsonl --lora adapters/qwen3.5-9b-qa-lora-<jobid>
     python scripts/benchmark.py --data data/dev_v2.jsonl --train-data data/train_v2.jsonl --shots 3
 
-Flags: --shots (few-shot demonstrations per example, default 0 = zero-shot) · --limit (cap dev
+Flags: --data (REQUIRED, see above) · --train-data (demo pool; required with --shots when --data
+is a JSONL, so demos cannot come from a pool that reintroduces the leakage v2 removed) ·
+--shots (few-shot demonstrations per example, default 0 = zero-shot) · --limit (cap dev
 rows) · --source (substring on `source`) · --lang (exact lang_code) · --[no-]lang-hint
 (target-language system turn, default on) · --out (predictions CSV path) · --model ·
 --temperature/--top-p (sampling params; defaults match Qwen3.5-2B's card, override for other
