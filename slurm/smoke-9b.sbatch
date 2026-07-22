@@ -50,11 +50,11 @@ ZERO="runs/smoke-9b-0shot-$SLURM_JOB_ID.csv"
 FEW="runs/smoke-9b-fewshot3-$SLURM_JOB_ID.csv"
 
 echo "=== 9B zero-shot (source=$SRC lang=$LANG) ==="
-python scripts/benchmark.py --model "$MODEL" --temperature 0.7 --top-p 0.8 \
+python scripts/benchmark.py --data hf-sample --model "$MODEL" --temperature 0.7 --top-p 0.8 \
   --source "$SRC" --lang "$LANG" --shots 0 --out "$ZERO"
 python scripts/evaluate.py "$ZERO"
 
 echo "=== 9B few-shot k=3 (source=$SRC lang=$LANG) ==="
-python scripts/benchmark.py --model "$MODEL" --temperature 0.7 --top-p 0.8 \
+python scripts/benchmark.py --data hf-sample --model "$MODEL" --temperature 0.7 --top-p 0.8 \
   --source "$SRC" --lang "$LANG" --shots 3 --out "$FEW"
 python scripts/evaluate.py "$FEW"

@@ -71,25 +71,11 @@ if [ -z "$ADAPTER" ]; then
 fi
 shift
 
-# Without --data, benchmark.py evaluates the HF sample's internal 80/20 dev split -- the OLD
-# row-split one, which leaks parallel items into train_v2 (DATA_AUDIT.md #2). A v2 adapter
-# scored on it is scored partly on its own training data: job 3878452 (C-only, 3876434) burnt
-# 5h23 that way and came back with MCIF COMBINED 66.54 against the honest 50.95, plus a row
-# count of 2,978 instead of 2,949. It fails loudly nowhere -- the run just completes and looks
-# plausible -- so warn here, where the log records it, rather than trust the submitter.
-# Not a hard exit: the pre-v2 baselines legitimately ran without --data.
-case " $* " in
-  *" --data "*|*" --data="*) ;;
-  *)
-    echo "###############################################################################" >&2
-    echo "## WARNING: no --data flag. Falling back to the HF sample's internal dev split" >&2
-    echo "##          (2,978 rows), which LEAKS into train_v2 -- v2 adapters scored on"   >&2
-    echo "##          it come out inflated and are not comparable to any v2 run."         >&2
-    echo "##          For a v2 adapter you want:  --data data/dev_v2.jsonl --no-lang-hint" >&2
-    echo "##          Ignore this only if you are deliberately reproducing a pre-v2 run." >&2
-    echo "###############################################################################" >&2
-    ;;
-esac
+# --data is passed through to benchmark.py, which now *requires* it (there is no default dev
+# set any more) and rejects the run in seconds if it is absent -- so there is deliberately no
+# guard here to drift out of sync with it. Pass `--data data/dev_v2.jsonl --no-lang-hint` for a
+# v2 adapter, or `--data hf-sample` to reproduce a pre-v2 run, which warns loudly because that
+# split leaks into train_v2 (DATA_AUDIT.md #2).
 
 mkdir -p runs
 CSV="runs/predictions-lora-$SLURM_JOB_ID.csv"

@@ -50,6 +50,6 @@ SHOTS="${1:-3}"
 # job ID so runs don't overwrite each other -- same relative path locally and on the cluster.
 mkdir -p runs
 CSV="runs/predictions-fewshot$SHOTS-$SLURM_JOB_ID.csv"
-python scripts/benchmark.py --shots "$SHOTS" --out "$CSV"
+python scripts/benchmark.py --data hf-sample --shots "$SHOTS" --out "$CSV"
 python scripts/evaluate.py "$CSV"          # prints chrF/BERTScore/ROUGE-L (overall + per-source + per-language)
 # Both scripts' stdout+stderr are captured by SLURM into logs/%x-%j.out (see --output above).

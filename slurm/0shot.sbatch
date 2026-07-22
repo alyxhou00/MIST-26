@@ -47,6 +47,6 @@ export TRANSFORMERS_OFFLINE=1
 # runs don't overwrite each other -- same relative path locally and on the cluster.
 mkdir -p runs
 CSV="runs/predictions-$SLURM_JOB_ID.csv"
-python scripts/benchmark.py --out "$CSV"   # writes predictions to $CSV; add --limit 50 for a quick run
+python scripts/benchmark.py --data hf-sample --out "$CSV"   # writes predictions to $CSV; add --limit 50 for a quick run
 python scripts/evaluate.py "$CSV"          # reads $CSV, prints chrF/BERTScore/ROUGE-L (overall + per-source + per-language)
 # Both scripts' stdout+stderr are captured by SLURM into logs/%x-%j.out (see --output above).

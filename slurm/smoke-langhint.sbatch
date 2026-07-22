@@ -50,9 +50,9 @@ HINT="runs/smoke-hint-$SLURM_JOB_ID.csv"
 NOHINT="runs/smoke-nohint-$SLURM_JOB_ID.csv"
 
 echo "=== lang-hint ON  (source=$SRC lang=$LANG) ==="
-python scripts/benchmark.py --source "$SRC" --lang "$LANG" --lang-hint --out "$HINT"
+python scripts/benchmark.py --data hf-sample --source "$SRC" --lang "$LANG" --lang-hint --out "$HINT"
 python scripts/evaluate.py "$HINT"
 
 echo "=== lang-hint OFF (source=$SRC lang=$LANG) ==="
-python scripts/benchmark.py --source "$SRC" --lang "$LANG" --no-lang-hint --out "$NOHINT"
+python scripts/benchmark.py --data hf-sample --source "$SRC" --lang "$LANG" --no-lang-hint --out "$NOHINT"
 python scripts/evaluate.py "$NOHINT"

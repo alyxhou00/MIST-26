@@ -47,6 +47,6 @@ python scripts/train_lora.py --limit 200 --epochs 1 --out "$ADAPTER"
 echo "=== evaluating (50 dev rows) ==="
 # --model must match train_lora.py's (default Qwen3.5-9B) -- the adapter was trained against
 # that base's module names/shapes, so benchmark.py needs to load the same base before attaching it.
-python scripts/benchmark.py --model Qwen/Qwen3.5-9B --lora "$ADAPTER" \
+python scripts/benchmark.py --data hf-sample --model Qwen/Qwen3.5-9B --lora "$ADAPTER" \
   --temperature 0.7 --top-p 0.8 --limit 50 --out "$CSV"
 python scripts/evaluate.py "$CSV"

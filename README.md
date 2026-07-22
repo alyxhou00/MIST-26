@@ -343,13 +343,16 @@ Until then, the working setup is a **hybrid**:
     --data data/dev_v2.jsonl --no-lang-hint
   ```
 
-  ⚠️ **`--data data/dev_v2.jsonl` is not optional for a v2 adapter.** Without it `benchmark.py`
-  silently falls back to the HF sample's internal 80/20 dev split — the *old* row-split one,
-  which leaks parallel items into `train_v2` (DATA_AUDIT.md §2), so the adapter is scored partly
-  on its own training data and the numbers come out inflated and incomparable. This example
-  previously omitted both flags and cost job **3878452** a 5h23 run (2,978 rows instead of 2,949,
-  MCIF COMBINED 66.54 vs the honest 50.95). `lora_eval.sbatch` now prints a loud banner when
-  `--data` is missing; the banner is not a substitute for passing the flag.
+  ⚠️ **`--data` is required — `benchmark.py` has no default evaluation set.** It takes either a
+  prepared JSONL (`data/dev_v2.jsonl`) or the literal `hf-sample` for the HF sample's internal
+  80/20 split, and exits in seconds if neither is given. It used to *default* to `hf-sample`,
+  which is the old row-level split that leaks parallel items into `train_v2` (DATA_AUDIT.md §2):
+  a v2 adapter evaluated there is scored partly on its own training data. That default cost job
+  **3878452** a 5h23 run whose numbers looked entirely plausible (2,978 rows instead of 2,949,
+  MCIF COMBINED 66.54 against the honest 49.23) because a submission — copied from this very
+  example, which then omitted both flags — forgot them. Choosing the leaky split is now an
+  explicit `--data hf-sample`, and still prints a loud banner, since the run it produces fails
+  silently rather than loudly.
 
 - **Big model weights (the distillation teachers) live on `$HPCVAULT`**
   (`/home/vault/b279bb/b279bb31/hf_cache_teacher`, per-user 1TB/200K files): `$HOME` is no

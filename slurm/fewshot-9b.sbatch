@@ -54,6 +54,12 @@ export TRANSFORMERS_OFFLINE=1
 SHOTS="${1:-3}"
 [ $# -ge 1 ] && shift  # anything after the shot count is passed through to benchmark.py
 
+# benchmark.py requires --data, so it must appear among the pass-through args -- this script has
+# no default dev set and dies in seconds without one. v2:
+#     sbatch slurm/fewshot-9b.sbatch 3 --data data/dev_v2.jsonl --train-data data/train_v2.jsonl --no-lang-hint
+# (with --shots, --data also needs --train-data, or demos would be drawn from a pool that
+# reintroduces the leakage v2 removed). `--data hf-sample` reproduces a pre-v2 run.
+#
 # Write per-example results into the repo's (gitignored) runs/ dir, keyed by shot count and
 # job ID so runs don't overwrite each other -- same relative path locally and on the cluster.
 mkdir -p runs

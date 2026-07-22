@@ -4,15 +4,20 @@ Splits the `qa` examples 80/20 (train/dev, seed 42), runs the model on the dev h
 chat template, and writes a predictions CSV. Scoring is a separate step -- run
 `scripts/evaluate.py` on the CSV for chrF/BERTScore/ROUGE-L (single source of truth).
 
-    python scripts/benchmark.py                       # full dev split; zero-shot, lang-hint ON
-    python scripts/benchmark.py --shots 3             # few-shot: 3 train-split demonstrations
-    python scripts/benchmark.py --limit 50            # quick check on the first 50 dev rows
-    python scripts/benchmark.py --no-lang-hint        # raw zero-shot: no target-language instruction
-    python scripts/benchmark.py --source aya --lang hin_Deva   # only the cross-lingual aya rows
-    python scripts/benchmark.py --out runs/my-run.csv          # choose where predictions are written
-    python scripts/benchmark.py --model Qwen/Qwen3.5-9B --temperature 0.7 --top-p 0.8  # a bigger base
-    python scripts/benchmark.py --lora adapters/qwen3.5-9b-qa-lora-<jobid>  # a LoRA-SFT'd model
+--data is REQUIRED and names the evaluation set explicitly -- either a prepared v2 JSONL or the
+literal `hf-sample` for the legacy internal split. There is no default: the default used to be
+the legacy split, and a submission that forgot the flag scored a v2 adapter on leaky data for
+five hours without erroring (job 3878452).
+
     python scripts/benchmark.py --data data/dev_v2.jsonl --no-lang-hint     # v2 item-split dev
+    python scripts/benchmark.py --data hf-sample      # legacy leaky split; warns loudly
+    python scripts/benchmark.py --data hf-sample --shots 3    # few-shot: 3 train-split demos
+    python scripts/benchmark.py --data hf-sample --limit 50   # quick check on 50 dev rows
+    python scripts/benchmark.py --data hf-sample --no-lang-hint  # no target-language instruction
+    python scripts/benchmark.py --data hf-sample --source aya --lang hin_Deva  # aya rows only
+    python scripts/benchmark.py --data hf-sample --out runs/my-run.csv  # where predictions go
+    python scripts/benchmark.py --data hf-sample --model Qwen/Qwen3.5-9B --temperature 0.7 --top-p 0.8
+    python scripts/benchmark.py --data data/dev_v2.jsonl --lora adapters/qwen3.5-9b-qa-lora-<jobid>
     python scripts/benchmark.py --data data/dev_v2.jsonl --train-data data/train_v2.jsonl --shots 3
 
 Flags: --shots (few-shot demonstrations per example, default 0 = zero-shot) · --limit (cap dev
@@ -26,6 +31,7 @@ and apply within the dev split.
 
 import argparse
 import csv
+import sys
 import zlib
 from pathlib import Path
 
@@ -85,6 +91,11 @@ def make_shot_picker(train, k: int, seed: int):
     return pick
 
 
+# Sentinel --data value selecting the HF sample's internal 80/20 split. Spelled out rather than
+# left as the default so that choosing the leaky split is always an explicit act.
+LEGACY_DATA = "hf-sample"
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="Qwen/Qwen3.5-2B")
@@ -120,12 +131,15 @@ def main() -> None:
     ap.add_argument("--lora", default=None,
                     help="path to a trained LoRA adapter (from scripts/train_lora.py) to load "
                          "on top of --model before generation. Omit for the base model.")
-    ap.add_argument("--data", default=None,
-                    help="JSONL of dev rows (e.g. data/dev_v2.jsonl) evaluated INSTEAD of the "
-                         "HF sample's internal 80/20 dev split. Accepts the v2 schema "
-                         "(question_lang -> lang_code; sum-sum rows dropped). The old internal "
-                         "split leaks parallel items (DATA_AUDIT.md #2) -- v2 runs must pass "
-                         "this.")
+    ap.add_argument("--data", required=True, metavar="PATH|hf-sample",
+                    help="REQUIRED. JSONL of dev rows (e.g. data/dev_v2.jsonl), accepting the v2 "
+                         "schema (question_lang -> lang_code; sum-sum rows dropped); or the "
+                         "literal 'hf-sample' to opt in to the HF sample's internal 80/20 split. "
+                         "That split leaks parallel items across train/dev (DATA_AUDIT.md #2) and "
+                         "is kept only so pre-v2 numbers stay reproducible -- it warns loudly when "
+                         "selected. No default on purpose: it used to default to the leaky split, "
+                         "and job 3878452 scored a v2 adapter on it for 5h23 without erroring "
+                         "because a submission forgot the flag.")
     ap.add_argument("--train-data", default=None,
                     help="JSONL pool for --shots demonstrations (e.g. data/train_v2.jsonl). "
                          "Required when --shots is used together with --data: the internal "
@@ -151,7 +165,7 @@ def main() -> None:
 
     # --- data: either prepared JSONL files (v2, item-split) or the legacy internal split ---
     pick_shots = None
-    if args.data:
+    if args.data != LEGACY_DATA:
         dev = load_rows(args.data)
         if args.shots:
             if not args.train_data:
@@ -160,7 +174,21 @@ def main() -> None:
             pick_shots = make_shot_picker(load_rows(args.train_data), args.shots, args.seed)
     else:
         # legacy: qa subset, row-level 80/20 split (leaky across parallel items --
-        # DATA_AUDIT.md #2; kept only so old numbers stay reproducible)
+        # DATA_AUDIT.md #2; kept only so old numbers stay reproducible). Reaching this branch
+        # is now always a deliberate `--data hf-sample`, never a forgotten flag -- but say so
+        # anyway, because the failure it guards against is silent: the run completes and the
+        # numbers look plausible (job 3878452, MCIF 66.54 against the honest 49.23).
+        for line in (
+            "###############################################################################",
+            "## WARNING: --data hf-sample -- evaluating on the HF sample's internal 80/20",
+            "##          dev split (2,978 rows). This split is ROW-level, so it LEAKS",
+            "##          parallel items into train_v2: any adapter trained on v2 data is",
+            "##          scored partly on its own training data and every column inflates.",
+            "##          Correct only for reproducing pre-v2 runs. For anything v2 you want:",
+            "##              --data data/dev_v2.jsonl --no-lang-hint",
+            "###############################################################################",
+        ):
+            print(line, file=sys.stderr)
         from datasets import load_dataset
         df = load_dataset("pinzhenchen/wmt26-mist-sample")["train"].to_pandas()
         qa = df[df["task"] == "qa"].sample(frac=1.0, random_state=args.seed).reset_index(drop=True)

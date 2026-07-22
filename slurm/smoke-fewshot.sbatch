@@ -51,9 +51,9 @@ FEWSHOT="runs/smoke-fewshot$SHOTS-$SLURM_JOB_ID.csv"
 ZEROSHOT="runs/smoke-0shot-$SLURM_JOB_ID.csv"
 
 echo "=== $SHOTS-shot (source=$SRC lang=$LANG) ==="
-python scripts/benchmark.py --source "$SRC" --lang "$LANG" --shots "$SHOTS" --out "$FEWSHOT"
+python scripts/benchmark.py --data hf-sample --source "$SRC" --lang "$LANG" --shots "$SHOTS" --out "$FEWSHOT"
 python scripts/evaluate.py "$FEWSHOT"
 
 echo "=== zero-shot control (source=$SRC lang=$LANG) ==="
-python scripts/benchmark.py --source "$SRC" --lang "$LANG" --out "$ZEROSHOT"
+python scripts/benchmark.py --data hf-sample --source "$SRC" --lang "$LANG" --out "$ZEROSHOT"
 python scripts/evaluate.py "$ZEROSHOT"
