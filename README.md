@@ -343,16 +343,11 @@ Until then, the working setup is a **hybrid**:
     --data data/dev_v2.jsonl --no-lang-hint
   ```
 
-  ⚠️ **`--data` is required — `benchmark.py` has no default evaluation set.** It takes either a
-  prepared JSONL (`data/dev_v2.jsonl`) or the literal `hf-sample` for the HF sample's internal
-  80/20 split, and exits in seconds if neither is given. It used to *default* to `hf-sample`,
-  which is the old row-level split that leaks parallel items into `train_v2` (DATA_AUDIT.md §2):
-  a v2 adapter evaluated there is scored partly on its own training data. That default cost job
-  **3878452** a 5h23 run whose numbers looked entirely plausible (2,978 rows instead of 2,949,
-  MCIF COMBINED 66.54 against the honest 49.23) because a submission — copied from this very
-  example, which then omitted both flags — forgot them. Choosing the leaky split is now an
-  explicit `--data hf-sample`, and still prints a loud banner, since the run it produces fails
-  silently rather than loudly.
+  ⚠️ **`--data` is required — `benchmark.py` has no default evaluation set**, and omitting it
+  exits in seconds. Pass `data/dev_v2.jsonl`, or `hf-sample` to opt in to the old row-level
+  split, which leaks into `train_v2` and warns loudly. It used to default to
+  the leaky one, and this example used to omit the flag — which is how job 3878452 scored a v2
+  adapter on its own training data for 5h23 without erroring.
 
 - **Big model weights (the distillation teachers) live on `$HPCVAULT`**
   (`/home/vault/b279bb/b279bb31/hf_cache_teacher`, per-user 1TB/200K files): `$HOME` is no
