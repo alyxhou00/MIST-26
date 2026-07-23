@@ -12,7 +12,9 @@ The shared task has three tasks:
 **Sub-task 2.** **Summarization** — given a document in language X, produce a summary in language Y.<br>
 **Task 3.** **Open-ended generation** — given an open-ended question, produce a helpful, natural response.
 
-## Columns: `task` and `source`
+## The sample dataset ([pinzhenchen/wmt26-mist-sample](https://huggingface.co/datasets/pinzhenchen/wmt26-mist-sample))
+
+### Columns: `task` and `source`
 
 Two columns describe each example:
 
@@ -20,7 +22,7 @@ Two columns describe each example:
   separate label for open-ended generation; those examples are tagged `qa`.
 - **`source`** — the upstream dataset the example comes from.
 
-## Source dataset → task mapping
+### Source dataset → task mapping
 
 Counts are from the `train` split (`df.groupby(["task", "source"]).size()`):
 
@@ -37,7 +39,7 @@ Counts are from the `train` split (`df.groupby(["task", "source"]).size()`):
 
 Totals: `qa` = 14,893 rows, `sum` = 9,026 rows.
 
-## Load Dataset
+### Load Dataset
 
 ```bash
 pip install datasets
@@ -129,7 +131,7 @@ question/document cluster, aya duplicate cluster) shares one group, so no dev it
 Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fresh in
 [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) — no old dev number is comparable.**
 
-## Layout
+## Repo Layout
 
 | Path | Contents |
 |------|----------|
