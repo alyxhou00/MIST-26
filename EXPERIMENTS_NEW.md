@@ -20,7 +20,7 @@ below re-establish.
 | C-only | 3876434 | `mist-qa-qwen3.5-9b-lora-wordcnt` | + word-budget compliance; quality = plain within noise |
 | **C+D-small** | 3880753 | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` | + bho pack at 17.1%; **the primary submission** |
 
-**"C" and "D" in the docs are internal roadmap shorthand** (full roadmap kept locally, not in this repo):
+**"C" and "D" in the docs are internal roadmap shorthand** (full roadmap doc kept locally, not in this repo):
 
 - **C** = constraint-augmentation: also called word budget or word count compilance, that is 
   training rows that state a word-budget instruction, so
@@ -76,14 +76,14 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 | 3880753 | 07-22 | **C+D-small SFT**: LoRA on `train_v2-cd-small.jsonl` (14,074 rows = 11,674 qa + 2,400 bho-pack at **17.1%**; same 840 budget rows), no hint | — | — | — | — | — | — | — | — | train_loss **1.087**. 7h27. Adapter: `adapters/qwen3.5-9b-qa-lora-3880753`. Chained evals: 3882157 (dev), 3882158 (test qa-oeg), 3882159 (test qa-context bho). |
 | 3882157 | 07-23 | ↑ C+D-small adapter 3880753, 0-shot, no hint | **44.78** | **72.79** | **51.68** | 39.90 | 36.45 | 39.45 | — | — | 5h13, 0 runaway. Best-or-tied on all three qa-context columns (n=1,915); qa-oeg agg mid-pack at 39.45. Read it with the bootstrap before ranking — the four-system spread lives in the 90-row OEG column. |
 
-### 🔴 Runaway-generation artifact (found 2026-07-18)
+### Failure to stop after the answer (found 2026-07-18)
 
 After a correct short answer, the fine-tuned models sometimes kept going, inventing a fake chat exchange (`\nuser\n…\nassistant\n<think>`) that got scored as part of the answer and dragged the numbers down. This is what made one earlier model look much worse at tydiqa (38.94→19.53): not lost ability, just 78% of answers running on. **Fixed 2026-07-18**: generation now stops at the
 first fake turn, and any stragglers are trimmed before scoring. Every adapter from job 3869088 on is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §5.6.
 
 ### C and D on the test set (dev is blind to both)
 
-The dev set cannot measure what C+D is built for: it has no budget rows and no bho rows. So on dev we only see the cost of C+D (adding bho data pulls attention away from the main qa task) and never the benefit (better budget compliance and more bho output). To see the benefit we have to look at the official test set. In the table below, the dev columns come from the job logs, and the test columns were all re-scored together on the same test file.
+The dev set cannot evaluate what C+D is built for: it has no budget rows and no bho rows. So on dev we only see the cost of C+D (adding bho data pulls attention away from the main qa task) and never the benefit (better budget compliance and more bho output). To see the benefit we have to look at the official test set. In the table below, the dev columns come from the job logs, and the test columns were all re-scored together on the same test file.
 
 | | plain-v2 | C+D (bho 40.7%) | C-only (bho 0%) | **C+D-small (bho 17.1%)** |
 |---|---|---|---|---|
