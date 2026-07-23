@@ -4,7 +4,7 @@ This is the log for the rebuilt dataset, **`data/train_v2.jsonl` / `data/dev_v2.
 (built by `scripts/build_dataset.py`, seed 42 — schema in README "The rebuilt train/dev
 set"). The previous log ([EXPERIMENTS.md](EXPERIMENTS.md)) is closed: its train/dev split
 leaked parallel items across the two, so its dev numbers aren't comparable to anything
-measured here — don't copy rows across.
+measured here. Don't copy rows across.
 
 Not every old finding needs re-running, though. Comparisons that never depended on the
 split — prompting vs. prompting, distillation vs. gold SFT on the same data, adapter+demos
@@ -12,7 +12,7 @@ not stacking — still hold as-is. What doesn't hold is any comparison *between*
 and an adapter, since the adapter was trained on the leaky split; those are what the runs
 below re-establish.
 
-## The three adapters (submission variants)
+## The three adapters (proposed submission variants as of 07-23)
 
 | variant | adapter | Hub repo (`alyxhou00/`) | one-line |
 |---|---|---|---|
@@ -20,12 +20,15 @@ below re-establish.
 | C-only | 3876434 | `mist-qa-qwen3.5-9b-lora-wordcnt` | + word-budget compliance; quality = plain within noise |
 | **C+D-small** | 3880753 | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` | + bho pack at 17.1%; **the primary submission** |
 
-C-only vs plain is settled: budget compliance 44.9% → 61.3% (test, n=465), dev quality a wash
-both ways (OEG +1.16 p=0.225, MCIF −1.72 p=0.147 — neither survives the bootstrap). C+D-small
-adds bho (40% vs 12% qa-oeg, 90% vs 18% qa-context) and is chosen for the whole qa set — see the
-bootstrap section below for why the C-only vs C+D-small edges are marginal and opposite.
+**"C" and "D" in the docs are internal roadmap shorthand** (full roadmap kept locally, not in this repo):
 
-## Ground rules (carried over + new)
+- **C** = constraint-augmentation: also called word budget or word count compilance, that is 
+  training rows that state a word-budget instruction, so
+  the model learns to respect stated length constraints.
+- **D** = the Bhojpuri (`bho`) data pack folded into SFT, since the sample data has zero
+  native `bho` coverage otherwise.
+
+## Ground rules
 
 - One row per full SLURM job; smokes and post-mortems go to IMPLEMENTATION_NOTES.md,
   logs to `logs/`.
@@ -50,17 +53,9 @@ bootstrap section below for why the C-only vs C+D-small edges are marginal and o
 2. 9B base, 3-shot (variant1 safety config).
 3. Gold-LoRA retrained on `train_v2` (0-shot, test format — same recipe as 3822375 but
    new substrate), scored on dev_v2.
-4. (After C/D fold-in) constraint-augmented + bho-pack SFT on the same substrate.
+4. Constraint-augmented + bho-pack SFT on the same substrate.
 
 ## Runs
-
-**"C" and "D" below are internal roadmap shorthand** (full roadmap kept locally,
-`ROADMAP.md`, not in this repo):
-
-- **C** = constraint-augmentation — training rows that state a word-budget instruction, so
-  the model learns to respect stated length constraints.
-- **D** = the Bhojpuri (`bho`) data pack folded into SFT, since the sample data has zero
-  native `bho` coverage otherwise.
 
 All scores are **COMBINED** = mean(chrF, BERTScore, ROUGE-L) per source column, computed
 from the per-source lines in the job log. qa-oeg agg = 0.87·OEG + 0.13·aya. Refusal columns
