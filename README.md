@@ -207,6 +207,42 @@ auto-resumes -- see the file for how to resubmit) trains the full adapter; then
 [`slurm/lora_eval.sbatch <adapter dir>`](slurm/lora_eval.sbatch) (24h) scores it on the full
 dev set.
 
+### Publishing an adapter to the Hugging Face Hub
+
+Adapters are uploaded from the **login node** (it has internet; compute nodes do not), over
+`hf` (the `huggingface_hub` CLI, already in `mist-venv`). Do it inside `tmux` — the upload of
+a ~110 MB `adapter_model.safetensors` survives an SSH drop that way.
+
+```bash
+ssh alex
+tmux new -s hf-upload
+source /home/atuin/b279bb/b279bb31/mist-venv/bin/activate
+hf auth login                       # paste a WRITE token (https://huggingface.co/settings/tokens)
+
+cd /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-<jobid>
+hf upload <repo-id> . --repo-type model --exclude "checkpoint-*/*"
+```
+
+**`--exclude "checkpoint-*/*"` is not optional.** Every adapter dir keeps its two mid-training
+checkpoints (`checkpoint-1600/`, `checkpoint-1760/`, ...), which roughly double the folder and
+are useless on the Hub — `hf upload .` sends the whole directory unless they are excluded.
+
+Uploading to an **existing** repo overwrites files of the same name and adds a new commit; the
+previous weights are not lost, they stay in the repo's git history and `main` just moves to the
+new commit. Same-name files (`adapter_model.safetensors`, `adapter_config.json`, ...) are
+replaced cleanly, so no `--delete` is needed to swap weights; add `--delete "*"` only if you
+want to also remove files that exist on the Hub but not locally. Note `hf upload .` also uploads
+the PEFT-generated `README.md`, which **replaces the repo's model card** — add `README.md` to
+`--exclude` (or edit the card first) if the Hub copy is hand-written.
+
+Repo map (adapter job → Hub repo, all under `alyxhou00/`):
+
+| adapter | config | Hub repo |
+|---|---|---|
+| `...-3867139` | plain-v2 | `mist-qa-qwen3.5-9b-lora` |
+| `...-3869129` | C+D (bho 40.7%) | `mist-qa-qwen3.5-9b-lora-cd` |
+| `...-3880753` | C+D-small (bho 17.1%) | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` (swap in over the old C+D weights) |
+
 ## Running on the Alex cluster (NHR@FAU)
 
 The Alex login node has internet but no GPU; the compute nodes have GPUs but no internet. So we
