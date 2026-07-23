@@ -134,25 +134,15 @@ model that loses them.)
 
 ### Final submission generation (2026-07-23, in progress)
 
-Single model **C+D-small** (`qwen3.5-9b-qa-lora-3880753`), on the **fixed** test file
-`data/tests-ad630f88.jsonl`, qa only (sum-sum is the teammate's). Config **matches the validated
-runs exactly** — no `--unescape`, no `--lang-hint`, default sampling — since every number the
-decision rests on was measured that way; `--unescape` stays a candidate *variant* (TEST_SET_ANALYSIS
-§2), not the primary.
+For the final QA submission we use a single model, C+D-small, across the whole QA test set.
 
-- **qa-oeg (2,359):** reused `runs/test-qaoeg-cdsmall-3880753.jsonl` — only 9 rows differ between the
-  stale and fixed files (`qa-oeg_47/93..100_eng_eng`, all English, none bho), so 2,350 outputs are
-  valid as-is; the 9 changed rows resume-regenerated → `runs/submit-cdsmall-qaoeg.jsonl`.
-- **qa-context (8,640):** generated fresh on the fixed file, jobs **3889744** / **3889745**
-  (`--shard 1,2/2`, ~7h each) → `runs/submit-cdsmall-qactx-s{1,2}of2.jsonl`. qa-context runs at
-  5.9 s/row (one sentence), not qa-oeg's 20.5.
-- **still to do:** concatenate to one 10,999-row JSONL, verify all ids and the `{"id","output"}`
-  format, decide the `<br>`-strip.
+We run it with exactly the settings we used when comparing the candidate models (no `--unescape`,
+no `--lang-hint`, default sampling). The reason: every number the decision was based on was measured
+with these settings, so the submission has to match them or it would be inconsistent with those
+results. (`--unescape` is a variant we may try later, not the main submission.)
 
-⚠️ **Every test number above the fixed-file submission is on the pre-fix file** (2026-07-16 revision;
-jobs 3875151 / 3875152 / 3878453 / 3882158 / 3882159). Harmless for the comparisons (identical
-substrate, 9 prompt-only rows differ of 2,359), but the submission itself must use
-`data/tests-ad630f88.jsonl` or the 8 `{country}`/`{language}` rows get answered literally.
+The submission must use the latest version of the test set (`data/tests-07-20.jsonl`). We generate
+the outputs on that test set.
 
 ---
 
