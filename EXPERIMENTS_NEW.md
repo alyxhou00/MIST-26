@@ -12,6 +12,19 @@ not stacking — still hold as-is. What doesn't hold is any comparison *between*
 and an adapter, since the adapter was trained on the leaky split; those are what the runs
 below re-establish.
 
+## The three adapters (submission variants)
+
+| variant | adapter | Hub repo (`alyxhou00/`) | one-line |
+|---|---|---|---|
+| plain | 3867139 | `mist-qa-qwen3.5-9b-lora` | v2 SFT, no C, no D — the baseline |
+| C-only | 3876434 | `mist-qa-qwen3.5-9b-lora-wordcnt` | + word-budget compliance; quality = plain within noise |
+| **C+D-small** | 3880753 | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` | + bho pack at 17.1%; **the primary submission** |
+
+C-only vs plain is settled: budget compliance 44.9% → 61.3% (test, n=465), dev quality a wash
+both ways (OEG +1.16 p=0.225, MCIF −1.72 p=0.147 — neither survives the bootstrap). C+D-small
+adds bho (40% vs 12% qa-oeg, 90% vs 18% qa-context) and is chosen for the whole qa set — see the
+bootstrap section below for why the C-only vs C+D-small edges are marginal and opposite.
+
 ## Ground rules (carried over + new)
 
 - One row per full SLURM job; smokes and post-mortems go to IMPLEMENTATION_NOTES.md,

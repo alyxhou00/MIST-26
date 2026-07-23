@@ -239,7 +239,8 @@ want to also remove files that exist on the Hub but not locally. Note `hf upload
 the PEFT-generated `README.md`, which **replaces the repo's model card** — add `README.md` to
 `--exclude` (or edit the card first) if the Hub copy is hand-written.
 
-Repo map (adapter job → Hub repo, three repos, all under `alyxhou00/`):
+Repo map — the three submission variants (plain, C-only, C+D-small), adapter job → Hub repo,
+all under `alyxhou00/`:
 
 | adapter | config | Hub repo |
 |---|---|---|
