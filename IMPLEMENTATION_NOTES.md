@@ -456,10 +456,11 @@ thresholds, or a "this source is gold-only" list) is the missing piece in
 
 ## 5.6 The runaway-generation artifact (2026-07-18) — smoke + post-mortem record
 
-Full analysis in EXPERIMENTS_NEW.md; this is the pipeline-mechanics record. LoRA
-adapters (v2 gold 3867139 worst at 66% of predictions; OLD gold 3857589 at 78%
-tydiqa / 56% aya — the "tydiqa collapse" retro-explained) continue past the answer
-into hallucinated chat turns. Facts established while debugging:
+LoRA adapters (v2 gold 3867139 worst at 66% of predictions; OLD gold 3857589 at 78%
+tydiqa / 56% aya — the "tydiqa collapse" 38.94→19.53 retro-explained as truncation,
+not capability loss) continue past the answer into hallucinated chat turns rendered
+as plain text (`\nuser\n…\nassistant\n<think>`), especially after short golds. Base
+models were never affected (0% incidence). Facts established while debugging:
 
 - **Label masking in `train_lora.py` is NOT the bug**: reproduced locally with the
   Qwen3.5-9B tokenizer — `prefix_ids` is an exact token prefix of `full_ids` and the
@@ -547,3 +548,28 @@ One more trap when copying numbers out: evaluate.py now labels the single `overa
 **"LEGACY -- 71% noise, do not compare systems on this"**, because dev's source weighting is
 inverted against the test mix. Quote it only for continuity with the older table, and never
 use it to rank systems.
+
+## The aya "style shift" — mostly a chrF artifact, no action (2026-07-23)
+
+Adapter answers aya tersely (11 words vs gold's 26, matching the gold register) while base
+pads with markdown (105 words, 89% markdown-formatted) — that verbosity is what inflates
+base's chrF (character-recall), while BERTScore/ROUGE-L correctly prefer the adapter. No fix
+needed.
+
+## Paired bootstrap — the edges are marginal and opposite (2026-07-23)
+
+The dev qa-oeg aggregate is 87% a 90-row column: across all four adapters aya (n=944) spans 0.28
+points, OEG (n=90) spans 2.83, and the moving part is OEG's ROUGE-L. `scripts/bootstrap_compare.py`,
+10,000 paired resamples, reference = C+D-small, on the faithful proxy for each sub-task:
+
+| vs C+D-small | OEG (qa-oeg, n=90), job 3889564 | MCIF (qa-context, n=160), job 3889735 |
+|---|---|---|
+| C-only | **+1.79**  CI [+0.08, +3.58]  p=0.041 | **−2.44**  CI [−4.96, −0.02]  p=0.048 |
+| C+D | −1.04  CI [−3.55, +1.45]  p=0.394 | −0.57  CI [−2.78, +1.61]  p=0.621 |
+| plain | +0.62  CI [−1.52, +2.75]  p=0.583 | −0.73  CI [−3.35, +1.85]  p=0.600 |
+
+**The only gaps that clear noise are C-only vs C+D-small, and they point opposite ways** (both CIs
+graze zero, p just under 0.05): C-only wins qa-oeg long-form, C+D-small wins qa-context. Every
+plain/C+D comparison is noise — the earlier "+0.88 over C+D" and "+1.01 over plain" rankings did
+not survive. Direct plain vs C-only is also a wash both ways (OEG +1.16 p=0.225, MCIF −1.72 p=0.147;
+jobs 3889793/3889794).
