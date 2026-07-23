@@ -104,19 +104,25 @@ rebuild them locally (fully deterministic, seed 42):
 PYTHONPATH=scripts python scripts/build_dataset.py
 ```
 
-Schema: `task` (**exact test names**: `qa-context` / `qa-oeg` / `sum-sum`), `question_lang`
-(bare code — question *and* answer language, the test invariant), `context_lang` (null for
-qa-oeg; CrossSum unknown), `source`, `input`, `output`, `item_group`. **The dev/train side is
-a pure function of `item_group`** — every language version of one underlying item (MCIF talk,
-OEG prompt, belebele passage, tydiqa question/document cluster, aya duplicate cluster) shares
-one group, so no dev item has a train twin. Highlights: belebele and tydiqa are re-synthesized
-from upstream into the attested test `qa-context` layout (lead-in + passage + question +
-constraint tail, literal `\n\n` separators, boilerplate mined per-language from `tests-07-20.jsonl`
-by `constraint_bank.py`), including **unanswerable rows** whose gold is the exact per-language
-refusal phrase (7% belebele / 20% tydiqa — the sample had zero); OEG's shuffled-per-language
-parallel prompts were manually aligned ([`scripts/oeg_alignment.py`](scripts/oeg_alignment.py));
-tydiqa tel/swh/tha (languages absent from the test set) and ~38 cross-lingual aya rows are
-dropped. Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fresh in
+**Schema** (per row): `task` (**exact test names**: `qa-context` / `qa-oeg` / `sum-sum`),
+`question_lang` (bare code — question *and* answer language, the test invariant), `context_lang`
+(null for qa-oeg; CrossSum unknown), `source`, `input`, `output`, `item_group`.
+
+**Item-split (no dev/train leakage).** The dev/train side is a pure function of `item_group`:
+every language version of one underlying item (MCIF talk, OEG prompt, belebele passage, tydiqa
+question/document cluster, aya duplicate cluster) shares one group, so no dev item has a train twin.
+
+**Per-source handling:**
+- **belebele / tydiqa** — re-synthesized from upstream into the attested test `qa-context` layout
+  (lead-in + passage + question + constraint tail, literal `\n\n` separators; boilerplate mined
+  per-language from `tests-07-20.jsonl` by [`constraint_bank.py`](scripts/constraint_bank.py)),
+  including **unanswerable rows** whose gold is the exact per-language refusal phrase
+  (7% belebele / 20% tydiqa — the sample had zero).
+- **OEG** — shuffled-per-language parallel prompts manually aligned
+  ([`scripts/oeg_alignment.py`](scripts/oeg_alignment.py)).
+- **Dropped** — tydiqa tel/swh/tha (languages absent from the test set) and ~38 cross-lingual aya rows.
+
+Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fresh in
 [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) — no old dev number is comparable.**
 
 ## Layout
@@ -209,23 +215,20 @@ dev set.
 
 ### Publishing an adapter to the Hugging Face Hub
 
-Adapters are uploaded from the **login node** (it has internet; compute nodes do not), over
-`hf` (the `huggingface_hub` CLI, already in `mist-venv`). Do it inside `tmux` — the upload of
-a ~110 MB `adapter_model.safetensors` survives an SSH drop that way.
+- Adapters are uploaded from the login node, which has Internet, over
+`hf` (the `huggingface_hub` CLI). 
+- Do it inside `tmux` since it might be a large file.
 
 ```bash
 ssh alex
 tmux new -s hf-upload
-source "$HOME/mist-venv/bin/activate"   # /home/hpc/... -- the venv with `hf` (1.21.0);
-                                        # the $WORK/atuin mist-venv does NOT have it
+source "$HOME/mist-venv/bin/activate"   # might want to switch to the venv with `hf`
+
 hf auth whoami || hf auth login         # paste a WRITE token (https://huggingface.co/settings/tokens)
 
 cd /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-<jobid>
 hf upload <repo-id> . --repo-type model --exclude "checkpoint-*/*"
 ```
-
-The adapters live under `$WORK` (atuin) but `hf` is in the `$HOME` venv — activate `$HOME`'s,
-`cd` into atuin's adapter dir. (`hf: command not found` means the wrong venv is active.)
 
 **`--exclude "checkpoint-*/*"` is not optional.** Every adapter dir keeps its two mid-training
 checkpoints (`checkpoint-1600/`, `checkpoint-1760/`, ...), which roughly double the folder and
@@ -234,10 +237,7 @@ are useless on the Hub — `hf upload .` sends the whole directory unless they a
 Uploading to an **existing** repo overwrites files of the same name and adds a new commit; the
 previous weights are not lost, they stay in the repo's git history and `main` just moves to the
 new commit. Same-name files (`adapter_model.safetensors`, `adapter_config.json`, ...) are
-replaced cleanly, so no `--delete` is needed to swap weights; add `--delete "*"` only if you
-want to also remove files that exist on the Hub but not locally. Note `hf upload .` also uploads
-the PEFT-generated `README.md`, which **replaces the repo's model card** — add `README.md` to
-`--exclude` (or edit the card first) if the Hub copy is hand-written.
+replaced cleanly.
 
 Repo map — the three submission variants (plain, C-only, C+D-small), adapter job → Hub repo,
 all under `alyxhou00/`:
@@ -248,10 +248,7 @@ all under `alyxhou00/`:
 | `...-3876434` | C-only (word-count, 0 bho) | `mist-qa-qwen3.5-9b-lora-wordcnt` |
 | `...-3880753` | C+D-small (bho 17.1%) | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` |
 
-`wordcnt-bho` originally held **C+D-large** (job 3869129, bho 40.7%); its weights were replaced
-in place by C+D-small on 2026-07-23 (verified on the Hub: the served `adapter_model.safetensors`
-sha256 matches the local 3880753 file), so C+D-large no longer has a repo of its own — it lives
-only in that repo's git history now. There is no `-cd` repo.
+`wordcnt-bho` originally held **C+D-large** (job 3869129, bho 40.7%); its weights were replaced in place by C+D-small on 2026-07-23, so C+D-large no longer has a repo of its own — it lives only in that repo's git history now.
 
 ## Running on the Alex cluster (NHR@FAU)
 
@@ -291,12 +288,11 @@ python scripts/benchmark.py --limit 20
 exit          # release the interactive allocation
 ```
 
-...or submit [`slurm/smoke-langhint.sbatch`](slurm/smoke-langhint.sbatch)
-(`sbatch slurm/smoke-langhint.sbatch`), a short (~40 min) job that A/Bs `--lang-hint` on/off
-over just the cross-lingual `aya` rows — a cheap way to check a prompt change before spending
+...or submit slurm scripts like [`slurm/smoke-langhint.sbatch`](slurm/smoke-langhint.sbatch)
+(`sbatch slurm/smoke-langhint.sbatch`. In this example, a short (~40 min) job that A/Bs `--lang-hint` on/off
+over just the cross-lingual `aya` rows, and it's a cheap way to check a prompt change before spending
 ~10h on the full `0shot.sbatch` run. Edit the `SRC`/`LANG` vars at the top to target a
-different subset. The `--source`/`--lang` filters it uses are on `benchmark.py` directly
-(e.g. `--source aya --lang hin_Deva`).
+different subset.
 
 **4. Submit the full dev-set run** and check the result:
 
@@ -313,7 +309,7 @@ Each run produces two artifacts:
 | `logs/mist-qa-0shot-<jobid>.out` | log: progress, warnings, final metric summary from `evaluate.py` (chrF / BERTScore / ROUGE-L, stdout + stderr) -- **committed**, so `git add logs/*.out && git commit && git push` from the cluster once the job finishes |
 | `runs/predictions-<jobid>.csv` | per-example `source, lang_code, input, gold, prediction` -- gitignored scratch; promote it into `predictions/` (see below) only if it's worth keeping |
 
-**5. Promote the predictions CSV into `predictions/`, if it's worth keeping.** `runs/` is
+**5. (Optional) Promote the predictions CSV into `predictions/`, if it's worth keeping.** `runs/` is
 gitignored scratch, so this is what actually saves a run long-term. Two equivalent ways to do
 it, replacing `<jobid>` with the actual job number:
 
@@ -372,16 +368,8 @@ Until then, the working setup is a **hybrid**:
 - **Reads still come from atuin** — `$WORK/mist-venv`, `$WORK/hf_cache`, and the trained
   adapters under `$WORK/MIST-26/adapters/` are unaffected (reading is not blocked). Pass
   adapter paths absolutely, e.g. `/home/atuin/b279bb/b279bb31/MIST-26/adapters/...`.
-- **`HF_DATASETS_CACHE` must point somewhere writable.** In offline mode (`HF_HUB_OFFLINE=1`)
-  the `datasets` library does *not* re-prepare a dataset from the hub cache — it needs the
-  *prepared* cache under `HF_DATASETS_CACHE`, and it also writes a lock file there on every
-  load. `$WORK/hf_cache` is unwritable while atuin is over quota, so **every sbatch script
-  that loads the HF dataset bakes in `export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"`**
-  (the prepared cache, 79MB/32 files, was copied once: `cp -r $WORK/hf_cache/datasets
-  $HOME/hf_datasets_cache`) — this is not something the submitter needs to set. Relying on a
-  caller-supplied env var instead of baking it in is exactly what killed job 3857583 (38s) and
-  later **job 3859591** (37s, same error, after the fix had only been applied to
-  `lora_eval.sbatch` and not yet to `fewshot-9b.sbatch`) — so submissions are just:
+- **`HF_DATASETS_CACHE` must point somewhere writable.** In offline mode (`HF_HUB_OFFLINE=1`) the `datasets` library does *not* re-prepare a dataset from the hub cache — it needs the *prepared* cache under `HF_DATASETS_CACHE`, and it also writes a lock file there on every load. `$WORK/hf_cache` is unwritable while atuin is over quota, so **every sbatch script that loads the HF dataset bakes in `export HF_DATASETS_CACHE="$HOME/hf_datasets_cache"`**
+  (the prepared cache, 79MB/32 files, was copied once: `cp -r $WORK/hf_cache/datasets $HOME/hf_datasets_cache`) — this is not something the submitter needs to set. Relying on a caller-supplied env var instead of baking it in is exactly what killed job 3857583 (38s) and later **job 3859591** (37s, same error, after the fix had only been applied to `lora_eval.sbatch` and not yet to `fewshot-9b.sbatch`) — so submissions are just:
 
   ```bash
   cd $HOME/MIST-26
@@ -389,18 +377,12 @@ Until then, the working setup is a **hybrid**:
     --data data/dev_v2.jsonl --no-lang-hint
   ```
 
-  ⚠️ **`--data` is required — `benchmark.py` has no default evaluation set**, and omitting it
-  exits in seconds. Pass `data/dev_v2.jsonl`, or `hf-sample` to opt in to the old row-level
-  split, which leaks into `train_v2` and warns loudly. It used to default to
-  the leaky one, and this example used to omit the flag — which is how job 3878452 scored a v2
-  adapter on its own training data for 5h23 without erroring.
+  ⚠️ **`--data` is required — `benchmark.py` has no default evaluation set**, and omitting it exits in seconds. Pass `data/dev_v2.jsonl`, or `hf-sample` to opt in to the old row-level split, which leaks into `train_v2` and warns loudly. It used to default to
+  the leaky one, and this example used to omit the flag — which is how job 3878452 scored a v2 adapter on its own training data for 5h23 without erroring.
 
 - **Big model weights (the distillation teachers) live on `$HPCVAULT`**
   (`/home/vault/b279bb/b279bb31/hf_cache_teacher`, per-user 1TB/200K files): `$HOME` is no
-  option — its filesystem **double-counts usage against the 100G soft quota** (the ~77GB
-  Qwen3.5-35B-A3B download showed up as ~140G and tripped the `!!!` overquota flag), so even
-  one big model blows it. Vault is slower storage, which is fine for weights read once at
-  job start. `$HPCVAULT` (like `$WORK`) is **unset in non-interactive ssh** — use the
+  option — its filesystem **double-counts usage against the 100G soft quota** (the ~77GB Qwen3.5-35B-A3B download showed up as ~140G and tripped the `!!!` overquota flag), so even one big model blows it. Vault is slower storage, which is fine for weights read once at job start. `$HPCVAULT` (like `$WORK`) is **unset in non-interactive ssh** — use the
   absolute path. Teacher sbatch files point `HF_HOME` there.
 
 Once the quota is fixed: the old `$WORK/MIST-26` checkout is stale and dirty (everything it
@@ -409,16 +391,13 @@ had is now committed on GitHub) — delete it, `git clone` fresh into `$WORK`, a
 
 ## Results so far
 
-- **Prompting baseline** (old row-split dev, closed — see [`EXPERIMENTS.md`](EXPERIMENTS.md)):
-  Qwen3.5-2B 0-shot chrF=18.01 → 2B 3-shot 21.84 → 9B 0-shot 23.12 → 9B 3-shot 27.64
-  (BERTScore/ROUGE-L improve alongside).
+- Use Qwen 9B as baseline.
 - **Routing decided on the v2 set** ([`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md)): a gold-LoRA
   adapter (no lang-hint, 0-shot) beats prompting on both `qa-context` and `qa-oeg`; adapter +
   few-shot demos don't stack (train/inference format must match); distillation was tried and
   lost to gold SFT (worse on both routing-relevant sub-tasks) and the roadmap closed on it.
-- Full experiment log: [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) (current, v2 item-split) and
-  [`EXPERIMENTS.md`](EXPERIMENTS.md) (closed, pre-v2, kept for surviving verdicts). Live status
-  and next steps: `ROADMAP.md` (kept locally, gitignored). Script/length-mismatch breakdown of
+- Full experiment log: [`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) (current, dev set samples version 2) and
+  [`EXPERIMENTS.md`](EXPERIMENTS.md) (closed, kept for surviving verdicts). Live status and next steps: `ROADMAP.md` (kept locally, gitignored). Script/length-mismatch breakdown of
   low-scoring languages: [`scripts/error_analysis.py`](scripts/error_analysis.py).
 
 ---
