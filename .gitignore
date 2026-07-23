@@ -53,6 +53,7 @@ env/
 # Official test set (47MB tests.jsonl) -- not committed; download per README "The official
 # test set" section. Same relative path locally and on the cluster.
 /data/
+!/data/.gitkeep
 
 # Internal audit notes -- kept locally, not shared in the repo.
 /DATA_AUDIT.md
