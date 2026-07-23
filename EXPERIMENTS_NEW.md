@@ -78,19 +78,12 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 
 ### 🔴 Runaway-generation artifact (found 2026-07-18)
 
-After a correct short answer, the fine-tuned models sometimes kept going, inventing a fake chat
-exchange (`\nuser\n…\nassistant\n<think>`) that got scored as part of the answer and dragged the
-numbers down. This is what made one earlier model look much worse at tydiqa (38.94→19.53): not
-lost ability, just 78% of answers running on. **Fixed 2026-07-18**: generation now stops at the
-first fake turn, and any stragglers are trimmed before scoring. Every adapter from job 3869088 on
-is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §5.6.
+After a correct short answer, the fine-tuned models sometimes kept going, inventing a fake chat exchange (`\nuser\n…\nassistant\n<think>`) that got scored as part of the answer and dragged the numbers down. This is what made one earlier model look much worse at tydiqa (38.94→19.53): not lost ability, just 78% of answers running on. **Fixed 2026-07-18**: generation now stops at the
+first fake turn, and any stragglers are trimmed before scoring. Every adapter from job 3869088 on is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §5.6.
 
 ### C and D on the test set (dev is blind to both)
 
-The dev set can't evaluate what C+D is for: it has no budget rows and no bho rows. So dev only
-measures the downside (piling on bho data dilutes the main qa task) and never the upside. For the
-upside we have to look at the official test set. In the table below, the dev columns come from the
-job logs, and the test columns were all re-scored together on the same test file.
+The dev set cannot measure what C+D is built for: it has no budget rows and no bho rows. So on dev we only see the cost of C+D (adding bho data pulls attention away from the main qa task) and never the benefit (better budget compliance and more bho output). To see the benefit we have to look at the official test set. In the table below, the dev columns come from the job logs, and the test columns were all re-scored together on the same test file.
 
 | | plain-v2 | C+D (bho 40.7%) | C-only (bho 0%) | **C+D-small (bho 17.1%)** |
 |---|---|---|---|---|
@@ -132,7 +125,9 @@ edge is the 90 OEG rows. So one model — C+D-small — for everything; C-only i
 variant. (Routing non-bho to C-only was considered and dropped: it would hand 79% of the rows to the
 model that loses them.)
 
-### Final submission generation (2026-07-23, in progress)
+### Proposed final submission generation 
+
+Last updated: (2026-07-23, pending)
 
 For the final QA submission we use a single model, C+D-small, across the whole QA test set.
 

@@ -1,10 +1,7 @@
-# WMT26 MIST Few-Shot Implementation Notes
+# WMT26 MIST Implementation Notes
 
 > [!NOTE]
 > Kept for future reference for the writing. Written by Claude.
-
-Session date: 2026-07-06
-Task: Add few-shot prompting to the zero-shot QA benchmark and refactor sbatch naming convention.
 
 ## Problems Identified
 
