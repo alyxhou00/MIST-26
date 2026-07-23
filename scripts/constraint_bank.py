@@ -3,7 +3,7 @@
 Roadmap C ("instruction following") needs to put constraints on SFT *inputs* in each target
 language. Writing those 24 sentences by hand would be guesswork; the test set already
 contains them, professionally translated, so this module **derives them from
-`data/tests.jsonl`** instead. Two families:
+`data/tests-07-20.jsonl`** instead. Two families:
 
 1. `context_tail(lang)` -- the qa-context instruction tail, extracted verbatim. Every
    language has exactly ONE distinct tail shared by all 360 of its qa-context rows, so this
@@ -46,7 +46,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-DEFAULT_TEST_FILE = "data/tests.jsonl"
+DEFAULT_TEST_FILE = "data/tests-07-20.jsonl"
 
 # qa-context prompts separate their sections with a LITERAL backslash-n (see
 # TEST_SET_ANALYSIS.md): the official file double-escaped them, so the prompt string carries
@@ -379,7 +379,7 @@ def word_budget(lang: str, lo: int, hi: int | None = None) -> str:
 
 
 # --------------------------------------------------------------------------------------
-# self-test: everything above is a claim about data/tests.jsonl -- check it against the file
+# self-test: everything above is a claim about data/tests-07-20.jsonl -- check it against the file
 # --------------------------------------------------------------------------------------
 
 def selftest(test_file: str) -> int:

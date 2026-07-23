@@ -12,9 +12,9 @@
 #     sbatch slurm/run_test.sbatch                              # all 10,999 qa rows
 #     sbatch slurm/run_test.sbatch --shard 1/3 --out runs/test-qa-s1of3.jsonl
 #     sbatch slurm/run_test.sbatch --lora <adapter dir> --lang-hint
-# Needs data/tests.jsonl (47MB, gitignored) -- download it on the login node first:
+# Needs data/tests-07-20.jsonl (47MB, gitignored) -- download it on the login node first:
 #     curl -sL "https://huggingface.co/datasets/pinzhenchen/wmt26-mist-test/resolve/main/tests.jsonl" \
-#       -o data/tests.jsonl
+#       -o data/tests-07-20.jsonl
 #
 # Time limit is the 24h partition max. MEASURED rates on this workload (9B + LoRA, one a40,
 # max-new-tokens 512) -- NOT benchmark.py's dev rates, which this header used to quote and

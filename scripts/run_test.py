@@ -1,6 +1,6 @@
 """Inference on the official WMT26 MIST test set -> submission-format JSONL.
 
-The test prompts (pinzhenchen/wmt26-mist-test, data/tests.jsonl -- see README for the
+The test prompts (pinzhenchen/wmt26-mist-test, data/tests-07-20.jsonl -- see README for the
 download command) are SELF-CONTAINED: context, constraints and question in one string,
 often with embedded format instructions ("answer in one sentence", "in 150 words", ...).
 So unlike benchmark.py, which builds prompts from the sample data with our template, this
@@ -129,7 +129,7 @@ def make_shot_picker(pool, k: int, seed: int):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--test-file", default="data/tests.jsonl",
+    ap.add_argument("--test-file", default="data/tests-07-20.jsonl",
                     help="official test JSONL ({id, prompt, task, question_lang} per line)")
     ap.add_argument("--task", default="qa-context,qa-oeg",
                     help="comma-separated task values to keep (default: both qa tasks; "

@@ -27,7 +27,7 @@ Per-source treatment (decisions of 2026-07-17, DATA_AUDIT section 6 + user):
   languages are drawn from the 23 test question languages belebele covers (all but bho),
   each row wrapped in the attested test layout
   `<lead-in>\\n\\n<passage>\\n\\n<question-intro><q>\\n\\n<tail>` with the boilerplate in
-  the question language (constraint_bank mines it from tests.jsonl). The separator is the
+  the question language (constraint_bank mines it from tests-07-20.jsonl). The separator is the
   test file's LITERAL backslash-n pair -- matching what run_test.py feeds the model by
   default, per the train/infer-format-must-match finding (EXPERIMENTS.md 3861409).
   Context language: 4% monolingual (the test's 340/8640), otherwise drawn from the test's
@@ -74,7 +74,7 @@ is reproducible byte-for-byte.
     python scripts/build_dataset.py            # writes data/{train,dev}_v2.jsonl + report
     python scripts/build_dataset.py --selfcheck-only
 
-Needs data/samples.jsonl and data/tests.jsonl (download commands in the README) plus the
+Needs data/samples.jsonl and data/tests-07-20.jsonl (download commands in the README) plus the
 two upstream pulls:
 
     for l in arb_Arab ben_Beng ces_Latn ckb_Arab deu_Latn eng_Latn fin_Latn fra_Latn \
@@ -362,7 +362,7 @@ def build_from_samples(samples_file: str, rng: random.Random) -> tuple[list[dict
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--samples", default="data/samples.jsonl")
-    ap.add_argument("--tests", default="data/tests.jsonl")
+    ap.add_argument("--tests", default="data/tests-07-20.jsonl")
     ap.add_argument("--upstream", default="data/upstream")
     ap.add_argument("--out-train", default="data/train_v2.jsonl")
     ap.add_argument("--out-dev", default="data/dev_v2.jsonl")

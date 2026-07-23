@@ -9,7 +9,7 @@ The C+D adapter (job 3869129) adds two things the v2 dev split has no way to sco
     in qa-oeg. The failure mode being checked is drift into standard Hindi.
 
 So both checks read a `run_test.py` output file ({"id", "output"} per line), joined back
-to `data/tests.jsonl` on `id`:
+to `data/tests-07-20.jsonl` on `id`:
 
     python scripts/verify_outputs.py runs/test-qaoeg-cd-3869129.jsonl \
         [runs/test-qaoeg-plain-3867139.jsonl ...]
@@ -301,7 +301,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("outputs", nargs="+", help="run_test.py output JSONL files")
-    ap.add_argument("--test-file", default="data/tests.jsonl")
+    ap.add_argument("--test-file", default="data/tests-07-20.jsonl")
     ap.add_argument("--ctx-lang", default="bho",
                     help="question language for the qa-context script/refusal/sentence "
                          "checks (default bho -- the only language D targets)")

@@ -55,11 +55,11 @@ print(ds["train"])   # the only split -- train
 Released 14 July 2026; submissions due **1 August 2026 23:59 AoE** (Google Form, JSONL of
 `{id, output}`, ≤3 systems/team with one marked primary; human eval may only cover the
 primary). One file, `tests.jsonl` (47MB, 12,775 rows) — gitignored here, download it into
-`data/`:
+`data/` under the date-stamped name the scripts expect (last test-set update 2026-07-20):
 
 ```bash
 curl -sL "https://huggingface.co/datasets/pinzhenchen/wmt26-mist-test/resolve/main/tests.jsonl" \
-  -o data/tests.jsonl
+  -o data/tests-07-20.jsonl
 ```
 
 Each row is `{id, prompt, task, question_lang}`; `id` = `task_int_questionlang_contextlang`
@@ -97,7 +97,7 @@ both: **`data/train_v2.jsonl` (18,901 rows) + `data/dev_v2.jsonl` (4,748 rows)**
 rebuild them locally (fully deterministic, seed 42):
 
 ```bash
-# inputs: data/samples.jsonl (sample download above), data/tests.jsonl (test download above),
+# inputs: data/samples.jsonl (sample download above), data/tests-07-20.jsonl (test download above),
 # plus two upstream pulls (see build_dataset.py's docstring for the exact curl commands):
 #   data/upstream/belebele/{24 langs}.jsonl   <- facebook/belebele (parallel items + eng)
 #   data/upstream/tydiqa/{train,validation}.parquet <- copenlu/answerable_tydiqa (unanswerables)
@@ -111,7 +111,7 @@ a pure function of `item_group`** — every language version of one underlying i
 OEG prompt, belebele passage, tydiqa question/document cluster, aya duplicate cluster) shares
 one group, so no dev item has a train twin. Highlights: belebele and tydiqa are re-synthesized
 from upstream into the attested test `qa-context` layout (lead-in + passage + question +
-constraint tail, literal `\n\n` separators, boilerplate mined per-language from `tests.jsonl`
+constraint tail, literal `\n\n` separators, boilerplate mined per-language from `tests-07-20.jsonl`
 by `constraint_bank.py`), including **unanswerable rows** whose gold is the exact per-language
 refusal phrase (7% belebele / 20% tydiqa — the sample had zero); OEG's shuffled-per-language
 parallel prompts were manually aligned ([`scripts/oeg_alignment.py`](scripts/oeg_alignment.py));

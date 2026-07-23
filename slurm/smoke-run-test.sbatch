@@ -11,7 +11,7 @@
 # each qa task, including the surprise language Bhojpuri (bho -- zero training rows; the
 # point is to eyeball whether outputs stay in Bhojpuri or slide into Hindi, and whether
 # embedded word-count instructions are respected). Outputs land in runs/ for inspection.
-# Run from the repo root on Alex (NHR@FAU) after downloading data/tests.jsonl (see
+# Run from the repo root on Alex (NHR@FAU) after downloading data/tests-07-20.jsonl (see
 # slurm/run_test.sbatch's header):
 #     sbatch slurm/smoke-run-test.sbatch
 
