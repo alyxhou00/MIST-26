@@ -87,10 +87,10 @@ is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §5.6
 
 ### C and D on the test set (dev is blind to both)
 
-`dev_v2` has **0 budget rows and 0 bho rows** (enumerated), so it prices only C+D's *cost* — a
-bho-heavy mix diluting the qa head — never its benefit. The benefit is read from the official
-test set. All four adapters: dev columns from the job logs, test columns re-scored in one
-`verify_outputs.py` pass (job **3884948**, single test-file revision).
+The dev set can't evaluate what C+D is for: it has no budget rows and no bho rows. So dev only
+measures the downside (piling on bho data dilutes the main qa task) and never the upside. For the
+upside we have to look at the official test set. In the table below, the dev columns come from the
+job logs, and the test columns were all re-scored together on the same test file.
 
 | | plain-v2 | C+D (bho 40.7%) | C-only (bho 0%) | **C+D-small (bho 17.1%)** |
 |---|---|---|---|---|
