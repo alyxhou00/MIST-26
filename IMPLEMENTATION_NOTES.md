@@ -573,3 +573,19 @@ graze zero, p just under 0.05): C-only wins qa-oeg long-form, C+D-small wins qa-
 plain/C+D comparison is noise — the earlier "+0.88 over C+D" and "+1.01 over plain" rankings did
 not survive. Direct plain vs C-only is also a wash both ways (OEG +1.16 p=0.225, MCIF −1.72 p=0.147;
 jobs 3889793/3889794).
+
+## D on qa-context (jobs 3876525 / 3876526 / 3882159)
+
+The 360 bho qa-context rows are too short for `bho_lid` (median 3 words, one-sentence answers).
+Script/sentence/refusal checks call the adapters identical. What separates them is **contrastive
+function words** (which of `आ`/`खातिर` vs `और`/`के लिए` appears, needs only one word):
+
+| | C+D | **C+D-small** | plain |
+|---|---|---|---|
+| bho-leaning / hin-leaning | **163 / 1** | 147 / 16 | 21 / 93 |
+| % bho of the decidable | **99%** | **90%** | 18% |
+
+This is the one check where C+D-small reads weaker than C+D (90% vs 99%: 16 hin-leaning vs 1, of
+163 decidable): the only place more bho data bought more bho output. Everything else is unchanged
+(Devanagari 99.7%, refusal 21.4%). Caveats: only 39% of rows are long enough to judge, and this
+shows output that *looks* bho, not that it's *correct*; the test set has no gold.

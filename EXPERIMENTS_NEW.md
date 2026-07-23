@@ -78,7 +78,7 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 
 ### 🔴 Runaway-generation artifact (found 2026-07-18)
 
-After a correct short answer, the fine-tuned models sometimes kept going — inventing a fake chat
+After a correct short answer, the fine-tuned models sometimes kept going, inventing a fake chat
 exchange (`\nuser\n…\nassistant\n<think>`) that got scored as part of the answer and dragged the
 numbers down. This is what made one earlier model look much worse at tydiqa (38.94→19.53): not
 lost ability, just 78% of answers running on. **Fixed 2026-07-18**: generation now stops at the
@@ -131,22 +131,6 @@ dev qa-context rows) and wins bho, while C-only is significantly *worst* on qa-c
 edge is the 90 OEG rows. So one model — C+D-small — for everything; C-only is at most a qa-oeg-only
 variant. (Routing non-bho to C-only was considered and dropped: it would hand 79% of the rows to the
 model that loses them.)
-
-### D on qa-context — jobs 3876525 / 3876526 / 3882159
-
-The 360 bho qa-context rows are too short for `bho_lid` (median 3 words, one-sentence answers).
-Script/sentence/refusal checks call the adapters identical; **contrastive function words** — which
-of `आ`/`खातिर` vs `और`/`के लिए` appears, needs only one word — separate them:
-
-| | C+D | **C+D-small** | plain |
-|---|---|---|---|
-| bho-leaning / hin-leaning | **163 / 1** | 147 / 16 | 21 / 93 |
-| % bho of the decidable | **99%** | **90%** | 18% |
-
-This is the one check where C+D-small reads weaker than C+D (90% vs 99%: 16 hin-leaning vs 1, of
-163 decidable) — the only place more bho data bought more bho output. Everything else is unchanged
-(Devanagari 99.7%, refusal 21.4%). Caveats: only 39% of rows are long enough to judge, and this
-shows output that *looks* bho, not that it's *correct* — the test set has no gold.
 
 ### Final submission generation (2026-07-23, in progress)
 
