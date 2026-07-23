@@ -1,0 +1,108 @@
+### Starting TaskPrologue of job 3884948 on a0429 at Thu Jul 23 17:45:35 CEST 2026
+Running on cores 80-95 with governor performance
+Thu Jul 23 17:45:36 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:C1:00.0 Off |                  Off |
+|  0%   36C    P8             22W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+
+=== runs/test-qaoeg-cdsmall-3880753.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  301 ( 64.7%)   over   36 (  7.7%)   under  128 ( 27.5%)
+    mean overshoot beyond the band: 56 units
+    worst languages: ben 15%, mar 20%, ckb 30%, arb 45%, tur 55%, jpn 58%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=40 (40.0%)  hin=35 (35.0%)  npi=2 (2.0%)  abstain=23 (23.0%)
+
+=== runs/test-qaoeg-cd-3869129.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  306 ( 65.8%)   over   33 (  7.1%)   under  126 ( 27.1%)
+    mean overshoot beyond the band: 67 units
+    worst languages: mar 25%, ben 35%, ckb 45%, hat 50%, kor 50%, yor 50%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=40 (40.0%)  hin=36 (36.0%)  npi=1 (1.0%)  abstain=23 (23.0%)
+
+=== runs/test-qaoeg-conly-3876434.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  285 ( 61.3%)   over   50 ( 10.8%)   under  130 ( 28.0%)
+    mean overshoot beyond the band: 41 units
+    worst languages: mar 0%, hat 25%, ben 35%, kor 35%, bho 38%, ckb 40%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=12 (12.0%)  hin=64 (64.0%)  abstain=24 (24.0%)
+
+=== runs/test-qaoeg-plain-3867139.jsonl  (2359 rows) ===
+C -- word-budget compliance on 465 qa-oeg rows that state a budget:
+    compliant  209 ( 44.9%)   over   18 (  3.9%)   under  238 ( 51.2%)
+    mean overshoot beyond the band: 86 units
+    worst languages: ben 10%, mar 20%, tur 20%, kor 25%, ckb 30%, arb 35%
+D -- bho_lid on 100 bho rows (function-word LID; abstains rather than guess):
+    bho=12 (12.0%)  hin=67 (67.0%)  abstain=21 (21.0%)
+
+=== runs/test-qactx-bho-cdsmall-3880753.jsonl  (360 rows) ===
+C -- no budget-carrying rows found (wrong task slice?)
+D(ctx) -- 360 bho qa-context rows (bho_lid NOT applicable at one-sentence length -- see docstring):
+    script: Deva 359 (99.7%)   none=1
+    wrong-script rows by PASSAGE language (the drift-to-passage failure): eng 1/100
+    one sentence 281 (78.1%)   two 2 (0.6%)   3+ 0 (0.0%)
+    used the attested refusal phrase: 77 (21.4%)   empty: 0
+    bho-vs-Hindi by contrastive function words, on the 283 non-refusal answers:
+        bho-leaning 147   hin-leaning 16   undecidable 120 (too short to commit)  ->  90% bho of the 163 decidable
+
+=== runs/test-qactx-bho-cd-3869129.jsonl  (360 rows) ===
+C -- no budget-carrying rows found (wrong task slice?)
+D(ctx) -- 360 bho qa-context rows (bho_lid NOT applicable at one-sentence length -- see docstring):
+    script: Deva 358 (99.4%)   none=2
+    wrong-script rows by PASSAGE language (the drift-to-passage failure): jpn 1/5, eng 1/100
+    one sentence 287 (79.7%)   two 2 (0.6%)   3+ 0 (0.0%)
+    used the attested refusal phrase: 71 (19.7%)   empty: 0
+    bho-vs-Hindi by contrastive function words, on the 289 non-refusal answers:
+        bho-leaning 163   hin-leaning 1   undecidable 125 (too short to commit)  ->  99% bho of the 164 decidable
+
+=== runs/test-qactx-bho-plain-3867139.jsonl  (360 rows) ===
+C -- no budget-carrying rows found (wrong task slice?)
+D(ctx) -- 360 bho qa-context rows (bho_lid NOT applicable at one-sentence length -- see docstring):
+    script: Deva 358 (99.4%)   none=1  Latn=1
+    wrong-script rows by PASSAGE language (the drift-to-passage failure): fra 1/20, eng 1/100
+    one sentence 296 (82.2%)   two 2 (0.6%)   3+ 0 (0.0%)
+    used the attested refusal phrase: 62 (17.2%)   empty: 0
+    bho-vs-Hindi by contrastive function words, on the 298 non-refusal answers:
+        bho-leaning 21   hin-leaning 93   undecidable 184 (too short to commit)  ->  18% bho of the 114 decidable
+=== JOB_STATISTICS ===
+=== current date     : Thu Jul 23 17:45:38 CEST 2026
+= Job-ID             : 3884948 on alex
+= Job-Name           : mist-qa-verify
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/slurm/verify_outputs.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 00:20:00
+= Elapsed runtime    : 00:00:05
+= Total RAM usage    : 0.3 GiB of assigned  GiB (%)
+= Node list          : a0429
+= Subm/Elig/Start/End: 2026-07-23T17:44:50 / 2026-07-23T17:44:50 / 2026-07-23T17:45:33 / 2026-07-23T17:45:38
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              57.1G   104.9G   209.7G        N/A     182K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin           141.8G     0.0K     0.0K        N/A   2,112                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

@@ -65,6 +65,8 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 | 3869130 | 07-19 | ↑ adapter, 0-shot, no hint (first run with the stop-fix in place — clean by construction) | 44.70 | 70.72 | **51.11** | 38.86 | **36.65** | 38.57 | — | — | 5h06, dev_v2 qa (n=2,949). **C+D does not beat plain-v2 on dev: qa-context is a wash (±0.4, noise), qa-oeg agg −1.42.** Deltas vs 3869088: belebele +0.37, tydiqa −1.32, MCIF +0.16, OEG **−1.67**, aya +0.22. See the C+D read below — dev cannot see either thing C+D adds. |
 | 3876434 | 07-21 | **C-only SFT**: LoRA on `train_v2-c.jsonl` — the same 11,674 examples as 3867139, row for row, with 840 of them carrying a word budget and **0 bho rows**. Isolates C from D, which had only ever been trained together | — | — | — | — | — | — | — | — | train_loss **0.9648** vs 3867139's 0.9656 and 3869129's 1.156 — i.e. **the 840 budget sentences cost essentially nothing to fit, and the C+D loss increase was entirely the bho pack** (continuation/translation text at 41% of the mix). 6h27, 24 rows truncated \@2048. Adapter: `adapters/qwen3.5-9b-qa-lora-3876434`. Dev eval = 3880737, test compliance = 3878453. |
 | 3880737 | 07-22 | ↑ C-only adapter 3876434, 0-shot, no hint | 44.69 | **72.72** | 49.23 | **41.69** | 36.37 | **41.00** | — | — | 5h11, dev_v2 qa (n=2,949), **0/2,949 runaway** (stop-fix clean by construction). **C-only does not merely recover plain-v2's qa-oeg, it beats it: agg 41.00 vs 39.99 (+1.01), and +2.43 over C+D.** With compliance holding at 61.3% (3878453 below) both halves of the roadmap's C-only criterion are met → **the C+D −1.42 was the bho pack diluting the qa head, not C.** Deltas vs plain 3869088: belebele +0.36, tydiqa +0.68, MCIF −1.72, OEG +1.16, aya −0.06. |
+| 3880753 | 07-22 | **C+D-small SFT**: LoRA on `train_v2-cd-small.jsonl` (14,074 rows = 11,674 qa + 2,400 bho-pack at **17.1%** of the mix; the same 840 budget rows), no hint, otherwise the 3867139 recipe | — | — | — | — | — | — | — | — | train_loss **1.087**, between C+D's 1.156 and C-only's 0.9648 and roughly where halving the pack's share predicts. 7h27, 24 rows truncated \@2048. Adapter: `adapters/qwen3.5-9b-qa-lora-3880753`. Chained evals: 3882157 (dev), 3882158 (test qa-oeg), 3882159 (test qa-context bho). |
+| 3882157 | 07-23 | ↑ C+D-small adapter 3880753, 0-shot, no hint | **44.78** | **72.79** | **51.68** | 39.90 | 36.45 | 39.45 | — | — | 5h13, dev_v2 qa (n=2,949), 0 runaway. **Best or tied-best on all three qa-context columns** (belebele, tydiqa, MCIF — n=1,915 between them), and the qa-oeg aggregate lands mid-pack at 39.45: it recovers 0.88 of C+D's 1.42-point loss but does not reach C-only's 41.00. Read the aggregate with the bootstrap below before ranking on it — the entire four-system spread lives in the 90-row OEG column (aya, n=944, is flat at 36.37–36.65 across all four). |
 
 ### 🔴 Runaway-generation artifact (found 2026-07-18)
 
@@ -155,11 +157,16 @@ is what "proportionate" is. C+D-small (17.1%) is the candidate; the three-way pi
 - **C-only is primary, C+D becomes the bho-hedging variant**, if C+D-small's dev falls back
   toward 38.6 — that would mean 17.1% is still too much bho for the qa head to carry.
 
+**Outcome (2026-07-23): neither branch fired cleanly — it landed at 39.45, between the two
+thresholds — and writing the criterion against a 90-row column is why.** See "The proportionate
+D" below for the four-way table and what the criterion should have been.
+
 ⚠️ **All test-set numbers in this section are on the pre-fix test file.** The organizers fixed
 the 8 `{country}`/`{language}` placeholder rows on 2026-07-20 (sha `ad630f88`), but `/data/` is
-gitignored, so the re-download never reached the cluster: jobs 3875151 / 3875152 / 3878453 all
-ran against the 2026-07-16 revision. Harmless for these comparisons (identical substrate on all
-three; 9 prompt-only rows differ out of 2,359) but the **final submission must use
+gitignored, so the re-download never reached the cluster: jobs 3875151 / 3875152 / 3878453 —
+and 3882158 / 3882159 on 07-22 — all ran against the 2026-07-16 revision. Harmless for these
+comparisons (identical substrate on all four; 9 prompt-only rows differ out of 2,359) but the
+**final submission must use
 `--test-file data/tests-ad630f88.jsonl`**, or those 8 English qa-oeg rows get answered about a
 literal `{country}`. `run_test.py`'s placeholder warning still reads "known upstream bug", which
 as of 07-20 is misleading — it now means the test file is stale.
@@ -179,6 +186,57 @@ median (too short to demonstrate paragraph-length bho), while `fineweb-2` (120 w
 is the only half that shows bho at qa-oeg's target length. Final mix: 1,400 fineweb + 1,000
 xP3x.
 
+**Results, 2026-07-23 — all four systems, one table.** Dev columns from the job logs; test
+columns re-scored in a single `verify_outputs.py` pass (job **3884948**) so every number below
+comes from one instrument run over one test-file revision. C-only was never generated on the
+360 bho qa-context rows, hence the `—`; it trains on 0 bho rows and scores 12% on qa-oeg's
+bho_lid (exactly plain's), so there is nothing to expect there that plain does not already show.
+
+| | plain-v2 | C+D (bho 40.7%) | C-only (bho 0%) | **C+D-small (bho 17.1%)** |
+|---|---|---|---|---|
+| SFT job / eval job | 3867139 / 3869088 | 3869129 / 3869130 | 3876434 / 3880737 | **3880753 / 3882157** |
+| train_loss | 0.9656 | 1.156 | 0.9648 | 1.087 |
+| dev belebele-v2 | 44.33 | 44.70 | 44.69 | **44.78** |
+| dev tydiqa-v2 | 72.04 | 70.72 | 72.72 | **72.79** |
+| dev MCIF | 50.95 | 51.11 | 49.23 | **51.68** |
+| dev OEG (n=90) | 40.53 | 38.86 | **41.69** | 39.90 |
+| dev aya (n=944) | 36.43 | **36.65** | 36.37 | 36.45 |
+| **dev qa-oeg agg** | 39.99 | 38.57 | **41.00** | 39.45 |
+| C: budget compliance (465) | 44.9% | **65.8%** | 61.3% | 64.7% |
+| ↳ under / over | 51.2% / 3.9% | **27.1%** / 7.1% | 28.0% / 10.8% | 27.5% / 7.7% |
+| D: bho_lid qa-oeg (100) | 12 / 67 / 21 | **40** / 36 / 23 | 12 / 64 / 24 | **40** / 35 / 23 |
+| D: bho qa-context (360) | 18% bho | **99%** bho | — | 90% bho |
+| `<br>` markup | 27.9% | 31.0% | 28.2% | **26.7%** |
+
+**Shrinking the pack to 17.1% kept all of D and most of the dilution.** On the qa-oeg bho rows
+C+D-small is *identical* to C+D — 40/35/23 against 40/36/23, the same 40 rows within one — and
+on qa-context it holds 90% bho against C+D's 99%, still five times plain's 18%. Compliance
+lands at 64.7% vs C+D's 65.8%, with the same under-shoot fix (27.5% vs 27.1%, against plain's
+51.2%). So **2,400 bho rows buy essentially everything 8,009 bought**, which was the branch-(a)
+hypothesis and is the one clean result of this round.
+
+**What it did not buy is the dev qa-oeg aggregate.** 39.45 recovers 0.88 of C+D's 1.42-point
+loss and stops there, short of C-only's 41.00 — halving the pack's share recovered ~62% of the
+loss, so the dilution is not linear in the mix proportion. Taken at face value the
+pre-registered rule (above) says "C+D-small falls short of ~41.00 → C-only is primary".
+
+⚠️ **Do not take it at face value: 87% of that aggregate is 90 rows.** Across all four systems
+the aya column (n=944) spans 0.28 points end to end while OEG (n=90) spans 2.83, and the
+component that actually moves is OEG's ROUGE-L: 23.91 / 26.77 / 27.37 / 30.61 for
+C+D / C+D-small / plain / C-only, against a chrF spread of 22.88–23.84. A 1.5-point aggregate
+gap is therefore a ~2.4-point ROUGE-L gap on ninety rows. The paired-bootstrap check
+(`scripts/bootstrap_compare.py`, job **3885055**) is what decides whether that survives
+resampling; until it reports, **rank on the qa-context columns and the test checks, which have
+1,915 and 465–360 rows behind them, not on the aggregate.** On those, C+D-small is best or
+tied-best on all three dev qa-context columns and matches C+D on every D check.
+
+**Where this leaves the three-way.** C+D-small dominates C+D outright — same bho behaviour,
+same compliance, better on all three qa-context columns, +0.88 on the aggregate, and the lowest
+`<br>` rate of the four — so **C+D can be dropped from the shortlist**, and the choice is
+C+D-small vs C-only. That choice is exactly the n=90 question above, with a known asymmetry:
+C-only's only claim is the OEG column, while C+D-small additionally buys 40% vs 12% bho on
+qa-oeg and 90% vs ~18% on qa-context, over the 4.2% of the test set that is bho.
+
 ### D on qa-context — jobs 3876525/3876526
 
 All earlier D evidence came from the 100 bho **qa-oeg** rows; the other 360 bho rows are
@@ -191,15 +249,24 @@ Hindi ones (`और`/`के लिए`/`की`). A fourth check, **contrastive
 candidate words appears — needs only one word, not `bho_lid`'s paragraph-level density),
 confirms it:
 
-| | C+D | plain |
-|---|---|---|
-| bho-leaning / hin-leaning | **163 / 1** | 21 / 93 |
-| % bho of the decidable | **99%** | 18% |
+| | C+D | **C+D-small** | plain |
+|---|---|---|---|
+| bho-leaning / hin-leaning | **163 / 1** | 147 / 16 | 21 / 93 |
+| % bho of the decidable | **99%** | **90%** | 18% |
 
 D's effect is cleaner on qa-context (360 rows, 78% of bho's test share) than on qa-oeg (100
 rows: 40% vs 12%), strengthening the case for keeping D. Caveat: only 39% of rows are long
 enough to judge (the rest are 2–3 word noun phrases); this shows output that *looks*
 Bhojpuri, not that it's *correct* — the test set has no gold to check against.
+
+**C+D-small (job 3882159) added 2026-07-23.** It is the one place the shrunk pack reads
+measurably weaker than the full one: 90% vs 99%, i.e. 16 hin-leaning answers where C+D had 1,
+out of 163 decidable. Everything else on these rows is unchanged (Devanagari 99.7%, one
+sentence 78.1%, refusal phrase 21.4% vs C+D's 19.7%, 0 empty). Whether 16 rows out of 360
+matters is a judgement about 4.2% of the test set, not a measurement — but note the direction:
+this is the only check where more bho data bought more bho output, which is what a genuine
+dose–response looks like and is weak evidence that 17.1% is near the bottom of the usable range
+rather than comfortably inside it.
 
 🟢 **Submission-schedule correction**: qa-context runs at 5.9 s/row, not the 20.5 s/row
 measured on qa-oeg — it only answers one sentence. Full qa set: 8,640×5.9 + 2,359×20.5 =
