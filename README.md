@@ -94,13 +94,17 @@ The original 80/20 row split of `samples.jsonl` leaks parallel items across dev/
 (DATA_AUDIT.md §2) and no sample source matches the test-set format (§4). The v2 set fixes
 both: **`data/train_v2.jsonl` (18,901 rows) + `data/dev_v2.jsonl` (4,748 rows)**, built by
 [`scripts/build_dataset.py`](scripts/build_dataset.py) — gitignored like all of `data/`;
-rebuild them locally (fully deterministic, seed 42):
+rebuild them locally (fully deterministic, seed 42).
+
+**To replicate, prepare four inputs under `data/`:**
+- `data/samples.jsonl` — the organizer's sample set (MCIF, aya, OEG, CrossSum, wiki_lingua).
+- `data/tests-07-20.jsonl` — the official test file; the build mines per-language boilerplate and refusal phrases from it.
+- `data/upstream/belebele/{24 langs}.jsonl` — from `facebook/belebele`; belebele is rebuilt from upstream, not the sample.
+- `data/upstream/tydiqa/{train,validation}.parquet` — from `copenlu/answerable_tydiqa`; supplies the unanswerable rows the sample lacked.
+
+The first two are the sample/test downloads above; the exact `curl` commands for the two upstream pulls are in `build_dataset.py`'s docstring. Then run:
 
 ```bash
-# inputs: data/samples.jsonl (sample download above), data/tests-07-20.jsonl (test download above),
-# plus two upstream pulls (see build_dataset.py's docstring for the exact curl commands):
-#   data/upstream/belebele/{24 langs}.jsonl   <- facebook/belebele (parallel items + eng)
-#   data/upstream/tydiqa/{train,validation}.parquet <- copenlu/answerable_tydiqa (unanswerables)
 PYTHONPATH=scripts python scripts/build_dataset.py
 ```
 
