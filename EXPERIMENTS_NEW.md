@@ -78,10 +78,12 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 
 ### 🔴 Runaway-generation artifact (found 2026-07-18)
 
-Adapters ran past the answer into hallucinated chat turns after short golds — the old
-"tydiqa collapse" (38.94→19.53) was 78% runaway rows, not lost capability. **Fixed 2026-07-18**
-(`RUNAWAY_STOP_STRINGS` / `truncate_runaway()`); every adapter run from 3869088 on is clean by
-construction. Mechanics and debugging record in IMPLEMENTATION_NOTES.md §5.6.
+After a correct short answer, the fine-tuned models sometimes kept going — inventing a fake chat
+exchange (`\nuser\n…\nassistant\n<think>`) that got scored as part of the answer and dragged the
+numbers down. This is what made one earlier model look much worse at tydiqa (38.94→19.53): not
+lost ability, just 78% of answers running on. **Fixed 2026-07-18**: generation now stops at the
+first fake turn, and any stragglers are trimmed before scoring. Every adapter from job 3869088 on
+is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §5.6.
 
 ### C and D on the test set (dev is blind to both)
 
