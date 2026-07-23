@@ -239,13 +239,18 @@ want to also remove files that exist on the Hub but not locally. Note `hf upload
 the PEFT-generated `README.md`, which **replaces the repo's model card** — add `README.md` to
 `--exclude` (or edit the card first) if the Hub copy is hand-written.
 
-Repo map (adapter job → Hub repo, all under `alyxhou00/`):
+Repo map (adapter job → Hub repo, three repos, all under `alyxhou00/`):
 
 | adapter | config | Hub repo |
 |---|---|---|
 | `...-3867139` | plain-v2 | `mist-qa-qwen3.5-9b-lora` |
-| `...-3869129` | C+D (bho 40.7%) | `mist-qa-qwen3.5-9b-lora-cd` |
-| `...-3880753` | C+D-small (bho 17.1%) | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` (swap in over the old C+D weights) |
+| `...-3876434` | C-only (word-count, 0 bho) | `mist-qa-qwen3.5-9b-lora-wordcnt` |
+| `...-3880753` | C+D-small (bho 17.1%) | `mist-qa-qwen3.5-9b-lora-wordcnt-bho` |
+
+`wordcnt-bho` originally held **C+D-large** (job 3869129, bho 40.7%); its weights were replaced
+in place by C+D-small on 2026-07-23 (verified on the Hub: the served `adapter_model.safetensors`
+sha256 matches the local 3880753 file), so C+D-large no longer has a repo of its own — it lives
+only in that repo's git history now. There is no `-cd` repo.
 
 ## Running on the Alex cluster (NHR@FAU)
 
