@@ -237,6 +237,55 @@ C+D-small vs C-only. That choice is exactly the n=90 question above, with a know
 C-only's only claim is the OEG column, while C+D-small additionally buys 40% vs 12% bho on
 qa-oeg and 90% vs ~18% on qa-context, over the 4.2% of the test set that is bho.
 
+### Paired bootstrap — the two barely-significant, opposite-direction edges (2026-07-23)
+
+`scripts/bootstrap_compare.py`, 10,000 paired resamples, reference = C+D-small (3882157). Two
+source columns, the faithful proxy for each test sub-task:
+
+| vs C+D-small | OEG (qa-oeg, n=90), job 3889564 | MCIF (qa-context, n=160), job 3889735 |
+|---|---|---|
+| C-only | **+1.79**  CI [+0.08, +3.58]  p=0.041 | **−2.44**  CI [−4.96, −0.02]  p=0.048 |
+| C+D | −1.04  CI [−3.55, +1.45]  p=0.394 | −0.57  CI [−2.78, +1.61]  p=0.621 |
+| plain | +0.62  CI [−1.52, +2.75]  p=0.583 | −0.73  CI [−3.35, +1.85]  p=0.600 |
+
+Read the whole table, not one cell. **The only two gaps that clear noise are C-only vs
+C+D-small, and they point opposite ways and are both marginal** (both CIs graze zero, both
+p just under 0.05): C-only is better on qa-oeg long-form, C+D-small is better on qa-context
+cross-lingual. Every plain / C+D comparison is inside the noise on both columns — so the earlier
+"C+D-small +0.88 over C+D" and "C-only +1.01 over plain" rankings do **not** survive resampling;
+they were column noise. The dev qa-oeg aggregate can order C-only vs C+D-small (marginally) and
+nothing else.
+
+The mirror-image result is what settles the submission: qa-context is **79% of the qa test set**
+(8,640 of 10,999), and C+D-small wins it while C-only is significantly *worst* on it (49.23,
+−2.44). C-only's only win is 90 long-form proxy rows. So routing non-bho to C-only — which an
+earlier draft of this plan proposed — would hand 79% of the rows to the model that loses that
+79%. Dropped.
+
+**Decision (2026-07-23): submit C+D-small for the entire qa set.** It is best-or-tied on the two
+large-sample buckets (qa-context MCIF n=160, and the 1,915 dev qa-context rows), best on bho, and
+its only deficit is the qa-oeg OEG column — 90 rows, marginal, 1.79 behind C-only. One model, one
+generation pass. C-only becomes a possible variant submission for a qa-oeg-only arm, not the
+primary.
+
+### Final submission generation (2026-07-23, in progress)
+
+Single model **C+D-small** (adapter `qwen3.5-9b-qa-lora-3880753`), on the **fixed** test file
+`data/tests-ad630f88.jsonl`, qa only (sum-sum is the teammate's). Config **matches the validated
+runs exactly** — no `--unescape`, no `--lang-hint`, default sampling — because every number the
+decision rests on was measured in that configuration; flipping `--unescape` on for the final run
+would ship a prompt variant with no dev proxy behind it (it stays a candidate *variant*
+submission, per TEST_SET_ANALYSIS §2, not the primary).
+
+- **qa-oeg (2,359):** reused `runs/test-qaoeg-cdsmall-3880753.jsonl` — only 9 rows differ between
+  the stale and fixed files (`qa-oeg_47/93..100_eng_eng`, all English, none bho), so 2,350 outputs
+  are valid as-is; the 9 changed rows resume-regenerated on the fixed file → `runs/submit-cdsmall-qaoeg.jsonl`.
+- **qa-context (8,640):** generated fresh on the fixed file, jobs **3889744** (`--shard 1/2`) /
+  **3889745** (`--shard 2/2`), ~7h each → `runs/submit-cdsmall-qactx-s{1,2}of2.jsonl`.
+- **still to do:** concatenate to one 10,999-row submission JSONL, verify all ids present and the
+  `{"id","output"}` format, and decide the `<br>`-strip (26.7% of qa-oeg outputs carry literal
+  `<br>` from the web-scraped substrate — the one-line submission-time strip flagged all along).
+
 ### D on qa-context — jobs 3876525/3876526
 
 All earlier D evidence came from the 100 bho **qa-oeg** rows; the other 360 bho rows are

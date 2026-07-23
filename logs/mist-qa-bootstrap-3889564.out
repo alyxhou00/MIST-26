@@ -1,0 +1,72 @@
+### Starting TaskPrologue of job 3889564 on a0429 at Thu Jul 23 18:56:37 CEST 2026
+Running on cores 80-95 with governor performance
+Thu Jul 23 18:56:37 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:C1:00.0 Off |                  Off |
+|  0%   40C    P8             23W /  300W |       0MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+[transformers] The tokenizer you are loading from 'bert-base-multilingual-cased' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+source: wmt25-mist-oeg-gpt-4.1   n = 90 rows   systems = 4   bootstrap = 10000 resamples (seed 42)
+
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 4039.70it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: bert-base-multilingual-cased
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+reference: runs/predictions-lora-3882157.csv   COMBINED = 39.90
+
+runs/predictions-lora-3880737.csv
+    COMBINED = 41.69   delta = +1.79   95% CI [+0.08, +3.58]   p = 0.041   -> distinguishable
+runs/predictions-lora-3869130.csv
+    COMBINED = 38.86   delta = -1.04   95% CI [-3.55, +1.45]   p = 0.394   -> NOT distinguishable from noise
+runs/predictions-lora-3867140-trunc.csv
+    COMBINED = 40.53   delta = +0.62   95% CI [-1.52, +2.75]   p = 0.583   -> NOT distinguishable from noise
+=== JOB_STATISTICS ===
+=== current date     : Thu Jul 23 18:57:06 CEST 2026
+= Job-ID             : 3889564 on alex
+= Job-Name           : mist-qa-bootstrap
+= Job-Command        : /home/atuin/b279bb/b279bb31/MIST-26/slurm/bootstrap_compare.sbatch
+= Initial workdir    : /home/atuin/b279bb/b279bb31/MIST-26
+= Queue/Partition    : a40
+= Slurm account      : b279bb with QOS=normal
+= Requested resources:  for 00:15:00
+= Elapsed runtime    : 00:00:33
+= Total RAM usage    : 2.6 GiB of assigned  GiB (%)
+= Node list          : a0429
+= Subm/Elig/Start/End: 2026-07-23T18:51:55 / 2026-07-23T18:51:55 / 2026-07-23T18:56:33 / 2026-07-23T18:57:06
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              57.1G   104.9G   209.7G        N/A     182K     500K   1,000K        N/A    
+    /home/vault           413.8G  1048.6G  2097.2G        N/A     252      200K     400K        N/A    
+    /home/atuin           141.8G     0.0K     0.0K        N/A   2,132                           N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+NVIDIA A40, 00000000:C1:00.0, 326910, 26 %, 13 %, 2716 MiB, 14253 ms

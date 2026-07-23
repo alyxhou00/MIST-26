@@ -40,7 +40,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import sacrebleu
 from bert_score import BERTScorer
+from sacrebleu.metrics import CHRF
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from evaluate import bertscore_f1, chrf, combined, rouge_l  # noqa: E402
@@ -85,10 +87,28 @@ def align(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
     return out
 
 
-def score(df: pd.DataFrame, idx: np.ndarray) -> float:
-    """COMBINED over one resample: chrF recomputed on the drawn rows, the other two averaged."""
-    preds, golds = df["prediction"].to_numpy()[idx], df["gold"].to_numpy()[idx]
-    return combined(chrf(preds, golds),
+def chrf_stats(preds, golds) -> np.ndarray:
+    """Per-row chrF sufficient statistics -- an (n, 18) array of n-gram match/total counts.
+
+    Recomputing `corpus_chrf` from scratch on every resample is the obvious implementation and
+    it is far too slow to run: measured at 268 ms for 90 rows, i.e. ~3 hours for 10,000 draws
+    x 4 systems, against a 30-minute wall clock. But corpus chrF is a ratio computed from
+    *summed* per-segment counts, so the counts can be extracted once and only the summing
+    repeated -- which is what sacrebleu itself does internally when it aggregates. Same
+    arithmetic, 0.03 ms per draw instead of 268 (verified identical to every printed digit on
+    the real OEG rows, and asserted below on each run in case a sacrebleu upgrade moves these
+    two underscore-prefixed methods)."""
+    return np.array(CHRF()._extract_corpus_statistics(list(preds), [list(golds)]), dtype=np.float64)
+
+
+def chrf_from_stats(stats: np.ndarray) -> float:
+    return CHRF()._compute_score_from_stats(list(stats.sum(axis=0))).score
+
+
+def score(df: pd.DataFrame, stats: np.ndarray, idx: np.ndarray) -> float:
+    """COMBINED over one resample: chrF re-aggregated over the drawn rows (it is a corpus
+    statistic, not a per-row mean), the other two averaged over the same rows."""
+    return combined(chrf_from_stats(stats[idx]),
                     df["bertscore_f1"].to_numpy()[idx].mean(),
                     df["rouge_l_f1"].to_numpy()[idx].mean())
 
@@ -111,14 +131,25 @@ def main() -> None:
           f"bootstrap = {args.n_boot} resamples (seed {args.seed})\n")
 
     scorer = BERTScorer(model_type=args.bertscore_model)
-    for df in frames.values():
+    stats = {}
+    for name, df in frames.items():
         df["bertscore_f1"] = bertscore_f1(scorer, df["prediction"], df["gold"])
         df["rouge_l_f1"] = rouge_l(df["prediction"], df["gold"])
+        stats[name] = chrf_stats(df["prediction"], df["gold"])
+        # The fast path must reproduce the public API exactly, or every number below is wrong
+        # in a way that still looks like a clean confidence interval.
+        direct = chrf(df["prediction"], df["gold"])
+        if abs(chrf_from_stats(stats[name]) - direct) > 1e-9:
+            sys.exit(f"{name}: chrF from summed per-row statistics "
+                     f"({chrf_from_stats(stats[name]):.6f}) != sacrebleu.corpus_chrf "
+                     f"({direct:.6f}) -- sacrebleu {sacrebleu.__version__} changed its internals")
 
     rng = np.random.default_rng(args.seed)
     draws = rng.integers(0, n, size=(args.n_boot, n))          # shared across systems: paired
-    point = {name: score(df, np.arange(n)) for name, df in frames.items()}
-    boot = {name: np.array([score(df, idx) for idx in draws]) for name, df in frames.items()}
+    all_rows = np.arange(n)
+    point = {name: score(df, stats[name], all_rows) for name, df in frames.items()}
+    boot = {name: np.array([score(df, stats[name], idx) for idx in draws])
+            for name, df in frames.items()}
 
     ref_name = args.pred_csvs[0]
     print(f"reference: {ref_name}   COMBINED = {point[ref_name]:.2f}\n")
