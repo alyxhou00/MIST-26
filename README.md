@@ -216,12 +216,16 @@ a ~110 MB `adapter_model.safetensors` survives an SSH drop that way.
 ```bash
 ssh alex
 tmux new -s hf-upload
-source /home/atuin/b279bb/b279bb31/mist-venv/bin/activate
-hf auth login                       # paste a WRITE token (https://huggingface.co/settings/tokens)
+source "$HOME/mist-venv/bin/activate"   # /home/hpc/... -- the venv with `hf` (1.21.0);
+                                        # the $WORK/atuin mist-venv does NOT have it
+hf auth whoami || hf auth login         # paste a WRITE token (https://huggingface.co/settings/tokens)
 
 cd /home/atuin/b279bb/b279bb31/MIST-26/adapters/qwen3.5-9b-qa-lora-<jobid>
 hf upload <repo-id> . --repo-type model --exclude "checkpoint-*/*"
 ```
+
+The adapters live under `$WORK` (atuin) but `hf` is in the `$HOME` venv — activate `$HOME`'s,
+`cd` into atuin's adapter dir. (`hf: command not found` means the wrong venv is active.)
 
 **`--exclude "checkpoint-*/*"` is not optional.** Every adapter dir keeps its two mid-training
 checkpoints (`checkpoint-1600/`, `checkpoint-1760/`, ...), which roughly double the folder and
