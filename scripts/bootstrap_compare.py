@@ -57,7 +57,14 @@ def load(path: str, source: str) -> pd.DataFrame:
 
 
 def align(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
-    """Put every system's rows in one order, keyed on the prompt. Bails on any mismatch."""
+    """Put every system's rows in one order, keyed on the prompt. Bails on any mismatch.
+
+    One row = one question = one gold + one prediction per system. Every CSV carries its own
+    copy of the `gold` column (benchmark.py writes it out per run), and they are only *supposed*
+    to be the same text, read from the same dev file -- so this checks it instead of assuming.
+    A gold that differs between two files means they were scored against different dev
+    revisions, which would make the comparison meaningless in a way nothing downstream would
+    show."""
     ref_name, ref = next(iter(frames.items()))
     keys = list(ref["input"])
     if len(set(keys)) != len(keys):
@@ -68,6 +75,13 @@ def align(frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
             sys.exit(f"{name}: scored a different row set than {ref_name} "
                      f"({len(df)} vs {len(keys)} rows) -- these are not paired")
         out[name] = df.set_index("input").loc[keys].reset_index()
+
+    ref_gold = out[ref_name]["gold"]
+    for name, df in out.items():
+        differing = (df["gold"] != ref_gold).sum()
+        if differing:
+            sys.exit(f"{name}: {differing} of {len(df)} rows have a different `gold` than "
+                     f"{ref_name} -- these files were scored against different dev data")
     return out
 
 
