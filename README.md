@@ -121,13 +121,21 @@ for f in train_v2 dev_v2; do
 done
 ```
 
-**Schema** (per row): `task` (**exact test names**: `qa-context` / `qa-oeg` / `sum-sum`),
-`question_lang` (bare code — question *and* answer language, the test invariant), `context_lang`
-(null for qa-oeg; CrossSum unknown), `source`, `input`, `output`, `item_group`.
+**Schema**:
+
+| Column | Description |
+|--------|-------------|
+| `task` | **Exact test names**: `qa-context` / `qa-oeg` / `sum-sum`. |
+| `question_lang` | Bare code — question *and* answer language (the test invariant). |
+| `context_lang` | Bare code of the passage language; null for qa-oeg, CrossSum unknown. |
+| `source` | Upstream dataset the example derives from. |
+| `input` | The full prompt (the SFT pair's input). |
+| `output` | The gold/reference response (the SFT pair's output). |
+| `item_group` | Opaque group id shared by all language versions of one item; the dev/train split is a pure function of it. |
 
 **Item-split (no dev/train leakage).** The dev/train side is a pure function of `item_group`:
 every language version of one underlying item (MCIF talk, OEG prompt, belebele passage, tydiqa
-question/document cluster, aya duplicate cluster) shares one group, so no dev item has a train twin.
+question/document cluster, aya duplicate cluster) shares one group, so no dev item has a train counterpart.
 
 **Per-source handling:**
 - **belebele / tydiqa** — re-synthesized from upstream into the attested test `qa-context` layout
@@ -139,8 +147,6 @@ question/document cluster, aya duplicate cluster) shares one group, so no dev it
   ([`scripts/oeg_alignment.py`](scripts/oeg_alignment.py)).
 - **Dropped** — tydiqa tel/swh/tha (languages absent from the test set) and ~38 cross-lingual aya rows.
 
-Full decision record in DATA_AUDIT.md §7. **Experiments on v2 start fresh in
-[`EXPERIMENTS_NEW.md`](EXPERIMENTS_NEW.md) — no old dev number is comparable.**
 
 ## Repo Layout
 
