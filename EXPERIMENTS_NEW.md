@@ -79,7 +79,7 @@ rate on gold-refusal rows (belebele/tydiqa averaged, full split in the analysis 
 ### Failure to stop after the answer (found 2026-07-18)
 
 After a correct short answer, the fine-tuned models sometimes kept going, inventing a fake chat exchange (`\nuser\n…\nassistant\n<think>`) that got scored as part of the answer and dragged the numbers down. This is what made one earlier model look much worse at tydiqa (38.94→19.53): not lost ability, just 78% of answers running on. **Fixed 2026-07-18**: generation now stops at the
-first fake turn, and any stragglers are trimmed before scoring. Every adapter from job 3869088 on is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §5.6.
+first fake turn, and any stragglers are trimmed before scoring. Every adapter from job 3869088 on is clean; base models never had this. Full record: IMPLEMENTATION_NOTES.md §6.1.
 
 ### C and D on the test set (dev is blind to both)
 
@@ -102,7 +102,7 @@ The dev set cannot evaluate what C+D is built for: it has no budget rows and no 
 | `<br>` markup | 27.9% | 31.0% | 28.2% | **26.7%** |
 
 - **C is free.** train_loss = plain within noise; dev quality = plain within noise (bootstrap
-  in IMPLEMENTATION_NOTES.md); +16.4pp compliance, and the failure it targets — under-shooting — halved (51.2%→28.0%).
+  in IMPLEMENTATION_NOTES.md §7.2); +16.4pp compliance, and the failure it targets — under-shooting — halved (51.2%→28.0%).
   Conditional, not padding: on the 1,894 non-budget test rows the systems match (median 73 vs 81
   words), only the 465 budget rows move (119→149). The compliance gap to C+D (61.3 vs 65.8) is all
   *over*-shooting; under-shoot is fixed equally by both.

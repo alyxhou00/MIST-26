@@ -19,7 +19,7 @@ this table -- see [README.md](README.md) for what each script/sbatch file does.
 **What gets a row:** full runs that support a meaningful comparison (baselines, ablations,
 full generation/training passes). Smoke tests, pipeline checks and failed/aborted jobs are
 NOT logged here -- their logs are still committed under `logs/`, infra failure post-mortems
-live in [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md) §6, and the teacher-selection
+live in [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md) §8, and the teacher-selection
 smoke comparison lives in IMPLEMENTATION_NOTES §5.1.
 
 **Adding a row:** after a job finishes and its log is committed, add one row below with the job
@@ -511,7 +511,7 @@ below are the ones that survived into the merge):
 > teacher data, not the dropped hint — and the whole routing table's hinted gold-LoRA numbers are
 > now known to be directly comparable to `run_test.py`'s no-hint inference. No baseline outstanding.
 
-> **Sharp edge, fixed 2026-07-17 (post-mortem: IMPLEMENTATION_NOTES).** 3865036 was submitted
+> **Sharp edge, fixed 2026-07-17 (post-mortem: IMPLEMENTATION_NOTES §8).** 3865036 was submitted
 > from the atuin clone against an adapter that exists only in `$HOME`. It was correct **by luck**:
 > the submit line happened to use an absolute path, and `lora_sft.sbatch`'s own copy-paste hint
 > printed a *relative* one, which would have resolved inside the atuin clone and hit either
