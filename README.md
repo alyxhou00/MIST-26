@@ -110,6 +110,17 @@ The first two are the sample/test downloads above; the exact `curl` commands for
 PYTHONPATH=scripts python scripts/build_dataset.py
 ```
 
+**Or skip the build and pull the exact files** from the Hub
+([`alyxhou00/wmt26-mist-v2`](https://huggingface.co/datasets/alyxhou00/wmt26-mist-v2)) — the
+same seed-42 output, no upstream pulls needed:
+
+```bash
+for f in train_v2 dev_v2; do
+  curl -sL "https://huggingface.co/datasets/alyxhou00/wmt26-mist-v2/resolve/main/$f.jsonl" \
+    -o "data/$f.jsonl"
+done
+```
+
 **Schema** (per row): `task` (**exact test names**: `qa-context` / `qa-oeg` / `sum-sum`),
 `question_lang` (bare code — question *and* answer language, the test invariant), `context_lang`
 (null for qa-oeg; CrossSum unknown), `source`, `input`, `output`, `item_group`.
